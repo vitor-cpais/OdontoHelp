@@ -1,13 +1,31 @@
 package com.OdontoHelp.BackEnd.entities.models;
 
+import com.OdontoHelp.BackEnd.entities.Paciente;
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
-public class Observacao {
+    @Entity
+    public class Observacao {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String texto;
     private LocalDateTime dataRegistro;
     // Outros atributos relacionados, se necessário...
 
+
+    @ManyToOne
+    @JoinColumn(name = "paciente_id")
+    private Paciente paciente;
+
+    public Paciente getPaciente() {
+        return paciente;
+    }
+
+    public void setPaciente(Paciente paciente) {
+        this.paciente = paciente;
+    }
 
     // Construtores, getters e setters...
 

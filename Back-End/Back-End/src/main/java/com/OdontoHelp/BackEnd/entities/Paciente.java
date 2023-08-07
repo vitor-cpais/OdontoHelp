@@ -2,20 +2,27 @@ package com.OdontoHelp.BackEnd.entities;
 import com.OdontoHelp.BackEnd.entities.models.Endereco;
 import com.OdontoHelp.BackEnd.entities.models.Observacao;
 import com.OdontoHelp.BackEnd.entities.models.enums.Genero;
+import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.util.List;
-
+@Entity
+@Table(name = "tb_paciente")
 public class Paciente {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
     private String Name;
     private LocalDate dataNascimento;
     private Genero genero;
     private Long telefone;
     private String email;
+    @Embedded
     private Endereco endereco;
 
+
+    @OneToMany(mappedBy = "paciente")
     private List<Observacao> observacoes; // Lista de observações do paciente
 
 

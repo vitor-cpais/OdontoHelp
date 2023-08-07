@@ -1,5 +1,12 @@
 package com.OdontoHelp.BackEnd.entities.models;
 
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import org.springframework.boot.autoconfigure.web.WebProperties;
+
+@Embeddable
 public class Endereco {
     private String rua;
     private String numero;
@@ -8,6 +15,8 @@ public class Endereco {
     private String cep;
     // Outros atributos e métodos relacionados ao endereço...
 
+
+
     // Método toString para retornar o endereço formatado
     @Override
     public String toString() {
@@ -15,6 +24,9 @@ public class Endereco {
     }
 
     // Construtores, getters e setters...
+
+
+
 
 
     public Endereco() {

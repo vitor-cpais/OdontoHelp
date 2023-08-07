@@ -1,13 +1,23 @@
 package com.OdontoHelp.BackEnd.entities;
 
 import com.OdontoHelp.BackEnd.entities.models.enums.EspecializacaoDentista;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "tb_dentista")
 public class Dentista {
-    private Long Id;
+
+    @Id
+    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String name;
     private EspecializacaoDentista especializacaoDentista;
     private Integer telefone;
     private String email;
+
+
 
     // Construtores, getters e setters...
 
@@ -16,20 +26,15 @@ public class Dentista {
     }
 
     public Dentista(Long id, String name, EspecializacaoDentista especializacaoDentista, Integer telefone, String email) {
-        Id = id;
+        this.id = id;
         this.name = name;
         this.especializacaoDentista = especializacaoDentista;
         this.telefone = telefone;
         this.email = email;
     }
 
-
     public Long getId() {
-        return Id;
-    }
-
-    public void setId(Long id) {
-        Id = id;
+        return id;
     }
 
     public String getName() {
@@ -64,6 +69,11 @@ public class Dentista {
         this.email = email;
     }
 }
+
+
+
+
+
 
 
 
