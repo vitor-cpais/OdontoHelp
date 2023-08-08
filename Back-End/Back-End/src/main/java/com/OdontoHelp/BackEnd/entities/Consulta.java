@@ -25,19 +25,10 @@ public class Consulta {
 
     private StatusConsulta statusConsulta;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
 
     // Outros atributos e métodos relacionados a consulta...
 
 
-    // Método para adicionar uma observação à lista de observações
 
     // Construtores, getters e setters...
 
@@ -62,6 +53,14 @@ public class Consulta {
 
     public void setDataHoraConsulta(LocalDateTime dataHoraConsulta) {
         this.dataHoraConsulta = dataHoraConsulta;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Paciente getPaciente() {

@@ -28,7 +28,7 @@ public class Paciente {
 
     // Outros atributos e métodos relacionados ao Paciente...
 
-    // Método para adicionar uma nova observação à lista
+    // Método para adicionar uma nova observação à lista---
     public void adicionarObservacao(Observacao observacao) {
         observacoes.add(observacao);
     }
