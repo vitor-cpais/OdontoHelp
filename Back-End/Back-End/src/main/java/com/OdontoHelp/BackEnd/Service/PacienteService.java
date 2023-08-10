@@ -1,7 +1,9 @@
 package com.OdontoHelp.BackEnd.Service;
 
 import com.OdontoHelp.BackEnd.Repositories.PacienteRepository;
+import com.OdontoHelp.BackEnd.Service.Exception.PacienteNotFoundException;
 import com.OdontoHelp.BackEnd.entities.Paciente;
+import com.OdontoHelp.BackEnd.entities.models.Observacao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -32,4 +34,10 @@ public class PacienteService {
     }
 
 
+
+
+
 }
+
+
+

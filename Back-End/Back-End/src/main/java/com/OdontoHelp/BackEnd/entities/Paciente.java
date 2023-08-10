@@ -13,52 +13,71 @@ public class Paciente {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
-    private String Name;
+    private String name;
     private LocalDate dataNascimento;
+
     private Genero genero;
-    private Long telefone;
+    private String telefone;
     private String email;
+    private String cpf;
+
     @Embedded
     private Endereco endereco;
 
 
     @OneToMany(mappedBy = "paciente")
+    @Embedded
     private List<Observacao> observacoes; // Lista de observações do paciente
 
 
     // Outros atributos e métodos relacionados ao Paciente...
 
-    // Método para adicionar uma nova observação à lista---
-    public void adicionarObservacao(Observacao observacao) {
-        observacoes.add(observacao);
+
+
+    @Override
+    public String toString() {
+        return "Paciente{" +
+                "nome='" + name + '\'' +
+                ", dataNascimento=" + dataNascimento +
+                ", genero=" + genero +
+                ", cpf='" + cpf + '\'' +
+                ", email='" + email + '\'' +
+                ", telefone='" + telefone + '\'' +
+                ", endereco=" + endereco +
+                ", observacoes=" + observacoes +
+                '}';
     }
 
 
 
-    // Método para obter as últimas n observações do paciente
-    public List<Observacao> getUltimasObservacoes(int n) {
-        int startIndex = Math.max(0, observacoes.size() - n);
-        int endIndex = observacoes.size();
-        return observacoes.subList(startIndex, endIndex);
+    // Método para adicionar uma nova observação à lista---
 
 
 
 
-
-    }       // Construtores, getters e setters...
+         // Construtores, getters e setters...
 
     public Paciente() {
     }
 
-    public Paciente(Long id, String name, LocalDate dataNascimento, Genero genero, Long telefone, String email, Endereco endereco, List<Observacao> observacoes) {
+    public Paciente(Long id, String name, LocalDate dataNascimento, Genero genero, String telefone, String email, String cpf, Endereco endereco, List<Observacao> observacoes) {
         Id = id;
-        Name = name;
+        this.name = name;
         this.dataNascimento = dataNascimento;
         this.genero = genero;
         this.telefone = telefone;
         this.email = email;
+        this.cpf = cpf;
         this.endereco = endereco;
         this.observacoes = observacoes;
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
     }
 
     public Long getId() {
@@ -70,11 +89,11 @@ public class Paciente {
     }
 
     public String getName() {
-        return Name;
+        return name;
     }
 
     public void setName(String name) {
-        Name = name;
+        name = name;
     }
 
     public LocalDate getDataNascimento() {
@@ -93,11 +112,11 @@ public class Paciente {
         this.genero = genero;
     }
 
-    public Long getTelefone() {
+    public String getTelefone() {
         return telefone;
     }
 
-    public void setTelefone(Long telefone) {
+    public void setTelefone(String telefone) {
         this.telefone = telefone;
     }
 

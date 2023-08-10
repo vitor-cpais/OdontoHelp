@@ -2,6 +2,7 @@ package com.OdontoHelp.BackEnd.Controller;
 
 import com.OdontoHelp.BackEnd.Service.PacienteService;
 import com.OdontoHelp.BackEnd.entities.Paciente;
+import com.OdontoHelp.BackEnd.entities.models.Observacao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -49,6 +50,8 @@ public class PacienteController {
             return ResponseEntity.notFound().build();
         }
     }
+
+
 
 
 }

@@ -19,7 +19,10 @@ import java.time.LocalDateTime;
     @JoinColumn(name = "paciente_id")
     private Paciente paciente;
 
-    public Paciente getPaciente() {
+        public Observacao(String s, LocalDateTime now) {
+        }
+
+        public Paciente getPaciente() {
         return paciente;
     }
 
@@ -27,16 +30,29 @@ import java.time.LocalDateTime;
         this.paciente = paciente;
     }
 
-    // Construtores, getters e setters...
-
-    public Observacao() {
+    //Metodos
+    @Override
+    public String toString() {
+        return "Observacao{" +
+                "id=" + id +
+                ", texto='" + texto + '\'' +
+                ", dataObservacao=" + dataRegistro +
+                '}';
     }
 
-    public Observacao(Long id, String texto, LocalDateTime dataRegistro) {
+
+    // Construtores, getters e setters...
+
+
+        public Observacao() {
+        }
+
+        public Observacao(Long id, String texto, LocalDateTime dataRegistro) {
         this.id = id;
         this.texto = texto;
         this.dataRegistro = dataRegistro;
     }
+
 
     public Long getId() {
         return id;
