@@ -1,10 +1,8 @@
 package com.OdontoHelp.BackEnd.entities.models;
 
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import org.springframework.boot.autoconfigure.web.WebProperties;
+
+import javax.persistence.*;
+
 
 @Embeddable
 public class Endereco {

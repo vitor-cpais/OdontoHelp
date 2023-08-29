@@ -1,9 +1,9 @@
 package com.OdontoHelp.BackEnd.entities;
-import com.OdontoHelp.BackEnd.entities.models.Observacao;
+
+
 import com.OdontoHelp.BackEnd.entities.models.enums.StatusConsulta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 
@@ -26,7 +26,7 @@ public class Consulta {
     private StatusConsulta statusConsulta;
 
 
-    // Outros atributos e métodos relacionados a consulta...
+
 
 
 

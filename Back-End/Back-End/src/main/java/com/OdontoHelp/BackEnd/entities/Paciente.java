@@ -1,8 +1,10 @@
 package com.OdontoHelp.BackEnd.entities;
+
+
 import com.OdontoHelp.BackEnd.entities.models.Endereco;
-import com.OdontoHelp.BackEnd.entities.models.Observacao;
 import com.OdontoHelp.BackEnd.entities.models.enums.Genero;
-import jakarta.persistence.*;
+import javax.persistence.*;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,9 +27,6 @@ public class Paciente {
     private Endereco endereco;
 
 
-    @OneToMany(mappedBy = "paciente")
-    @Embedded
-    private List<Observacao> observacoes; // Lista de observações do paciente
 
 
     // Outros atributos e métodos relacionados ao Paciente...
@@ -44,7 +43,6 @@ public class Paciente {
                 ", email='" + email + '\'' +
                 ", telefone='" + telefone + '\'' +
                 ", endereco=" + endereco +
-                ", observacoes=" + observacoes +
                 '}';
     }
 
@@ -60,7 +58,7 @@ public class Paciente {
     public Paciente() {
     }
 
-    public Paciente(Long id, String name, LocalDate dataNascimento, Genero genero, String telefone, String email, String cpf, Endereco endereco, List<Observacao> observacoes) {
+    public Paciente(Long id, String name, LocalDate dataNascimento, Genero genero, String telefone, String email, String cpf, Endereco endereco) {
         Id = id;
         this.name = name;
         this.dataNascimento = dataNascimento;
@@ -69,7 +67,6 @@ public class Paciente {
         this.email = email;
         this.cpf = cpf;
         this.endereco = endereco;
-        this.observacoes = observacoes;
     }
 
     public String getCpf() {
@@ -93,7 +90,7 @@ public class Paciente {
     }
 
     public void setName(String name) {
-        name = name;
+        this.name = name;
     }
 
     public LocalDate getDataNascimento() {
@@ -136,12 +133,7 @@ public class Paciente {
         this.endereco = endereco;
     }
 
-    public List<Observacao> getObservacoes() {
-        return observacoes;
-    }
 
-    public void setObservacoes(List<Observacao> observacoes) {
-        this.observacoes = observacoes;
-    }
 }
+
 

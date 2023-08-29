@@ -1,7 +1,8 @@
 package com.OdontoHelp.BackEnd.entities;
 
 import com.OdontoHelp.BackEnd.entities.models.enums.EspecializacaoDentista;
-import jakarta.persistence.*;
+import javax.persistence.*;
+
 
 @Entity
 @Table(name = "tb_dentista")

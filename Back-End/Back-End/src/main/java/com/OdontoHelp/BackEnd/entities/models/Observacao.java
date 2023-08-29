@@ -1,8 +1,9 @@
 package com.OdontoHelp.BackEnd.entities.models;
 
 import com.OdontoHelp.BackEnd.entities.Paciente;
-import jakarta.persistence.*;
 
+
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
     @Entity
@@ -11,8 +12,6 @@ import java.time.LocalDateTime;
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String texto;
-    private LocalDateTime dataRegistro;
-    // Outros atributos relacionados, se necessário...
 
 
     @ManyToOne
@@ -22,23 +21,11 @@ import java.time.LocalDateTime;
         public Observacao(String s, LocalDateTime now) {
         }
 
-        public Paciente getPaciente() {
-        return paciente;
-    }
 
-    public void setPaciente(Paciente paciente) {
-        this.paciente = paciente;
-    }
 
-    //Metodos
-    @Override
-    public String toString() {
-        return "Observacao{" +
-                "id=" + id +
-                ", texto='" + texto + '\'' +
-                ", dataObservacao=" + dataRegistro +
-                '}';
-    }
+
+
+
 
 
     // Construtores, getters e setters...
@@ -47,10 +34,9 @@ import java.time.LocalDateTime;
         public Observacao() {
         }
 
-        public Observacao(Long id, String texto, LocalDateTime dataRegistro) {
+        public Observacao(Long id, String texto) {
         this.id = id;
         this.texto = texto;
-        this.dataRegistro = dataRegistro;
     }
 
 
@@ -70,11 +56,5 @@ import java.time.LocalDateTime;
         this.texto = texto;
     }
 
-    public LocalDateTime getDataRegistro() {
-        return dataRegistro;
-    }
 
-    public void setDataRegistro(LocalDateTime dataRegistro) {
-        this.dataRegistro = dataRegistro;
-    }
 }
