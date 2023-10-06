@@ -1,17 +1,19 @@
-package com.OdontoHelp.BackEnd.controller;// Dentro da classe ConsultaController.java (em controllers)
+package com.OdontoHelp.BackEnd.controller;
 
-import com.OdontoHelp.BackEnd.service.ConsultaService;
+import com.OdontoHelp.BackEnd.dto.ConsultaDTO;
 import com.OdontoHelp.BackEnd.entities.Consulta;
+import com.OdontoHelp.BackEnd.service.ConsultaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
-@Controller
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/consultas")
 public class ConsultaController {
+
     private final ConsultaService consultaService;
 
     @Autowired
@@ -20,23 +22,25 @@ public class ConsultaController {
     }
 
     @GetMapping
-    public List<Consulta> listarTodasConsultas() {
-        return consultaService.listarTodasConsultas();
+    public List<ConsultaDTO> listarTodasConsultas() {
+        List<Consulta> consultas = consultaService.listarTodasConsultas();
+        return consultas.stream().map(ConsultaDTO::fromEntity).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Consulta> buscarConsultaPorId(@PathVariable Long id) {
+    public ResponseEntity<ConsultaDTO> buscarConsultaPorId(@PathVariable Long id) {
         Consulta consulta = consultaService.buscarConsultaPorId(id);
         if (consulta != null) {
-            return ResponseEntity.ok(consulta);
+            return ResponseEntity.ok(ConsultaDTO.fromEntity(consulta));
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
     @PostMapping
-    public Consulta salvarConsulta(@RequestBody Consulta consulta) {
-        return consultaService.salvarConsulta(consulta);
+    public ConsultaDTO salvarConsulta(@RequestBody ConsultaDTO consultaDTO) {
+        Consulta consulta = consultaService.salvarConsulta(consultaDTO.toEntity());
+        return ConsultaDTO.fromEntity(consulta);
     }
 
     @DeleteMapping("/{id}")
@@ -49,6 +53,4 @@ public class ConsultaController {
             return ResponseEntity.notFound().build();
         }
     }
-
-
 }

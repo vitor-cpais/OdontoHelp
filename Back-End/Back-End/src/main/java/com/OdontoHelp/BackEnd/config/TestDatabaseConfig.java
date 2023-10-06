@@ -71,10 +71,11 @@ public class TestDatabaseConfig implements CommandLineRunner {
 //  CADASTRO CONSULTA>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
-        Consulta consulta1 = new Consulta(null, LocalDateTime.of
-                (2023, Month.DECEMBER, 6, 14, 30)
-                , paciente1, dentista1, StatusConsulta.AGENDADA);
-
+        Consulta consulta1 = new Consulta();
+        consulta1.setDataHoraConsulta(LocalDateTime.of(2023, Month.DECEMBER, 6, 14, 30));
+        consulta1.setPaciente(paciente1);
+        consulta1.setDentista(dentista1);
+        consulta1.setStatusConsulta(StatusConsulta.AGENDADA);
 
         consultaService.salvarConsulta(consulta1);
 
