@@ -1,23 +1,25 @@
 package com.OdontoHelp.BackEnd.entities;
 
-
-import com.OdontoHelp.BackEnd.entities.models.enums.StatusConsulta;
+import com.OdontoHelp.BackEnd.entities.util.enums.StatusConsulta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
-
 
 @Entity
 @Table(name = "tb_consulta")
 public class Consulta {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private LocalDateTime dataHoraConsulta;
+
     @ManyToOne
     @JoinColumn(name = "paciente_id")
     private Paciente paciente;
+
     @ManyToOne
     @JoinColumn(name = "dentista_id")
     @JsonIgnore
@@ -25,16 +27,11 @@ public class Consulta {
 
     private StatusConsulta statusConsulta;
 
-
-
-
-
-
     // Construtores, getters e setters...
+
 
     public Consulta() {
     }
-
 
 
     public Consulta(Long id, LocalDateTime dataHoraConsulta, Paciente paciente, Dentista dentista, StatusConsulta statusConsulta) {
@@ -45,15 +42,18 @@ public class Consulta {
         this.statusConsulta = statusConsulta;
     }
 
-
-
-    public LocalDateTime getDataHoraConsulta() {
-        return dataHoraConsulta;
+    @Override
+    public String toString() {
+        return "Consulta{" +
+                "Paciente='" + paciente.getName() + "', " +
+                "Idade='" + paciente.getIdade() + " anos', " +
+                "Médico='" + dentista.getName() + "', " +
+                "Especialização='" + dentista.getEspecializacaoDentista() + "', " +
+                "Data e Hora da Consulta='" + dataHoraConsulta + "'" +
+                '}';
     }
 
-    public void setDataHoraConsulta(LocalDateTime dataHoraConsulta) {
-        this.dataHoraConsulta = dataHoraConsulta;
-    }
+    // Getters e setters...
 
     public Long getId() {
         return id;
@@ -61,6 +61,14 @@ public class Consulta {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public LocalDateTime getDataHoraConsulta() {
+        return dataHoraConsulta;
+    }
+
+    public void setDataHoraConsulta(LocalDateTime dataHoraConsulta) {
+        this.dataHoraConsulta = dataHoraConsulta;
     }
 
     public Paciente getPaciente() {
@@ -78,8 +86,6 @@ public class Consulta {
     public void setDentista(Dentista dentista) {
         this.dentista = dentista;
     }
-
-
 
     public StatusConsulta getStatusConsulta() {
         return statusConsulta;

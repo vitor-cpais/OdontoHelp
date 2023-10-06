@@ -1,4 +1,4 @@
-package com.OdontoHelp.BackEnd.entities.models.enums;
+package com.OdontoHelp.BackEnd.entities.util.enums;
 
 public enum Genero {
     MALE("Masculino"),

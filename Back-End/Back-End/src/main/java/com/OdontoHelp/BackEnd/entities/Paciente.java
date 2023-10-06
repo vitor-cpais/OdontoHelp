@@ -1,13 +1,12 @@
 package com.OdontoHelp.BackEnd.entities;
 
+import com.OdontoHelp.BackEnd.entities.util.Endereco;
+import com.OdontoHelp.BackEnd.entities.util.enums.Genero;
 
-import com.OdontoHelp.BackEnd.entities.models.Endereco;
-import com.OdontoHelp.BackEnd.entities.models.enums.Genero;
 import javax.persistence.*;
-
-
 import java.time.LocalDate;
-import java.util.List;
+import java.time.Period;
+
 @Entity
 @Table(name = "tb_paciente")
 public class Paciente {
@@ -26,34 +25,7 @@ public class Paciente {
     @Embedded
     private Endereco endereco;
 
-
-
-
-    // Outros atributos e métodos relacionados ao Paciente...
-
-
-
-    @Override
-    public String toString() {
-        return "Paciente{" +
-                "nome='" + name + '\'' +
-                ", dataNascimento=" + dataNascimento +
-                ", genero=" + genero +
-                ", cpf='" + cpf + '\'' +
-                ", email='" + email + '\'' +
-                ", telefone='" + telefone + '\'' +
-                ", endereco=" + endereco +
-                '}';
-    }
-
-
-
-    // Método para adicionar uma nova observação à lista---
-
-
-
-
-         // Construtores, getters e setters...
+    // Não use @Transient para a idade
 
     public Paciente() {
     }
@@ -67,6 +39,26 @@ public class Paciente {
         this.email = email;
         this.cpf = cpf;
         this.endereco = endereco;
+    }
+
+    // Calcula a idade com base na data de nascimento.
+    public int getIdade() {
+        LocalDate dataAtual = LocalDate.now();
+        return Period.between(dataNascimento, dataAtual).getYears();
+    }
+
+    @Override
+    public String toString() {
+        return "Paciente{" +
+                "nome='" + name + '\'' +
+                ", data de nascimento='" + dataNascimento + '\'' +
+                ", idade='" + getIdade() + " anos" + '\'' +
+                ", genero=" + genero +
+                ", cpf='" + cpf + '\'' +
+                ", email='" + email + '\'' +
+                ", telefone='" + telefone + '\'' +
+                ", endereco=" + endereco +
+                '}';
     }
 
     public String getCpf() {
@@ -132,8 +124,4 @@ public class Paciente {
     public void setEndereco(Endereco endereco) {
         this.endereco = endereco;
     }
-
-
 }
-
-

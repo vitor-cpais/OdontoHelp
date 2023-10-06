@@ -1,6 +1,6 @@
 package com.OdontoHelp.BackEnd.repositories;
 
-import com.OdontoHelp.BackEnd.entities.models.Observacao;
+import com.OdontoHelp.BackEnd.entities.util.Observacao;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,7 +1,7 @@
-package com.OdontoHelp.BackEnd.entities.models;
+package com.OdontoHelp.BackEnd.entities.util;
 
 
-import javax.persistence.*;
+import javax.persistence.Embeddable;
 
 
 @Embeddable
@@ -14,21 +14,11 @@ public class Endereco {
     // Outros atributos e métodos relacionados ao endereço...
 
 
-
-    // Método toString para retornar o endereço formatado
-    @Override
-    public String toString() {
-        return rua + ", " + numero + ", " + bairro + ", " + cidade + ", " + cep;
+    public Endereco() {
     }
 
     // Construtores, getters e setters...
 
-
-
-
-
-    public Endereco() {
-    }
 
     public Endereco(String rua, String numero, String bairro, String cidade, String cep) {
         this.rua = rua;
@@ -36,6 +26,12 @@ public class Endereco {
         this.bairro = bairro;
         this.cidade = cidade;
         this.cep = cep;
+    }
+
+    // Método toString para retornar o endereço formatado
+    @Override
+    public String toString() {
+        return rua + ", " + numero + ", " + bairro + ", " + cidade + ", " + cep;
     }
 
     public String getRua() {
