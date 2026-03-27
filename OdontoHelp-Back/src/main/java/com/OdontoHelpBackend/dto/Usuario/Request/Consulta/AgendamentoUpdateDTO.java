@@ -1,0 +1,16 @@
+package com.OdontoHelpBackend.dto.Usuario.Request.Consulta;
+
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDateTime;
+
+public record AgendamentoUpdateDTO(
+
+        @NotNull(message = "Data início é obrigatória")
+        LocalDateTime dataInicio,
+
+        @NotNull(message = "Data fim é obrigatória")
+        LocalDateTime dataFim,
+
+        String observacoes
+) {}
