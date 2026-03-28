@@ -99,7 +99,7 @@ public class DataInitializer implements ApplicationRunner {
         d3.setPerfil(PerfilUsuario.DENTISTA);
         d3.setGenero("F");
         d3.setDataNascimento(LocalDate.of(1992, 11, 5));
-        d3.setIsAtivo(true);
+        d3.setIsAtivo(false);
         d3.setCro("SP-33333");
         criarEndereco(dentistaRepository.save(d3));
     }
