@@ -11,6 +11,8 @@ import PacientesPage from '../features/pacientes/pages/PacientesPage';
 import UsuariosPage from '../features/usuarios/pages/UsuariosPage';
 
 
+
+
 const router = createBrowserRouter([
   {
     path: '/',

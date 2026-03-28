@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Long> {
 
+    Slice<Paciente> findAllBy(Pageable pageable);
+
     Slice<Paciente> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
     Slice<Paciente> findByIsAtivo(Boolean isAtivo, Pageable pageable);

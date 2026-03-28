@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class AgendamentoService {
@@ -102,4 +104,16 @@ public class AgendamentoService {
         if (conflito)
             throw new ConflictException("Dentista já possui agendamento neste horário");
     }
+
+    public Slice<AgendamentoResponseDTO> filtrar(
+            LocalDateTime dataInicio,
+            LocalDateTime dataFim,
+            StatusConsulta status,
+            Long dentistaId,
+            Long pacienteId,
+            Pageable pageable) {
+        return agendamentoRepository.filtrar(dataInicio, dataFim, status, dentistaId, pacienteId, pageable)
+                .map(agendamentoMapper::toResponse);
+    }
+
 }

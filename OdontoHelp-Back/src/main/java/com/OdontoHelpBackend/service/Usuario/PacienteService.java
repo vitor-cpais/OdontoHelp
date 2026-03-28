@@ -25,13 +25,15 @@ public class PacienteService {
         return pacienteMapper.toResponse(paciente);
     }
 
-    public Slice<PacienteResponseDTO> listar(String nome, Pageable pageable) {
-        Slice<Paciente> pacientes;
+    public Slice<PacienteResponseDTO> listar(String nome, Boolean isAtivo, Pageable pageable) {
         if (nome != null && !nome.isBlank())
-            pacientes = pacienteRepository.findByNomeContainingIgnoreCase(nome, pageable);
-        else
-            pacientes = pacienteRepository.findByIsAtivo(true, pageable);
-        return pacientes.map(pacienteMapper::toResponse);
+            return pacienteRepository.findByNomeContainingIgnoreCase(nome, pageable)
+                    .map(pacienteMapper::toResponse);
+        if (isAtivo != null)
+            return pacienteRepository.findByIsAtivo(isAtivo, pageable)
+                    .map(pacienteMapper::toResponse);
+        return pacienteRepository.findAllBy(pageable)
+                .map(pacienteMapper::toResponse);
     }
 
     public PacienteResponseDTO criar(PacienteRequestDTO dto) {
@@ -57,5 +59,12 @@ public class PacienteService {
     public Paciente buscarEntidadePorId(Long id) {
         return pacienteRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Paciente não encontrado"));
+    }
+
+
+    public void toggleStatus(Long id, boolean isAtivo) {
+        Paciente paciente = buscarEntidadePorId(id);
+        paciente.setIsAtivo(isAtivo);
+        pacienteRepository.save(paciente);
     }
 }

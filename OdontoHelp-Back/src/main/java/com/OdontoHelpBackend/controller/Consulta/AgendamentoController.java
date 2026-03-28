@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/agendamentos")
@@ -66,5 +67,16 @@ public class AgendamentoController {
     public ResponseEntity<Void> cancelar(@PathVariable Long id) {
         agendamentoService.cancelar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<Slice<AgendamentoResponseDTO>> filtrar(
+            @RequestParam(required = false) LocalDateTime dataInicio,
+            @RequestParam(required = false) LocalDateTime dataFim,
+            @RequestParam(required = false) StatusConsulta status,
+            @RequestParam(required = false) Long dentistaId,
+            @RequestParam(required = false) Long pacienteId,
+            Pageable pageable) {
+        return ResponseEntity.ok(agendamentoService.filtrar(dataInicio, dataFim, status, dentistaId, pacienteId, pageable));
     }
 }

@@ -8,10 +8,10 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
-import { useDentistaDrawerStore } from './dentistaStore';
-import { useCreateDentista, useUpdateDentista } from './useDentistas';
-import { maskCpf, maskCro,maskTelefone } from '../../shared/utils/masks';
-import type { DentistaFormData } from './types';
+import { usePacienteDrawerStore } from './pacienteStore';
+import { useCreatePaciente, useUpdatePaciente } from './usePacientes';
+import { maskCpf, maskTelefone } from '../../shared/utils/masks';
+import type { PacienteFormData } from './types';
 
 const schema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
@@ -25,7 +25,7 @@ const schema = z.object({
     (val) => new Date(val) < new Date(),
     'Data não pode ser futura'
   ),
-  cro: z.string().min(4, 'CRO inválido — ex: SP-12345'),
+  observacoesMedicas: z.string().max(500, 'Máximo 500 caracteres').optional().default(''),
   senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 });
 
@@ -34,22 +34,19 @@ interface Props {
   onError: (msg: string) => void;
 }
 
-export default function DentistaDrawer({ onSuccess, onError }: Props) {
-  const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = useDentistaDrawerStore();
+export default function PacienteDrawer({ onSuccess, onError }: Props) {
+  const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = usePacienteDrawerStore();
   const isEditing = editingId !== null;
   const [confirmClose, setConfirmClose] = useState(false);
 
-  const create = useCreateDentista();
-  const update = useUpdateDentista(editingId ?? 0);
+  const create = useCreatePaciente();
+  const update = useUpdatePaciente(editingId ?? 0);
 
-  const {
-    control, handleSubmit, reset, watch,
-    formState: { errors, isDirty },
-  } = useForm<DentistaFormData>({
+  const { control, handleSubmit, reset, watch, formState: { errors, isDirty } } = useForm<PacienteFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       nome: '', email: '', telefone: '', cpf: '',
-      genero: 'NAO_INFORMADO', dataNascimento: '', cro: '', senha: '',
+      genero: 'NAO_INFORMADO', dataNascimento: '', observacoesMedicas: '', senha: '',
     },
   });
 
@@ -62,7 +59,7 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         cpf: draft.cpf ?? '',
         genero: draft.genero ?? 'NAO_INFORMADO',
         dataNascimento: draft.dataNascimento ?? '',
-        cro: draft.cro ?? '',
+        observacoesMedicas: draft.observacoesMedicas ?? '',
         senha: '',
       });
     }
@@ -74,29 +71,27 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   }, [JSON.stringify(values), open]);
 
   const handleClose = () => {
-    if (isDirty && !isEditing) {
-      setConfirmClose(true);
-    } else {
-      clearDraft();
-    }
+    if (isDirty && !isEditing) setConfirmClose(true);
+    else clearDraft();
   };
 
-  const onSubmit = async (data: DentistaFormData) => {
+  const onSubmit = async (data: PacienteFormData) => {
     try {
       if (isEditing) {
         await update.mutateAsync(data);
-        onSuccess('Dentista atualizado com sucesso!');
+        onSuccess('Paciente atualizado com sucesso!');
       } else {
         await create.mutateAsync(data);
-        onSuccess('Dentista cadastrado com sucesso!');
+        onSuccess('Paciente cadastrado com sucesso!');
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar dentista');
+      onError(e.message ?? 'Erro ao salvar paciente');
     }
   };
 
   const loading = create.isPending || update.isPending;
+  const obsValue = watch('observacoesMedicas') ?? '';
 
   return (
     <>
@@ -104,18 +99,16 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         anchor="right"
         open={open}
         onClose={handleClose}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 440 }, display: 'flex', flexDirection: 'column' },
-        }}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 440 }, display: 'flex', flexDirection: 'column' } }}
       >
         <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PersonOutlined sx={{ fontSize: 17, color: '#0F6E56' }} />
+            <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PersonOutlined sx={{ fontSize: 17, color: '#185FA5' }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                {isEditing ? 'Editar dentista' : 'Novo dentista'}
+                {isEditing ? 'Editar paciente' : 'Novo paciente'}
               </Typography>
               {hasDraft && !isEditing && (
                 <Typography variant="caption" sx={{ color: '#BA7517' }}>rascunho salvo</Typography>
@@ -141,53 +134,29 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
 
             <Stack direction="row" spacing={1.5}>
               <Controller name="cpf" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="CPF *"
-                  placeholder="000.000.000-00"
-                  error={!!errors.cpf}
-                  helperText={errors.cpf?.message}
-                  fullWidth
+                <TextField {...field} label="CPF *" placeholder="000.000.000-00"
+                  error={!!errors.cpf} helperText={errors.cpf?.message} fullWidth
                   inputProps={{ maxLength: 14 }}
-                  onChange={(e) => field.onChange(maskCpf(e.target.value))}
-                />
+                  onChange={(e) => field.onChange(maskCpf(e.target.value))} />
               )} />
               <Controller name="dataNascimento" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Nascimento *"
-                  type="date"
-                  error={!!errors.dataNascimento}
-                  helperText={errors.dataNascimento?.message}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ max: new Date().toISOString().split('T')[0] }}
-                />
+                <TextField {...field} label="Nascimento *" type="date"
+                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message}
+                  fullWidth InputLabelProps={{ shrink: true }}
+                  inputProps={{ max: new Date().toISOString().split('T')[0] }} />
               )} />
             </Stack>
 
             <Stack direction="row" spacing={1.5}>
               <Controller name="telefone" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Telefone *"
-                  placeholder="(00) 00000-0000"
-                  error={!!errors.telefone}
-                  helperText={errors.telefone?.message}
-                  fullWidth
+                <TextField {...field} label="Telefone *" placeholder="(00) 00000-0000"
+                  error={!!errors.telefone} helperText={errors.telefone?.message} fullWidth
                   inputProps={{ maxLength: 15 }}
-                  onChange={(e) => field.onChange(maskTelefone(e.target.value))}
-                />
+                  onChange={(e) => field.onChange(maskTelefone(e.target.value))} />
               )} />
               <Controller name="genero" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Gênero *"
-                  error={!!errors.genero}
-                  helperText={errors.genero?.message}
-                  fullWidth
-                >
+                <TextField {...field} select label="Gênero *"
+                  error={!!errors.genero} helperText={errors.genero?.message} fullWidth>
                   <MenuItem value="NAO_INFORMADO">Não informado</MenuItem>
                   <MenuItem value="MASCULINO">Masculino</MenuItem>
                   <MenuItem value="FEMININO">Feminino</MenuItem>
@@ -197,19 +166,14 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
             </Stack>
 
             <Divider />
-            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Dados profissionais</Typography>
+            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Informações médicas</Typography>
 
-            <Controller name="cro" control={control} render={({ field }) => (
-              <TextField
-                {...field}
-                label="CRO *"
-                placeholder="SP-12345"
-                error={!!errors.cro}
-                helperText={errors.cro?.message ?? 'Formato: UF-NNNNN'}
-                fullWidth
-                inputProps={{ maxLength: 8 }}
-                onChange={(e) => field.onChange(maskCro(e.target.value))}
-              />
+            <Controller name="observacoesMedicas" control={control} render={({ field }) => (
+              <TextField {...field} label="Observações médicas"
+                multiline rows={3}
+                error={!!errors.observacoesMedicas}
+                helperText={errors.observacoesMedicas?.message ?? `${obsValue.length}/500`}
+                fullWidth inputProps={{ maxLength: 500 }} />
             )} />
 
             <Divider />
@@ -221,15 +185,11 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
             )} />
 
             <Controller name="senha" control={control} render={({ field }) => (
-              <TextField
-                {...field}
+              <TextField {...field}
                 label={isEditing ? 'Nova senha (deixe vazio para manter)' : 'Senha *'}
-                type="password"
-                error={!!errors.senha}
+                type="password" error={!!errors.senha}
                 helperText={errors.senha?.message ?? (isEditing ? '' : 'Mínimo 6 caracteres')}
-                fullWidth
-                inputProps={{ maxLength: 64 }}
-              />
+                fullWidth inputProps={{ maxLength: 64 }} />
             )} />
 
             <Typography variant="caption" sx={{ color: 'text.disabled', mt: -1 }}>
@@ -258,7 +218,8 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmClose(false)}>Continuar editando</Button>
-          <Button variant="contained" color="error" onClick={() => { setConfirmClose(false); clearDraft(); }}>
+          <Button variant="contained" color="error"
+            onClick={() => { setConfirmClose(false); clearDraft(); }}>
             Descartar
           </Button>
         </DialogActions>

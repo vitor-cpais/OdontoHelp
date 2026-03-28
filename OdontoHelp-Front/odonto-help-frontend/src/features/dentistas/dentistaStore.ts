@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { DentistaFormData, Dentista } from './types';
+import { maskCpf, maskTelefone } from '../../shared/utils/masks';
 
 interface DentistaDrawerState {
   open: boolean;
@@ -29,8 +30,8 @@ export const useDentistaDrawerStore = create<DentistaDrawerState>((set, get) => 
       draft: {
         nome: dentista.nome,
         email: dentista.email,
-        telefone: dentista.telefone,
-        cpf: dentista.cpf,
+        cpf: maskCpf(dentista.cpf),
+         telefone: maskTelefone(dentista.telefone),
         genero: dentista.genero,
         dataNascimento: dentista.dataNascimento,
         cro: dentista.cro,

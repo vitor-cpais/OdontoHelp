@@ -24,13 +24,15 @@ public class DentistaService {
         return dentistaMapper.toResponse(dentista);
     }
 
-    public Slice<DentistaResponseDTO> listar(String nome, Pageable pageable) {
-        Slice<Dentista> dentistas;
+    public Slice<DentistaResponseDTO> listar(String nome, Boolean isAtivo, Pageable pageable) {
         if (nome != null && !nome.isBlank())
-            dentistas = dentistaRepository.findByNomeContainingIgnoreCase(nome, pageable);
-        else
-            dentistas = dentistaRepository.findByIsAtivo(true, pageable);
-        return dentistas.map(dentistaMapper::toResponse);
+            return dentistaRepository.findByNomeContainingIgnoreCase(nome, pageable)
+                    .map(dentistaMapper::toResponse);
+        if (isAtivo != null)
+            return dentistaRepository.findByIsAtivo(isAtivo, pageable)
+                    .map(dentistaMapper::toResponse);
+        return dentistaRepository.findAllBy(pageable)
+                .map(dentistaMapper::toResponse);
     }
 
     public DentistaResponseDTO criar(DentistaRequestDTO dto) {
@@ -57,4 +59,11 @@ public class DentistaService {
         return dentistaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Dentista não encontrado"));
     }
+
+    public void toggleStatus(Long id, boolean isAtivo) {
+        Dentista dentista = buscarEntidadePorId(id);
+        dentista.setIsAtivo(isAtivo);
+        dentistaRepository.save(dentista);
+    }
+
 }

@@ -29,8 +29,9 @@ public class PacienteController {
     @GetMapping
     public ResponseEntity<Slice<PacienteResponseDTO>> listar(
             @RequestParam(required = false) String nome,
+            @RequestParam(required = false) Boolean isAtivo,
             Pageable pageable) {
-        return ResponseEntity.ok(pacienteService.listar(nome, pageable));
+        return ResponseEntity.ok(pacienteService.listar(nome, isAtivo, pageable));
     }
 
     @PostMapping
@@ -48,9 +49,11 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.atualizar(id, dto));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desativar(@PathVariable Long id) {
-        pacienteService.desativar(id);
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> toggleStatus(
+            @PathVariable Long id,
+            @RequestParam boolean isAtivo) {
+        pacienteService.toggleStatus(id, isAtivo);
         return ResponseEntity.noContent().build();
     }
 }

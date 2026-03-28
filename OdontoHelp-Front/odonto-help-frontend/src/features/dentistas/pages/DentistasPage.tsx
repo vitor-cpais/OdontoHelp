@@ -11,10 +11,11 @@ import {
 import { useState, useCallback } from 'react';
 import { useDentistas, useToggleAtivoDentista } from '../useDentistas';
 import { useDentistaDrawerStore } from '../dentistaStore';
-import DentistaStatusChip from '../DentistaStatusChip';
+import StatusChip from '../../../shared/components/StatusChip';
 import DentistaDrawer from '../DentistaDrawer';
 import type { Dentista } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { maskTelefone } from '../../../shared/utils/masks';
 
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
@@ -154,10 +155,10 @@ export default function DentistasPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{d.telefone}</Typography>
+                      <Typography variant="body2">{maskTelefone(d.telefone)}</Typography>
                     </TableCell>
                     <TableCell>
-                      <DentistaStatusChip isAtivo={d.isAtivo} />
+                      <StatusChip isAtivo={d.isAtivo} />
                     </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="Editar">
