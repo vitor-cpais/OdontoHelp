@@ -4,16 +4,16 @@ import com.OdontoHelpBackend.domain.Consulta.Agendamento;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoRequestDTO;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoUpdateDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Agendamento.AgendamentoResponseDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoRequestDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoUpdateDTO;
+import com.OdontoHelpBackend.dto.Consulta.Response.Agendamento.AgendamentoResponseDTO;
 import java.time.LocalDateTime;
 import javax.annotation.processing.Generated;
 import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-03-27T04:23:10-0300",
+    date = "2026-03-28T22:31:42-0300",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Amazon.com Inc.)"
 )
 @Component

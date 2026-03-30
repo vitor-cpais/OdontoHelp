@@ -1,9 +1,12 @@
 package com.OdontoHelpBackend.service.Usuario;
 
+import com.OdontoHelpBackend.Mapper.DentistaMapper;
 import com.OdontoHelpBackend.Mapper.PacienteMapper;
+import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.PacienteRepository;
@@ -62,9 +65,11 @@ public class PacienteService {
     }
 
 
-    public void toggleStatus(Long id, boolean isAtivo) {
+    public PacienteResponseDTO toggleStatus(Long id, boolean isAtivo) {
         Paciente paciente = buscarEntidadePorId(id);
         paciente.setIsAtivo(isAtivo);
-        pacienteRepository.save(paciente);
+        return pacienteMapper.toResponse((pacienteRepository.save(paciente)));
+
     }
 }
+

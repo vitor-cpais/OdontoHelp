@@ -1,14 +1,15 @@
 package com.OdontoHelpBackend.controller.Consulta;
 
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoRequestDTO;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoUpdateDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Agendamento.AgendamentoResponseDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoRequestDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoUpdateDTO;
+import com.OdontoHelpBackend.dto.Consulta.Response.Agendamento.AgendamentoResponseDTO;
 import com.OdontoHelpBackend.service.Consulta.AgendamentoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -71,8 +72,8 @@ public class AgendamentoController {
 
     @GetMapping
     public ResponseEntity<Slice<AgendamentoResponseDTO>> filtrar(
-            @RequestParam(required = false) LocalDateTime dataInicio,
-            @RequestParam(required = false) LocalDateTime dataFim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
             @RequestParam(required = false) StatusConsulta status,
             @RequestParam(required = false) Long dentistaId,
             @RequestParam(required = false) Long pacienteId,

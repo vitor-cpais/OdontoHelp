@@ -50,11 +50,13 @@ public class DentistaController {
         return ResponseEntity.ok(dentistaService.atualizar(id, dto));
     }
 
+
+
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> toggleStatus(
+    public ResponseEntity<DentistaResponseDTO> toggleStatus(
             @PathVariable Long id,
             @RequestParam boolean isAtivo) {
-        dentistaService.toggleStatus(id, isAtivo);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(dentistaService.toggleStatus(id, isAtivo));
     }
+
 }

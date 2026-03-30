@@ -114,7 +114,7 @@ export default function Sidebar() {
       <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          MVP 1 · sem autenticação
+          v1.0.0 • OdontoHelp © 2026
         </Typography>
       </Box>
     </Box>

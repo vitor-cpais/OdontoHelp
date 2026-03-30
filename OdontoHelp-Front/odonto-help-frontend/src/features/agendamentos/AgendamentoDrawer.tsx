@@ -1,16 +1,19 @@
 import {
   Drawer, Box, Typography, IconButton, Divider, TextField,
-  MenuItem, Button, Stack, Dialog, DialogTitle,
-  DialogContent, DialogActions, Alert, Autocomplete,
+  Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions,
+  Alert, Autocomplete, CircularProgress,
 } from '@mui/material';
-import { Close, CalendarMonthOutlined, WarningAmberOutlined } from '@mui/icons-material';
+import { Close, CalendarMonthOutlined, WarningAmberOutlined, EditOutlined } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { useAgendamentoDrawerStore } from './agendamentoStore';
-import { useCreateAgendamento, useUpdateAgendamento, useAtualizarStatus, useCancelarAgendamento, useAgendamentos } from './useAgendamentos';
-import AgendamentoStatusChip from './AgendamentoStatusChip';
+import {
+  useCreateAgendamento, useUpdateAgendamento,
+  useAtualizarStatus, useCancelarAgendamento, useAgendamentos,
+} from './useAgendamentos';
+import StatusTransition from './StatusTransition';
 import { STATUS_LABELS } from './types';
 import type { AgendamentoFormData, StatusConsulta } from './types';
 import { useDentistas } from '../dentistas/useDentistas';
@@ -22,21 +25,30 @@ const schema = z.object({
   dataInicio: z.string().min(1, 'Data de início obrigatória'),
   dataFim: z.string().min(1, 'Data de fim obrigatória'),
   observacoes: z.string().max(500).optional().default(''),
+  status: z.string().optional(),
 }).refine(
   (d) => new Date(d.dataFim) > new Date(d.dataInicio),
   { message: 'Data fim deve ser após o início', path: ['dataFim'] }
 );
+
+const add30min = (dt: string): string => {
+  const d = new Date(dt);
+  d.setMinutes(d.getMinutes() + 30);
+  return d.toISOString().slice(0, 16);
+};
 
 interface Props {
   onSuccess: (msg: string) => void;
   onError: (msg: string) => void;
 }
 
-const STATUS_OPTIONS: StatusConsulta[] = ['AGENDADO', 'CONFIRMADO', 'CANCELADO', 'CONCLUIDO', 'FALTA'];
-
 export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
-  const { open, editingId, draft, clearDraft } = useAgendamentoDrawerStore();
-  const isEditing = editingId !== null;
+  const { open, mode, editingId, draft, hasChanges, clearDraft, setEditMode, setViewMode, setHasChanges } = useAgendamentoDrawerStore();
+  const isNew = mode === 'new';
+  const isView = mode === 'view';
+  const isEdit = mode === 'edit';
+  const isFinalStatus = draft.status && ['CANCELADO', 'CONCLUIDO', 'FALTA'].includes(draft.status);
+
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [conflito, setConflito] = useState<string | null>(null);
 
@@ -45,65 +57,80 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const atualizarStatus = useAtualizarStatus();
   const cancelar = useCancelarAgendamento();
 
-  // Busca dentistas e pacientes para autocomplete
   const { data: dentistasData } = useDentistas({ page: 0, size: 100, isAtivo: true });
   const { data: pacientesData } = usePacientes({ page: 0, size: 100, isAtivo: true });
   const dentistas = dentistasData?.content ?? [];
   const pacientes = pacientesData?.content ?? [];
 
-  // Busca agendamentos do dentista selecionado para checar conflito
   const { data: agendamentosDentista } = useAgendamentos({
     page: 0, size: 100,
     dentistaId: draft.dentistaId ?? undefined,
     dataInicio: draft.dataInicio?.slice(0, 10),
     dataFim: draft.dataFim?.slice(0, 10),
-  });
+  }, { enabled: !!draft.dentistaId && !!draft.dataInicio });
 
-  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<AgendamentoFormData>({
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors, isDirty } } = useForm<AgendamentoFormData>({
     resolver: zodResolver(schema),
-    defaultValues: { pacienteId: null as any, dentistaId: null as any, dataInicio: '', dataFim: '', observacoes: '' },
+    defaultValues: {
+      pacienteId: null as any, dentistaId: null as any,
+      dataInicio: '', dataFim: '', observacoes: '', status: undefined,
+    },
   });
 
   useEffect(() => {
     if (open) {
+      const inicio = draft.dataInicio ?? '';
       reset({
         pacienteId: draft.pacienteId ?? (null as any),
         dentistaId: draft.dentistaId ?? (null as any),
-        dataInicio: draft.dataInicio ?? '',
-        dataFim: draft.dataFim ?? '',
+        dataInicio: inicio,
+        dataFim: draft.dataFim ?? (inicio ? add30min(inicio) : ''),
         observacoes: draft.observacoes ?? '',
+        status: draft.status,
       });
       setConflito(null);
     }
-  }, [open]);
+  }, [open, mode]);
 
-  // Detecta conflito de horário
   const watchedInicio = watch('dataInicio');
   const watchedFim = watch('dataFim');
   const watchedDentistaId = watch('dentistaId');
 
+  // +30min automático quando fim está vazio
+  useEffect(() => {
+    if (watchedInicio && !watchedFim) setValue('dataFim', add30min(watchedInicio));
+  }, [watchedInicio]);
+
+  // Detecta se houve mudanças no modo edição
+  useEffect(() => {
+    if (isEdit) setHasChanges(isDirty);
+  }, [isDirty, isEdit]);
+
+  // Detecta conflito de horário
   useEffect(() => {
     if (!watchedInicio || !watchedFim || !watchedDentistaId) { setConflito(null); return; }
     const inicio = new Date(watchedInicio);
     const fim = new Date(watchedFim);
     const conflitante = agendamentosDentista?.content.find((a) => {
-      if (isEditing && a.id === editingId) return false;
+      if (editingId && a.id === editingId) return false;
       if (a.status === 'CANCELADO') return false;
-      const aInicio = new Date(a.dataInicio);
-      const aFim = new Date(a.dataFim);
-      return inicio < aFim && fim > aInicio;
+      return inicio < new Date(a.dataFim) && fim > new Date(a.dataInicio);
     });
-    setConflito(conflitante ? `Conflito com agendamento de ${conflitante.pacienteNome} às ${new Date(conflitante.dataInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : null);
+    setConflito(
+      conflitante
+        ? `Conflito com ${conflitante.pacienteNome} às ${new Date(conflitante.dataInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        : null
+    );
   }, [watchedInicio, watchedFim, watchedDentistaId, agendamentosDentista]);
 
   const onSubmit = async (data: AgendamentoFormData) => {
     try {
-      if (isEditing) {
-        await update.mutateAsync({ dataInicio: data.dataInicio, dataFim: data.dataFim, observacoes: data.observacoes });
-        onSuccess('Agendamento atualizado com sucesso!');
-      } else {
+      if (isNew) {
         await create.mutateAsync(data);
         onSuccess('Agendamento criado com sucesso!');
+      } else {
+        await update.mutateAsync({ dataInicio: data.dataInicio, dataFim: data.dataFim, observacoes: data.observacoes });
+        onSuccess('Agendamento atualizado com sucesso!');
       }
       clearDraft();
     } catch (e: any) {
@@ -126,7 +153,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
     if (!editingId) return;
     try {
       await cancelar.mutateAsync(editingId);
-      onSuccess('Agendamento cancelado com sucesso!');
+      onSuccess('Agendamento cancelado!');
       setConfirmCancel(false);
       clearDraft();
     } catch (e: any) {
@@ -135,6 +162,9 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   };
 
   const loading = create.isPending || update.isPending || atualizarStatus.isPending;
+  const fieldsDisabled = isView || !!isFinalStatus;
+
+  const drawerTitle = isNew ? 'Novo agendamento' : isEdit ? 'Editar agendamento' : 'Agendamento';
 
   return (
     <>
@@ -144,25 +174,31 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
         onClose={clearDraft}
         PaperProps={{ sx: { width: { xs: '100%', sm: 480 }, display: 'flex', flexDirection: 'column' } }}
       >
+        {/* Header */}
         <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CalendarMonthOutlined sx={{ fontSize: 17, color: '#854F0B' }} />
             </Box>
             <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-              {isEditing ? 'Editar agendamento' : 'Novo agendamento'}
+              {drawerTitle}
             </Typography>
           </Box>
-          <IconButton size="small" onClick={clearDraft}><Close sx={{ fontSize: 18 }} /></IconButton>
+          <IconButton size="small" onClick={clearDraft} disabled={loading}>
+            <Close sx={{ fontSize: 18 }} />
+          </IconButton>
         </Box>
 
         <Divider />
 
-        <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
+        {/* Form */}
+        <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}
+          sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
           <Stack spacing={2.5}>
 
-            {conflito && (
-              <Alert severity="warning" icon={<WarningAmberOutlined fontSize="small" />} sx={{ borderRadius: 2, fontSize: '0.8rem' }}>
+            {conflito && !isView && (
+              <Alert severity="warning" icon={<WarningAmberOutlined fontSize="small" />}
+                sx={{ borderRadius: 2, fontSize: '0.8rem' }}>
                 {conflito}
               </Alert>
             )}
@@ -175,7 +211,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
                 getOptionLabel={(o) => o.nome}
                 value={pacientes.find((p) => p.id === field.value) ?? null}
                 onChange={(_, v) => field.onChange(v?.id ?? null)}
-                disabled={isEditing}
+                disabled={fieldsDisabled || !!editingId}
                 renderInput={(params) => (
                   <TextField {...params} label="Paciente *" error={!!errors.pacienteId}
                     helperText={errors.pacienteId?.message} size="small" />
@@ -189,6 +225,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
                 getOptionLabel={(o) => o.nome}
                 value={dentistas.find((d) => d.id === field.value) ?? null}
                 onChange={(_, v) => field.onChange(v?.id ?? null)}
+                disabled={fieldsDisabled}
                 renderInput={(params) => (
                   <TextField {...params} label="Dentista *" error={!!errors.dentistaId}
                     helperText={errors.dentistaId?.message} size="small" />
@@ -203,12 +240,14 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
               <Controller name="dataInicio" control={control} render={({ field }) => (
                 <TextField {...field} label="Início *" type="datetime-local"
                   error={!!errors.dataInicio} helperText={errors.dataInicio?.message}
-                  fullWidth InputLabelProps={{ shrink: true }} size="small" />
+                  fullWidth InputLabelProps={{ shrink: true }} size="small"
+                  disabled={fieldsDisabled} />
               )} />
               <Controller name="dataFim" control={control} render={({ field }) => (
                 <TextField {...field} label="Fim *" type="datetime-local"
                   error={!!errors.dataFim} helperText={errors.dataFim?.message}
-                  fullWidth InputLabelProps={{ shrink: true }} size="small" />
+                  fullWidth InputLabelProps={{ shrink: true }} size="small"
+                  disabled={fieldsDisabled} />
               )} />
             </Stack>
 
@@ -218,31 +257,19 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
             <Controller name="observacoes" control={control} render={({ field }) => (
               <TextField {...field} label="Observações" multiline rows={3} fullWidth
                 inputProps={{ maxLength: 500 }}
-                helperText={`${field.value?.length ?? 0}/500`} size="small" />
+                helperText={`${field.value?.length ?? 0}/500`} size="small"
+                disabled={fieldsDisabled} />
             )} />
 
-            {isEditing && (
+            {/* Status — só no modo visualização */}
+            {isView && draft.status && (
               <>
                 <Divider />
-                <Typography variant="overline" sx={{ color: 'text.disabled' }}>Status</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {STATUS_OPTIONS.map((s) => (
-                    <AgendamentoStatusChip
-                      key={s}
-                      status={s}
-                      size="medium"
-                    />
-                  ))}
-                </Stack>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {STATUS_OPTIONS.map((s) => (
-                    <Button key={s} size="small" variant="outlined"
-                      onClick={() => handleStatusChange(s)}
-                      sx={{ fontSize: '0.75rem', py: 0.5 }}>
-                      {STATUS_LABELS[s]}
-                    </Button>
-                  ))}
-                </Stack>
+                <StatusTransition
+                  statusAtual={draft.status as StatusConsulta}
+                  onStatusChange={handleStatusChange}
+                  loading={atualizarStatus.isPending}
+                />
               </>
             )}
 
@@ -251,21 +278,51 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
 
         <Divider />
 
+        {/* Footer */}
         <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {isEditing ? (
-            <Button size="small" color="error" onClick={() => setConfirmCancel(true)} disabled={loading}>
-              Cancelar agendamento
-            </Button>
-          ) : <Box />}
-          <Stack direction="row" spacing={1.5}>
-            <Button variant="outlined" onClick={clearDraft} disabled={loading}>Fechar</Button>
-            <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>
-              {loading ? 'Salvando...' : isEditing ? 'Salvar' : 'Agendar'}
-            </Button>
+
+          {/* Esquerda */}
+          <Box>
+            {isView && !isFinalStatus && (
+              <Button size="small" color="error" onClick={() => setConfirmCancel(true)} disabled={loading}>
+                Cancelar agendamento
+              </Button>
+            )}
+            {isEdit && (
+              <Button size="small" color="inherit" onClick={() => { reset(); setViewMode(); }}
+                sx={{ color: 'text.secondary' }}>
+                {hasChanges ? 'Cancelar edição' : 'Voltar'}
+              </Button>
+            )}
+          </Box>
+
+          {/* Direita */}
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            {loading && <CircularProgress size={16} />}
+
+            {isView && !isFinalStatus && (
+              <Button variant="outlined" startIcon={<EditOutlined sx={{ fontSize: 16 }} />}
+                onClick={setEditMode} size="small">
+                Editar
+              </Button>
+            )}
+
+            {isNew && (
+              <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>
+                {loading ? 'Salvando...' : 'Agendar'}
+              </Button>
+            )}
+
+            {isEdit && (
+              <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>
+                {loading ? 'Salvando...' : 'Salvar'}
+              </Button>
+            )}
           </Stack>
         </Box>
       </Drawer>
 
+      {/* Confirmar cancelamento */}
       <Dialog open={confirmCancel} onClose={() => setConfirmCancel(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: '1rem', fontWeight: 500 }}>Cancelar agendamento?</DialogTitle>
         <DialogContent>
@@ -275,7 +332,9 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmCancel(false)}>Voltar</Button>
-          <Button variant="contained" color="error" onClick={handleCancelar}>Confirmar cancelamento</Button>
+          <Button variant="contained" color="error" onClick={handleCancelar}>
+            Confirmar cancelamento
+          </Button>
         </DialogActions>
       </Dialog>
     </>

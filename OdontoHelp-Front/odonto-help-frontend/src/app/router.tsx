@@ -12,7 +12,6 @@ import UsuariosPage from '../features/usuarios/pages/UsuariosPage';
 
 
 
-
 const router = createBrowserRouter([
   {
     path: '/',
@@ -22,8 +21,7 @@ const router = createBrowserRouter([
 
       // Usuários (pacientes + dentistas)
       { path: 'usuarios', element: <UsuariosPage /> },
-     // { path: 'usuarios/novo', element: <UsuarioFormPage /> },
-    //  { path: 'usuarios/:id/editar', element: <UsuarioFormPage /> },
+
 
       // Agendamentos
       { path: 'agendamentos', element: <AgendamentosPage /> },

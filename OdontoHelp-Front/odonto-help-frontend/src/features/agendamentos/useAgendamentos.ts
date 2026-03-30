@@ -4,11 +4,12 @@ import type { AgendamentoFormData, AgendamentoPageParams, StatusConsulta } from 
 
 export const AGENDAMENTOS_KEY = 'agendamentos';
 
-export function useAgendamentos(params: AgendamentoPageParams) {
+export function useAgendamentos(params: AgendamentoPageParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [AGENDAMENTOS_KEY, params],
     queryFn: () => agendamentoService.listar(params),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 

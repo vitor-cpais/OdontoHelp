@@ -1,9 +1,9 @@
 package com.OdontoHelpBackend.Mapper;
 
 import com.OdontoHelpBackend.domain.Consulta.Agendamento;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoRequestDTO;
-import com.OdontoHelpBackend.dto.Usuario.Request.Consulta.AgendamentoUpdateDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Agendamento.AgendamentoResponseDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoRequestDTO;
+import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoUpdateDTO;
+import com.OdontoHelpBackend.dto.Consulta.Response.Agendamento.AgendamentoResponseDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

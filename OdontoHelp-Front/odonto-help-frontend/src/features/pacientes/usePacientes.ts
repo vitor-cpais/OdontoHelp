@@ -28,11 +28,26 @@ export function useUpdatePaciente(id: number) {
   });
 }
 
+
+
 export function useToggleAtivoPaciente() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, isAtivo }: { id: number; isAtivo: boolean }) =>
       pacienteService.toggleAtivo(id, isAtivo),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [PACIENTES_KEY] }),
+    onSuccess: (pacienteAtualizado) => {
+      qc.setQueriesData({ queryKey: [PACIENTES_KEY] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          content: old.content.map((d: any) =>
+            d.id === pacienteAtualizado.id ? pacienteAtualizado : d
+          ),
+        };
+      });
+    },
   });
 }
+
+
+

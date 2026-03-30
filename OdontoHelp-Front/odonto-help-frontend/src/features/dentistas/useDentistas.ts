@@ -41,6 +41,16 @@ export function useToggleAtivoDentista() {
   return useMutation({
     mutationFn: ({ id, isAtivo }: { id: number; isAtivo: boolean }) =>
       dentistaService.toggleAtivo(id, isAtivo),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [DENTISTAS_KEY] }),
+    onSuccess: (dentistaAtualizado) => {
+      qc.setQueriesData({ queryKey: [DENTISTAS_KEY] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          content: old.content.map((d: any) =>
+            d.id === dentistaAtualizado.id ? dentistaAtualizado : d
+          ),
+        };
+      });
+    },
   });
 }

@@ -50,10 +50,9 @@ public class PacienteController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> toggleStatus(
+    public ResponseEntity<PacienteResponseDTO> toggleStatus(
             @PathVariable Long id,
             @RequestParam boolean isAtivo) {
-        pacienteService.toggleStatus(id, isAtivo);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(pacienteService.toggleStatus(id, isAtivo));
     }
 }

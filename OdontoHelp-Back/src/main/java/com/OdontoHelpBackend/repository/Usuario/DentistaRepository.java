@@ -14,4 +14,6 @@ public interface DentistaRepository extends JpaRepository<Dentista, Long> {
     Slice<Dentista> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
     Slice<Dentista> findByIsAtivo(Boolean isAtivo, Pageable pageable);
+
+    Long countByIsAtivo(Boolean isAtivo);
 }

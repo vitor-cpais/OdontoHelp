@@ -38,9 +38,10 @@ export const dentistaService = {
     });
     return data;
   },
+  
 
-  toggleAtivo: async (id: number, isAtivo: boolean): Promise<Dentista> => {
-    const { data } = await api.patch(`${BASE}/${id}/status`, { isAtivo });
-    return data;
+    toggleAtivo: async (id: number, isAtivo: boolean): Promise<Dentista> => {
+    const { data } = await api.patch(`${BASE}/${id}/status`, null, { params: { isAtivo } });
+  return data;
   },
 };

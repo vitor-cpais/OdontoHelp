@@ -14,4 +14,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     Slice<Paciente> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
     Slice<Paciente> findByIsAtivo(Boolean isAtivo, Pageable pageable);
+
+    Long countByIsAtivo(Boolean isAtivo);
 }

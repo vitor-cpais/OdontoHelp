@@ -41,3 +41,11 @@ export interface SliceResponse<T> {
   last: boolean;
   hasNext: boolean;
 }
+
+export interface AgendamentoFormData {
+  pacienteId: number | null;
+  dentistaId: number | null;
+  dataInicio: string;
+  dataFim: string;
+  observacoes: string;
+}

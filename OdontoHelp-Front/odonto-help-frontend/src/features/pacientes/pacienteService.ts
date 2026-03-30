@@ -40,7 +40,11 @@ export const pacienteService = {
     return data;
   },
 
-  toggleAtivo: async (id: number, isAtivo: boolean): Promise<void> => {
-    await api.patch(`${BASE}/${id}/status`, null, { params: { isAtivo } });
+
+  toggleAtivo: async (id: number, isAtivo: boolean): Promise<Paciente> => {
+    const { data } = await api.patch(`${BASE}/${id}/status`, null, { params: { isAtivo } });
+  return data;
   },
+
+
 };

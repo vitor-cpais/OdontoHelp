@@ -60,10 +60,12 @@ public class DentistaService {
                 .orElseThrow(() -> new NotFoundException("Dentista não encontrado"));
     }
 
-    public void toggleStatus(Long id, boolean isAtivo) {
+
+
+    public DentistaResponseDTO toggleStatus(Long id, boolean isAtivo) {
         Dentista dentista = buscarEntidadePorId(id);
         dentista.setIsAtivo(isAtivo);
-        dentistaRepository.save(dentista);
+        return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
 }
