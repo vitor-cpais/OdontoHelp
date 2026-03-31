@@ -4,11 +4,12 @@ import type { PacienteFormData, PacientePageParams } from './types';
 
 export const PACIENTES_KEY = 'pacientes';
 
-export function usePacientes(params: PacientePageParams) {
+export function usePacientes(params: PacientePageParams, options?: { staleTime?: number }) {
   return useQuery({
     queryKey: [PACIENTES_KEY, params],
     queryFn: () => pacienteService.listar(params),
     placeholderData: (prev) => prev,
+    staleTime: options?.staleTime,
   });
 }
 

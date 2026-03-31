@@ -57,8 +57,14 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const atualizarStatus = useAtualizarStatus();
   const cancelar = useCancelarAgendamento();
 
-  const { data: dentistasData } = useDentistas({ page: 0, size: 100, isAtivo: true });
-  const { data: pacientesData } = usePacientes({ page: 0, size: 100, isAtivo: true });
+  const { data: dentistasData } = useDentistas(
+  { page: 0, size: 100, isAtivo: true },
+  { staleTime: 0 }
+  );
+  const { data: pacientesData } = usePacientes(
+  { page: 0, size: 100, isAtivo: true },
+  { staleTime: 0 }
+  );
   const dentistas = dentistasData?.content ?? [];
   const pacientes = pacientesData?.content ?? [];
 

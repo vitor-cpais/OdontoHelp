@@ -18,12 +18,8 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     boolean existsByPacienteIdAndStatusIn(Long pacienteId, List<StatusConsulta> statuses);
     boolean existsByDentistaIdAndStatusIn(Long dentistaId, List<StatusConsulta> statuses);
 
-
     Slice<Agendamento> findByPacienteId(Long pacienteId, Pageable pageable);
-
     Slice<Agendamento> findByDentistaId(Long dentistaId, Pageable pageable);
-
-
     Slice<Agendamento> findByStatus(StatusConsulta status, Pageable pageable);
 
     boolean existsByDentistaIdAndStatusNotAndDataInicioLessThanAndDataFimGreaterThan(
@@ -33,20 +29,29 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataInicio
     );
 
-    @Query("""
-                SELECT a FROM Agendamento a
-                WHERE (:dataInicio IS NULL OR a.dataInicio >= :dataInicio)
-                AND (:dataFim IS NULL OR a.dataFim <= :dataFim)
-                AND (:status IS NULL OR a.status = :status)
-                AND (:dentistaId IS NULL OR a.dentista.id = :dentistaId)
-                AND (:pacienteId IS NULL OR a.paciente.id = :pacienteId)
-            """)
+    @Query(value = """
+            SELECT * FROM tb_agendamento a
+            WHERE (CAST(:dataInicio AS timestamp) IS NULL OR a.data_inicio >= CAST(:dataInicio AS timestamp))
+            AND (CAST(:dataFim AS timestamp) IS NULL OR a.data_fim <= CAST(:dataFim AS timestamp))
+            AND (CAST(:status AS text) IS NULL OR a.status = CAST(:status AS text))
+            AND (CAST(:dentistaId AS bigint) IS NULL OR a.dentista_id = CAST(:dentistaId AS bigint))
+            AND (CAST(:pacienteId AS bigint) IS NULL OR a.paciente_id = CAST(:pacienteId AS bigint))
+        """,
+            countQuery = """
+            SELECT COUNT(*) FROM tb_agendamento a
+            WHERE (CAST(:dataInicio AS timestamp) IS NULL OR a.data_inicio >= CAST(:dataInicio AS timestamp))
+            AND (CAST(:dataFim AS timestamp) IS NULL OR a.data_fim <= CAST(:dataFim AS timestamp))
+            AND (CAST(:status AS text) IS NULL OR a.status = CAST(:status AS text))
+            AND (CAST(:dentistaId AS bigint) IS NULL OR a.dentista_id = CAST(:dentistaId AS bigint))
+            AND (CAST(:pacienteId AS bigint) IS NULL OR a.paciente_id = CAST(:pacienteId AS bigint))
+        """,
+            nativeQuery = true)
     Slice<Agendamento> filtrar(
             @Param("dataInicio") LocalDateTime dataInicio,
             @Param("dataFim") LocalDateTime dataFim,
-            @Param("status") StatusConsulta status,
-            @Param("dentistaId") Long dentistaId,
+            @Param("status") String status,
             @Param("pacienteId") Long pacienteId,
+            @Param("dentistaId") Long dentistaId,
             Pageable pageable
     );
 
@@ -68,5 +73,4 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
-
 }

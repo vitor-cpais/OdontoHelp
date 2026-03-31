@@ -4,11 +4,12 @@ import type { DentistaFormData, DentistaPageParams } from './types';
 
 export const DENTISTAS_KEY = 'dentistas';
 
-export function useDentistas(params: DentistaPageParams) {
+export function useDentistas(params: DentistaPageParams, options?: { staleTime?: number }) {
   return useQuery({
     queryKey: [DENTISTAS_KEY, params],
     queryFn: () => dentistaService.listar(params),
     placeholderData: (prev) => prev,
+    staleTime: options?.staleTime,
   });
 }
 
