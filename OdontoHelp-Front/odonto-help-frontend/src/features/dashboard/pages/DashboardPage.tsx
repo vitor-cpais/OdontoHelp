@@ -10,11 +10,11 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { useDashboardResumo, useAgendamentosPorStatus,useProximosHoje } from './useDashboard';
-import { STATUS_COLORS, STATUS_LABELS } from '../agendamentos/types';
-import type { StatusConsulta } from '../agendamentos/types';
-import { useAgendamentoDrawerStore } from '../agendamentos/agendamentoStore';
-import AgendamentoStatusChip from '../agendamentos/AgendamentoStatusChip';
+import { useDashboardResumo, useAgendamentosPorStatus,useProximosHoje } from '../useDashboard';
+import { STATUS_COLORS, STATUS_LABELS } from '../../agendamentos/types';
+import type { StatusConsulta } from '../../agendamentos/types';
+import { useAgendamentoDrawerStore } from '../../agendamentos/agendamentoStore';
+import AgendamentoStatusChip from '../../agendamentos/AgendamentoStatusChip';
 
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 

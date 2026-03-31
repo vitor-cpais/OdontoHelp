@@ -1,15 +1,13 @@
 package com.OdontoHelpBackend.service.Usuario;
 
-import com.OdontoHelpBackend.Mapper.DentistaMapper;
 import com.OdontoHelpBackend.Mapper.PacienteMapper;
-import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.PacienteRepository;
+import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -22,6 +20,7 @@ public class PacienteService {
     private final PacienteRepository pacienteRepository;
     private final UsuarioService usuarioService;
     private final PacienteMapper pacienteMapper;
+    private final ValidacoesService validacoesService;
 
     public PacienteResponseDTO buscarPorId(Long id) {
         Paciente paciente = buscarEntidadePorId(id);
@@ -53,11 +52,6 @@ public class PacienteService {
         return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 
-    public void desativar(Long id) {
-        Paciente paciente = buscarEntidadePorId(id);
-        paciente.setIsAtivo(false);
-        pacienteRepository.save(paciente);
-    }
 
     public Paciente buscarEntidadePorId(Long id) {
         return pacienteRepository.findById(id)
@@ -66,10 +60,15 @@ public class PacienteService {
 
 
     public PacienteResponseDTO toggleStatus(Long id, boolean isAtivo) {
+        // Só valida se o novo status for 'false' (inativar)
+        if (!isAtivo) {
+            validacoesService.validarInativacaoUsuario(id);
+        }
+
         Paciente paciente = buscarEntidadePorId(id);
         paciente.setIsAtivo(isAtivo);
-        return pacienteMapper.toResponse((pacienteRepository.save(paciente)));
 
+        return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 }
 

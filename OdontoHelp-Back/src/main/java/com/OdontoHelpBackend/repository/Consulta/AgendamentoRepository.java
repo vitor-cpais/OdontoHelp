@@ -15,9 +15,14 @@ import java.util.List;
 @Repository
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
 
+    boolean existsByPacienteIdAndStatusIn(Long pacienteId, List<StatusConsulta> statuses);
+    boolean existsByDentistaIdAndStatusIn(Long dentistaId, List<StatusConsulta> statuses);
+
+
     Slice<Agendamento> findByPacienteId(Long pacienteId, Pageable pageable);
 
     Slice<Agendamento> findByDentistaId(Long dentistaId, Pageable pageable);
+
 
     Slice<Agendamento> findByStatus(StatusConsulta status, Pageable pageable);
 

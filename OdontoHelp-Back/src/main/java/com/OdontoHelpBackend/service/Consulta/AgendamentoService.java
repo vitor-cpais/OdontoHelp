@@ -5,6 +5,7 @@ import com.OdontoHelpBackend.domain.Consulta.Agendamento;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoRequestDTO;
 import com.OdontoHelpBackend.dto.Consulta.Request.Agendamento.AgendamentoUpdateDTO;
 import com.OdontoHelpBackend.dto.Consulta.Response.Agendamento.AgendamentoResponseDTO;
@@ -12,6 +13,7 @@ import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Consulta.AgendamentoRepository;
+import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
 import com.OdontoHelpBackend.service.Usuario.DentistaService;
 import com.OdontoHelpBackend.service.Usuario.PacienteService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,8 @@ public class AgendamentoService {
     private final PacienteService pacienteService;
     private final DentistaService dentistaService;
     private final AgendamentoMapper agendamentoMapper;
+
+
 
     public AgendamentoResponseDTO buscarPorId(Long id) {
         return agendamentoMapper.toResponse(buscarEntidadePorId(id));
@@ -115,5 +120,7 @@ public class AgendamentoService {
         return agendamentoRepository.filtrar(dataInicio, dataFim, status, dentistaId, pacienteId, pageable)
                 .map(agendamentoMapper::toResponse);
     }
+
+
 
 }

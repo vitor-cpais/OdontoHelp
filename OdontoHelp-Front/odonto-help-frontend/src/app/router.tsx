@@ -5,7 +5,7 @@ import AppShell from '../shared/components/AppShell';
 
 
 import AgendamentosPage from '../features/agendamentos/pages/AgendamentosPage';
-import DashboardPage from '../features/dashboard/DashboardPage';
+import DashboardPage from '../features/dashboard/pages/DashboardPage';
 import DentistasPage from '../features/dentistas/pages/DentistasPage';
 import PacientesPage from '../features/pacientes/pages/PacientesPage';
 import UsuariosPage from '../features/usuarios/pages/UsuariosPage';

@@ -2,11 +2,14 @@ package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.DentistaMapper;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
+import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
+import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ public class DentistaService {
     private final DentistaRepository dentistaRepository;
     private final UsuarioService usuarioService;
     private final DentistaMapper dentistaMapper;
+    private final ValidacoesService validacoesService;
 
     public DentistaResponseDTO buscarPorId(Long id) {
         Dentista dentista = buscarEntidadePorId(id);
@@ -62,9 +66,16 @@ public class DentistaService {
 
 
 
+
     public DentistaResponseDTO toggleStatus(Long id, boolean isAtivo) {
+        // Só valida se o novo status for 'false' (inativar)
+        if (!isAtivo) {
+            validacoesService.validarInativacaoUsuario(id);
+        }
+
         Dentista dentista = buscarEntidadePorId(id);
         dentista.setIsAtivo(isAtivo);
+
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
