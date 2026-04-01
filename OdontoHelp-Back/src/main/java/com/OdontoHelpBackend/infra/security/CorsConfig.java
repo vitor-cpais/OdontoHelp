@@ -10,7 +10,14 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:5173", "https://odonto-help.vercel.app") // Portas do angular e do react
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH");
+                .allowedOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:4200",
+                        "http://localhost:5173",
+                        "https://odonto-help.vercel.app" // Sem a barra "/" no final!
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }
