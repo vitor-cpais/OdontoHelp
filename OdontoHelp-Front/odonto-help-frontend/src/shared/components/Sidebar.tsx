@@ -1,4 +1,4 @@
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Drawer, useMediaQuery, useTheme } from '@mui/material';
 import {
   CalendarMonthOutlined,
   PeopleOutlined,
@@ -24,28 +24,21 @@ const navItems: NavItem[] = [
   { label: 'Usuários', icon: <PersonOutlined sx={{ fontSize: 18 }} />, path: '/usuarios' },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  
+  // Detecta se é Tablet/Mobile (abaixo de 1200px o iPad Pro já começa a sofrer)
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
-  return (
-    <Box
-      component="nav"
-      sx={{
-        width: SIDEBAR_WIDTH,
-        flexShrink: 0,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.paper',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 100,
-      }}
-    >
+  const SidebarContent = (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Logo */}
       <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', gap: 1.25, height: 56 }}>
         <Box
@@ -71,7 +64,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <Box sx={{ flex: 1, py: 1.5, overflowY: 'auto' }}>
-        <Typography variant="overline" sx={{ px: 2.5, mb: 0.5, display: 'block', color: 'text.disabled' }}>
+        <Typography variant="overline" sx={{ px: 2.5, mb: 0.5, display: 'block', color: 'text.disabled', lineHeight: 1 }}>
           Menu
         </Typography>
         <List dense disablePadding>
@@ -81,11 +74,14 @@ export default function Sidebar() {
             return (
               <ListItem key={item.path} disablePadding sx={{ px: 1.5, mb: 0.25 }}>
                 <ListItemButton
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile && onClose) onClose(); // Fecha ao clicar no iPad
+                  }}
                   selected={active}
                   sx={{
                     borderRadius: 1.5,
-                    py: 0.85,
+                    py: 1.1, // Aumentado levemente para facilitar o toque no iPad
                     px: 1.25,
                     color: active ? 'primary.main' : 'text.secondary',
                     '&.Mui-selected': {
@@ -101,7 +97,7 @@ export default function Sidebar() {
                   </ListItemIcon>
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: active ? 500 : 400 }}
+                    primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: active ? 600 : 400 }}
                   />
                 </ListItemButton>
               </ListItem>
@@ -110,13 +106,48 @@ export default function Sidebar() {
         </List>
       </Box>
 
-      {/* Footer */}
       <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          v1.0.0 • OdontoHelp © 2026
+          v0.2.5 • OdontoHelp © 2026
         </Typography>
       </Box>
+    </Box>
+  );
+
+  return (
+    <Box component="nav" sx={{ width: { lg: SIDEBAR_WIDTH }, flexShrink: { lg: 0 } }}>
+      {/* Versão MOBILE/IPAD: Temporária */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onClose}
+        ModalProps={{ keepMounted: true }} // Melhor performance ao abrir
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: SIDEBAR_WIDTH },
+        }}
+      >
+        {SidebarContent}
+      </Drawer>
+
+      {/* Versão DESKTOP: Fixa */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', lg: 'block' },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: SIDEBAR_WIDTH,
+            borderRight: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+          },
+        }}
+        open
+      >
+        {SidebarContent}
+      </Drawer>
     </Box>
   );
 }

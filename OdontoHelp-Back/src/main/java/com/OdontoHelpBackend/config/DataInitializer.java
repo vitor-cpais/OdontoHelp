@@ -16,7 +16,161 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
+
+
+
+
+import com.OdontoHelpBackend.domain.usuario.Dentista;
+import com.OdontoHelpBackend.domain.usuario.Endereco;
+import com.OdontoHelpBackend.domain.usuario.Paciente;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
+import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
+import com.OdontoHelpBackend.repository.Usuario.EnderecoRepository;
+import com.OdontoHelpBackend.repository.Usuario.PacienteRepository;
+import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.util.Random;
+
 @Component
+@RequiredArgsConstructor
+public class DataInitializer implements ApplicationRunner {
+
+    private final UsuarioRepository usuarioRepository;
+    private final DentistaRepository dentistaRepository;
+    private final PacienteRepository pacienteRepository;
+    private final EnderecoRepository enderecoRepository;
+    private final Random random = new Random();
+
+    @Override
+    public void run(ApplicationArguments args) {
+        if (usuarioRepository.count() == 0) {
+            criarAdmin();
+            criarRecepcionista();
+            criarDentistas(15);
+            criarPacientes(31);
+            System.out.println("✅ Base de dados inicializada com sucesso!");
+        }
+    }
+
+    private void criarAdmin() {
+        Usuario admin = new Usuario();
+        admin.setNome("Administrador Sistema");
+        admin.setEmail("admin@odonto.com");
+        admin.setSenha("admin123");
+        admin.setCpf(gerarCpfValido());
+        admin.setTelefone("(11) 99999-0000");
+        admin.setPerfil(PerfilUsuario.ADMIN);
+        admin.setGenero("M");
+        admin.setDataNascimento(LocalDate.of(1980, 1, 15));
+        admin.setIsAtivo(true);
+        criarEndereco(usuarioRepository.save(admin));
+    }
+
+    private void criarRecepcionista() {
+        Usuario recep = new Usuario();
+        recep.setNome("Recepcionista Padrão");
+        recep.setEmail("recepcao@odonto.com");
+        recep.setSenha("recepcao123");
+        recep.setCpf(gerarCpfValido());
+        recep.setTelefone("(11) 99999-0001");
+        recep.setPerfil(PerfilUsuario.RECEPCAO);
+        recep.setGenero("F");
+        recep.setDataNascimento(LocalDate.of(1990, 5, 20));
+        recep.setIsAtivo(true);
+        criarEndereco(usuarioRepository.save(recep));
+    }
+
+    private void criarDentistas(int quantidade) {
+        String[] nomes = {"Ricardo", "Beatriz", "Marcos", "Helena", "Tiago", "Sérgio", "Larissa", "Roberto", "Cláudia", "André", "Fernanda", "Juliana", "Fábio", "Patrícia", "Gustavo"};
+        String[] sobrenomes = {"Oliveira", "Costa", "Santos", "Melo", "Barbosa", "Teixeira", "Gomes", "Almeida", "Rodrigues"};
+
+        for (int i = 0; i < quantidade; i++) {
+            Dentista d = new Dentista();
+            String nomeFull = "Dr(a). " + nomes[i % nomes.length] + " " + sobrenomes[random.nextInt(sobrenomes.length)];
+
+            d.setNome(nomeFull);
+            d.setEmail("dentista" + (i + 1) + "@odonto.com");
+            d.setSenha("dentista123");
+            d.setCpf(gerarCpfValido());
+            d.setTelefone("(11) 98000-" + String.format("%04d", i));
+            d.setPerfil(PerfilUsuario.DENTISTA);
+            d.setGenero(i % 2 == 0 ? "F" : "M");
+            d.setDataNascimento(LocalDate.of(1975 + (i % 20), 6, 15));
+            d.setIsAtivo(true);
+            d.setCro("SP-" + (10000 + i));
+
+            criarEndereco(dentistaRepository.save(d));
+        }
+    }
+
+    private void criarPacientes(int quantidade) {
+        String[] nomes = {"Bruno", "Camila", "Daniel", "Elaine", "Fábio", "Gisele", "Hugo", "Isabela", "Jorge", "Karina", "Lucas", "Mariana", "Nivaldo", "Otávio", "Priscila"};
+        String[] sobrenomes = {"Silva", "Pereira", "Alves", "Ribeiro", "Martins", "Carvalho", "Lopes", "Ferreira", "Souza"};
+
+        for (int i = 0; i < quantidade; i++) {
+            Paciente p = new Paciente();
+            String nomeFull = nomes[i % nomes.length] + " " + sobrenomes[random.nextInt(sobrenomes.length)];
+
+            p.setNome(nomeFull);
+            p.setEmail("paciente" + (i + 1) + "@email.com");
+            p.setSenha("paciente123");
+            p.setCpf(gerarCpfValido());
+            p.setTelefone("(11) 97000-" + String.format("%04d", i));
+            p.setPerfil(PerfilUsuario.PACIENTE);
+            p.setGenero(i % 2 == 0 ? "F" : "M");
+            p.setDataNascimento(LocalDate.of(1985 + (i % 25), 3, 10));
+            p.setIsAtivo(true);
+            p.setObservacoesMedicas(i % 7 == 0 ? "Hipertenso e alérgico" : "Sem observações");
+
+            criarEndereco(pacienteRepository.save(p));
+        }
+    }
+
+    private void criarEndereco(Usuario usuario) {
+        Endereco endereco = new Endereco();
+        endereco.setUsuario(usuario);
+        endereco.setRua("Avenida Principal");
+        endereco.setNumero(String.valueOf(100 + random.nextInt(900)));
+        endereco.setBairro("Centro");
+        endereco.setCidade("São Paulo");
+        endereco.setUf("SP");
+        endereco.setCep("01310100");
+        endereco.setIsPrincipal(true);
+        enderecoRepository.save(endereco);
+    }
+
+    private String gerarCpfValido() {
+        int n = 9;
+        int n1 = random.nextInt(n);
+        int n2 = random.nextInt(n);
+        int n3 = random.nextInt(n);
+        int n4 = random.nextInt(n);
+        int n5 = random.nextInt(n);
+        int n6 = random.nextInt(n);
+        int n7 = random.nextInt(n);
+        int n8 = random.nextInt(n);
+        int n9 = random.nextInt(n);
+
+        int d1 = n9 * 2 + n8 * 3 + n7 * 4 + n6 * 5 + n5 * 6 + n4 * 7 + n3 * 8 + n2 * 9 + n1 * 10;
+        d1 = 11 - (d1 % 11);
+        if (d1 >= 10) d1 = 0;
+
+        int d2 = d1 * 2 + n9 * 3 + n8 * 4 + n7 * 5 + n6 * 6 + n5 * 7 + n4 * 8 + n3 * 9 + n2 * 10 + n1 * 11;
+        d2 = 11 - (d2 % 11);
+        if (d2 >= 10) d2 = 0;
+
+        return String.format("%d%d%d%d%d%d%d%d%d%d%d", n1, n2, n3, n4, n5, n6, n7, n8, n9, d1, d2);
+    }
+}
+
+
+/*@Component
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
@@ -183,4 +337,4 @@ public class DataInitializer implements ApplicationRunner {
         endereco.setIsPrincipal(true);
         enderecoRepository.save(endereco);
     }
-}
+}*/
