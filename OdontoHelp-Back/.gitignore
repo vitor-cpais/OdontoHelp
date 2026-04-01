@@ -1,0 +1,23 @@
+# Compilação e Build
+target/
+*.jar
+*.war
+*.ear
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+gen/
+
+# Logs e arquivos temporários
+*.log
+temp/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Configurações Locais (NUNCA suba o application-dev.properties se tiver senhas)
+# Se você quiser ignorar o arquivo com a senha do Neon no seu PC:
+# application-dev.properties
