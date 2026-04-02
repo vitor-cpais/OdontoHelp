@@ -1,6 +1,5 @@
 package com.OdontoHelpBackend.domain.Consulta.enums;
 
-import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +14,7 @@ public enum StatusConsulta {
     CONFIRMADO("Paciente confirmou o comparecimento"),
     CONCLUIDO("Atendimento finalizado com sucesso"),
     CANCELADO("Agendamento cancelado"),
-    FALTOU("Paciente não compareceu ao horário");
+    FALTA("Paciente não compareceu ao horário");
 
     private final String descricao;
 }

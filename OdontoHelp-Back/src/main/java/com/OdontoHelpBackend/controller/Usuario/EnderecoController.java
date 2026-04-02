@@ -1,6 +1,6 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
-import com.OdontoHelpBackend.domain.usuario.Endereco;
+
 import com.OdontoHelpBackend.dto.Usuario.Request.Endereco.EnderecoRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Endereco.EnderecoUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Endereco.EnderecoResponseDTO;
@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
-import java.util.List;
+
 
 @RestController
 @RequestMapping("/usuarios/{usuarioId}/enderecos")
@@ -20,8 +20,9 @@ public class EnderecoController {
     private final EnderecoService enderecoService;
 
     @GetMapping
-    public ResponseEntity<List<EnderecoResponseDTO>> listar(@PathVariable Long usuarioId) {
-        return ResponseEntity.ok(enderecoService.listarPorUsuario(usuarioId));
+    public ResponseEntity<EnderecoResponseDTO> buscar(@PathVariable Long usuarioId) {
+        // Alterado de List para EnderecoResponseDTO único
+        return ResponseEntity.ok(enderecoService.buscarPorUsuario(usuarioId));
     }
 
     @PostMapping
@@ -41,13 +42,6 @@ public class EnderecoController {
         return ResponseEntity.ok(enderecoService.atualizar(usuarioId, enderecoId, dto));
     }
 
-    @PatchMapping("/{enderecoId}/principal")
-    public ResponseEntity<EnderecoResponseDTO> definirPrincipal(
-            @PathVariable Long usuarioId,
-            @PathVariable Long enderecoId) {
-        return ResponseEntity.ok(enderecoService.definirPrincipal(usuarioId, enderecoId));
-    }
-
     @DeleteMapping("/{enderecoId}")
     public ResponseEntity<Void> deletar(
             @PathVariable Long usuarioId,
@@ -56,3 +50,4 @@ public class EnderecoController {
         return ResponseEntity.noContent().build();
     }
 }
+

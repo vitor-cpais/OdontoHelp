@@ -11,9 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Importação correta
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true) // Por padrão, tudo é apenas leitura (mais rápido)
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
@@ -34,6 +36,7 @@ public class UsuarioService {
         return usuarios.map(usuarioMapper::toResponse);
     }
 
+    @Transactional
     public void desativar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
@@ -41,20 +44,30 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
     }
 
+    @Transactional
+    public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dto) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+
+        usuarioMapper.updateEntity(dto, usuario);
+
+        // Vínculo bidirecional necessário para o Cascade
+        if (usuario.getEndereco() != null) {
+            usuario.getEndereco().setUsuario(usuario);
+        }
+
+        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+    }
+
     protected void validarCpfDuplicado(String cpf) {
-        if (usuarioRepository.existsByCpf(cpf))
+        // Garante que o CPF chegue liso para a consulta no banco
+        String cpfLimpo = (cpf != null) ? cpf.replaceAll("\\D", "") : null;
+        if (usuarioRepository.existsByCpf(cpfLimpo))
             throw new ConflictException("CPF já cadastrado");
     }
 
     protected void validarEmailDuplicado(String email) {
         if (usuarioRepository.existsByEmail(email))
             throw new ConflictException("E-mail já cadastrado");
-    }
-
-    public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dto) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-        usuarioMapper.updateEntity(dto, usuario);
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
 }

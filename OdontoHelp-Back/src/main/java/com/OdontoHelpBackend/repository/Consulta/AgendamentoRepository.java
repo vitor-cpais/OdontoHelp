@@ -29,29 +29,25 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataInicio
     );
 
-    @Query(value = """
-            SELECT * FROM tb_agendamento a
-            WHERE (CAST(:dataInicio AS timestamp) IS NULL OR a.data_inicio >= CAST(:dataInicio AS timestamp))
-            AND (CAST(:dataFim AS timestamp) IS NULL OR a.data_fim <= CAST(:dataFim AS timestamp))
-            AND (CAST(:status AS text) IS NULL OR a.status = CAST(:status AS text))
-            AND (CAST(:dentistaId AS bigint) IS NULL OR a.dentista_id = CAST(:dentistaId AS bigint))
-            AND (CAST(:pacienteId AS bigint) IS NULL OR a.paciente_id = CAST(:pacienteId AS bigint))
-        """,
-            countQuery = """
-            SELECT COUNT(*) FROM tb_agendamento a
-            WHERE (CAST(:dataInicio AS timestamp) IS NULL OR a.data_inicio >= CAST(:dataInicio AS timestamp))
-            AND (CAST(:dataFim AS timestamp) IS NULL OR a.data_fim <= CAST(:dataFim AS timestamp))
-            AND (CAST(:status AS text) IS NULL OR a.status = CAST(:status AS text))
-            AND (CAST(:dentistaId AS bigint) IS NULL OR a.dentista_id = CAST(:dentistaId AS bigint))
-            AND (CAST(:pacienteId AS bigint) IS NULL OR a.paciente_id = CAST(:pacienteId AS bigint))
-        """,
-            nativeQuery = true)
+    @Query("""
+    SELECT a FROM Agendamento a
+    JOIN a.paciente p
+    JOIN a.dentista d
+    WHERE (:dataInicio IS NULL OR a.dataInicio >= :dataInicio)
+    AND (:dataFim IS NULL OR a.dataFim <= :dataFim)
+    AND (:status IS NULL OR a.status = :status)
+    AND (:dentistaId IS NULL OR d.id = :dentistaId)
+    AND (:pacienteId IS NULL OR p.id = :pacienteId)
+    AND (:nome IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))
+        OR LOWER(d.nome) LIKE LOWER(CONCAT('%', :nome, '%')))
+""")
     Slice<Agendamento> filtrar(
             @Param("dataInicio") LocalDateTime dataInicio,
             @Param("dataFim") LocalDateTime dataFim,
-            @Param("status") String status,
-            @Param("pacienteId") Long pacienteId,
+            @Param("status") StatusConsulta status,
             @Param("dentistaId") Long dentistaId,
+            @Param("pacienteId") Long pacienteId,
+            @Param("nome") String nome,
             Pageable pageable
     );
 

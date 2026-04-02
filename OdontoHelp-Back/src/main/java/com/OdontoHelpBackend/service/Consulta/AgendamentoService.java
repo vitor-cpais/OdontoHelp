@@ -113,8 +113,9 @@ public class AgendamentoService {
             StatusConsulta status,
             Long dentistaId,
             Long pacienteId,
+            String nome,
             Pageable pageable) {
-        return agendamentoRepository.filtrar(dataInicio, dataFim, status != null ? status.name() : null, dentistaId, pacienteId, pageable)
+        return agendamentoRepository.filtrar(dataInicio, dataFim, status, dentistaId, pacienteId, nome, pageable)
                 .map(agendamentoMapper::toResponse);
     }
 

@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @RestController
@@ -72,12 +73,16 @@ public class AgendamentoController {
 
     @GetMapping
     public ResponseEntity<Slice<AgendamentoResponseDTO>> filtrar(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate dataFim,
             @RequestParam(required = false) StatusConsulta status,
             @RequestParam(required = false) Long dentistaId,
             @RequestParam(required = false) Long pacienteId,
+            @RequestParam(required = false) String nome,
             Pageable pageable) {
-        return ResponseEntity.ok(agendamentoService.filtrar(dataInicio, dataFim, status, dentistaId, pacienteId, pageable));
+        return ResponseEntity.ok(agendamentoService.filtrar(
+                dataInicio != null ? dataInicio.atStartOfDay() : null,
+                dataFim != null ? dataFim.atTime(23, 59, 59) : null,
+                status, dentistaId, pacienteId, nome, pageable));
     }
 }

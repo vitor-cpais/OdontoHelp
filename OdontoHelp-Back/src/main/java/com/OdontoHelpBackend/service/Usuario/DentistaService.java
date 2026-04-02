@@ -2,20 +2,20 @@ package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.DentistaMapper;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
-import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
 import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Importação essencial
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DentistaService {
 
     private final DentistaRepository dentistaRepository;
@@ -39,20 +39,32 @@ public class DentistaService {
                 .map(dentistaMapper::toResponse);
     }
 
+    @Transactional
     public DentistaResponseDTO criar(DentistaRequestDTO dto) {
         usuarioService.validarCpfDuplicado(dto.cpf());
         usuarioService.validarEmailDuplicado(dto.email());
         Dentista dentista = dentistaMapper.toEntity(dto);
         dentista.setIsAtivo(true);
+        if (dentista.getEndereco() != null) {
+            dentista.getEndereco().setUsuario(dentista);
+        }
+
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
+    @Transactional
     public DentistaResponseDTO atualizar(Long id, DentistaUpdateDTO dto) {
         Dentista dentista = buscarEntidadePorId(id);
         dentistaMapper.updateEntity(dto, dentista);
+
+        if (dentista.getEndereco() != null) {
+            dentista.getEndereco().setUsuario(dentista);
+        }
+
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
+    @Transactional
     public void desativar(Long id) {
         Dentista dentista = buscarEntidadePorId(id);
         dentista.setIsAtivo(false);
@@ -64,11 +76,8 @@ public class DentistaService {
                 .orElseThrow(() -> new NotFoundException("Dentista não encontrado"));
     }
 
-
-
-
+    @Transactional
     public DentistaResponseDTO toggleStatus(Long id, boolean isAtivo) {
-        // Só valida se o novo status for 'false' (inativar)
         if (!isAtivo) {
             validacoesService.validarInativacaoUsuario(id);
         }
@@ -78,5 +87,4 @@ public class DentistaService {
 
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
-
 }

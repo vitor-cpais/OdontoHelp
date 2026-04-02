@@ -17,9 +17,13 @@ public interface EnderecoMapper {
 
     EnderecoResponseDTO toResponse(Endereco endereco);
 
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "usuario", ignore = true)
-    @Mapping(target = "isPrincipal", ignore = true)
-    void updateEntity(EnderecoUpdateDTO dto,
-                      @MappingTarget Endereco endereco);
+    void updateEntity(EnderecoRequestDTO dto, @MappingTarget Endereco endereco);
+
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "usuario", ignore = true)
+    void updateEntity(EnderecoUpdateDTO dto, @MappingTarget Endereco endereco);
 }

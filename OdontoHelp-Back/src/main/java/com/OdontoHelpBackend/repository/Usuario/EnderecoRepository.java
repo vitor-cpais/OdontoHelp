@@ -11,5 +11,4 @@ public interface EnderecoRepository extends JpaRepository<Endereco, Long> {
 
     List<Endereco> findByUsuarioId(Long usuarioId);
 
-    boolean existsByUsuarioIdAndIsPrincipal(Long usuarioId, Boolean isPrincipal);
 }

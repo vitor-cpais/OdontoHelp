@@ -1,35 +1,40 @@
 package com.OdontoHelpBackend.domain.usuario;
 
 import jakarta.persistence.*;
-
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(name = "TB_ENDERECO")
-@Getter @Setter @NoArgsConstructor
 public class Endereco {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "usuario_id", nullable = false)
+
+    @OneToOne
+    @JoinColumn(name = "usuario_id", nullable = true, unique = true)
     private Usuario usuario;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String rua;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10)
     private String numero;
 
+    @Column(length = 50)
     private String complemento;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String bairro;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String cidade;
 
     @Column(nullable = false, length = 2)
@@ -38,6 +43,16 @@ public class Endereco {
     @Column(nullable = false, length = 8)
     private String cep;
 
-    @Column(nullable = false)
-    private Boolean isPrincipal = false;
+
+    @PrePersist
+    @PreUpdate
+    private void prepararEndereco() {
+        if (this.cep != null) this.cep = this.cep.replaceAll("\\D", "");
+        if (this.rua != null) this.rua = this.rua.trim().toUpperCase();
+        if (this.bairro != null) this.bairro = this.bairro.trim().toUpperCase();
+        if (this.cidade != null) this.cidade = this.cidade.trim().toUpperCase();
+        if (this.uf != null) this.uf = this.uf.trim().toUpperCase();
+        if (this.complemento != null) this.complemento = this.complemento.trim().toUpperCase();
+    }
 }
+
