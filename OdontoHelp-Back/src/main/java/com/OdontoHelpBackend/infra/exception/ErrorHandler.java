@@ -43,4 +43,12 @@ public class ErrorHandler {
                         f -> f.getDefaultMessage() != null ? f.getDefaultMessage() : "Campo inválido"
                 ));
     }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Map<String, String> handleInvalidToken(InvalidTokenException ex) {
+        return Map.of("erro", ex.getMessage());
+    }
+
+
 }

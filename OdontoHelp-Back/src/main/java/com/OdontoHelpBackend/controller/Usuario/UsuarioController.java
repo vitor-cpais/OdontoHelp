@@ -2,6 +2,7 @@ package com.OdontoHelpBackend.controller.Usuario;
 
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
 import com.OdontoHelpBackend.service.Usuario.UsuarioService;
 import jakarta.validation.Valid;
@@ -38,9 +39,13 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.atualizar(id, dto));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desativar(@PathVariable Long id) {
-        usuarioService.desativar(id);
-        return ResponseEntity.noContent().build();
+
+
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<UsuarioResponseDTO> toggleStatus(
+            @PathVariable Long id,
+            @RequestParam boolean isAtivo) {
+        return ResponseEntity.ok(usuarioService.toggleStatus(id, isAtivo));
     }
 }

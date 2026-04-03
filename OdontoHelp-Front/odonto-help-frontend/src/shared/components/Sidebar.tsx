@@ -1,27 +1,69 @@
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Drawer, useMediaQuery, useTheme } from '@mui/material';
+// src/shared/components/Sidebar.tsx
+import {
+  Box,
+  Divider,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import {
   CalendarMonthOutlined,
   PeopleOutlined,
-  PersonOutlined,
   MedicalServicesOutlined,
   DashboardOutlined,
+  PersonOutlined,
+  LogoutOutlined,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore, type PerfilUsuario } from '../store/authStore';
+import { useLogout } from '../../features/auth/useAuth';
 
-const SIDEBAR_WIDTH = 220;
+export const SIDEBAR_WIDTH = 220;
 
 interface NavItem {
   label: string;
   icon: React.ReactNode;
   path: string;
+  allowed: PerfilUsuario[];
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: <DashboardOutlined sx={{ fontSize: 18 }} />, path: '/' },
-  { label: 'Agendamentos', icon: <CalendarMonthOutlined sx={{ fontSize: 18 }} />, path: '/agendamentos' },
-  { label: 'Pacientes', icon: <PeopleOutlined sx={{ fontSize: 18 }} />, path: '/pacientes' },
-  { label: 'Dentistas', icon: <MedicalServicesOutlined sx={{ fontSize: 18 }} />, path: '/dentistas' },
-  { label: 'Usuários', icon: <PersonOutlined sx={{ fontSize: 18 }} />, path: '/usuarios' },
+  {
+    label: 'Dashboard',
+    icon: <DashboardOutlined sx={{ fontSize: 18 }} />,
+    path: '/dashboard',
+    allowed: ['ADMIN', 'RECEPCAO'],
+  },
+  {
+    label: 'Agendamentos',
+    icon: <CalendarMonthOutlined sx={{ fontSize: 18 }} />,
+    path: '/agendamentos',
+    allowed: ['ADMIN', 'RECEPCAO', 'DENTISTA'],
+  },
+  {
+    label: 'Pacientes',
+    icon: <PeopleOutlined sx={{ fontSize: 18 }} />,
+    path: '/pacientes',
+    allowed: ['ADMIN', 'RECEPCAO', 'DENTISTA'],
+  },
+  {
+    label: 'Dentistas',
+    icon: <MedicalServicesOutlined sx={{ fontSize: 18 }} />,
+    path: '/dentistas',
+    allowed: ['ADMIN', 'RECEPCAO'],
+  },
+  {
+    label: 'Usuários',
+    icon: <PersonOutlined sx={{ fontSize: 18 }} />,
+    path: '/usuarios',
+    allowed: ['ADMIN'],
+  },
 ];
 
 interface SidebarProps {
@@ -33,9 +75,14 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
-  
-  // Detecta se é Tablet/Mobile (abaixo de 1200px o iPad Pro já começa a sofrer)
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const logout = useLogout();
+
+  const visibleItems = navItems.filter(
+    (item) => perfil && item.allowed.includes(perfil)
+  );
 
   const SidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -64,24 +111,28 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       {/* Nav */}
       <Box sx={{ flex: 1, py: 1.5, overflowY: 'auto' }}>
-        <Typography variant="overline" sx={{ px: 2.5, mb: 0.5, display: 'block', color: 'text.disabled', lineHeight: 1 }}>
+        <Typography
+          variant="overline"
+          sx={{ px: 2.5, mb: 0.5, display: 'block', color: 'text.disabled', lineHeight: 1 }}
+        >
           Menu
         </Typography>
         <List dense disablePadding>
-          {navItems.map((item) => {
-            const active = location.pathname === item.path ||
+          {visibleItems.map((item) => {
+            const active =
+              location.pathname === item.path ||
               (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <ListItem key={item.path} disablePadding sx={{ px: 1.5, mb: 0.25 }}>
                 <ListItemButton
                   onClick={() => {
                     navigate(item.path);
-                    if (isMobile && onClose) onClose(); // Fecha ao clicar no iPad
+                    if (isMobile && onClose) onClose();
                   }}
                   selected={active}
                   sx={{
                     borderRadius: 1.5,
-                    py: 1.1, // Aumentado levemente para facilitar o toque no iPad
+                    py: 1.1,
                     px: 1.25,
                     color: active ? 'primary.main' : 'text.secondary',
                     '&.Mui-selected': {
@@ -97,7 +148,10 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   </ListItemIcon>
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: active ? 600 : 400 }}
+                    primaryTypographyProps={{
+                      fontSize: '0.865rem',
+                      fontWeight: active ? 600 : 400,
+                    }}
                   />
                 </ListItemButton>
               </ListItem>
@@ -107,9 +161,37 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </Box>
 
       <Divider />
+
+      {/* Logout */}
+      <List dense disablePadding sx={{ px: 1.5, py: 0.75 }}>
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            sx={{
+              borderRadius: 1.5,
+              py: 1.1,
+              px: 1.25,
+              color: 'error.main',
+              '&:hover': { backgroundColor: 'action.hover' },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+              <LogoutOutlined sx={{ fontSize: 18 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Sair"
+              primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: 400 }}
+            />
+          </ListItemButton>
+        </ListItem>
+      </List>
+
+      {/* Rodapé */}
+      <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          v0.2.5 • OdontoHelp © 2026
+          v0..0 • OdontoHelp © 2026
         </Typography>
       </Box>
     </Box>
@@ -117,12 +199,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   return (
     <Box component="nav" sx={{ width: { lg: SIDEBAR_WIDTH }, flexShrink: { lg: 0 } }}>
-      {/* Versão MOBILE/IPAD: Temporária */}
+      {/* Mobile/iPad: Temporária */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
         onClose={onClose}
-        ModalProps={{ keepMounted: true }} // Melhor performance ao abrir
+        ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', lg: 'none' },
           '& .MuiDrawer-paper': { boxSizing: 'border-box', width: SIDEBAR_WIDTH },
@@ -131,13 +213,13 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         {SidebarContent}
       </Drawer>
 
-      {/* Versão DESKTOP: Fixa */}
+      {/* Desktop: Fixa */}
       <Drawer
         variant="permanent"
         sx={{
           display: { xs: 'none', lg: 'block' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: SIDEBAR_WIDTH,
             borderRight: '1px solid',
             borderColor: 'divider',
@@ -151,5 +233,3 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     </Box>
   );
 }
-
-export { SIDEBAR_WIDTH };

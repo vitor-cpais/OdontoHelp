@@ -1,8 +1,10 @@
 package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.UsuarioMapper;
+import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
@@ -11,7 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Importação correta
+import org.springframework.transaction.annotation.Transactional;
+import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +23,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
-
+    private final ValidacoesService validacoesService;
     public UsuarioResponseDTO buscarPorId(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
@@ -36,22 +39,34 @@ public class UsuarioService {
         return usuarios.map(usuarioMapper::toResponse);
     }
 
+
+
+
     @Transactional
-    public void desativar(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-        usuario.setIsAtivo(false);
-        usuarioRepository.save(usuario);
+    public UsuarioResponseDTO toggleStatus(Long id, boolean isAtivo) {
+        if (!isAtivo) {
+            validacoesService.validarInativacaoUsuario(id);
+        }
+        Usuario usuario = buscarEntidadePorId(id);
+        usuario.setIsAtivo(isAtivo);
+        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
+
+    public Usuario buscarEntidadePorId(Long id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario não encontrado"));
+    }
+
+
+
+
 
     @Transactional
     public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-
         usuarioMapper.updateEntity(dto, usuario);
 
-        // Vínculo bidirecional necessário para o Cascade
         if (usuario.getEndereco() != null) {
             usuario.getEndereco().setUsuario(usuario);
         }

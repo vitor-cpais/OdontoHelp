@@ -1,26 +1,28 @@
-// src/features/pacientes/PacienteDrawer.tsx
+// src/features/usuarios/UsuarioDrawer.tsx
 import {
   Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Collapse,
+  Collapse, Alert,
 } from '@mui/material';
-import { Close, PersonOutlined, ExpandMore, ExpandLess, LockOutlined } from '@mui/icons-material';
+import {
+  Close, ManageAccountsOutlined,
+  ExpandMore, ExpandLess, LockOutlined,
+} from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
-import { usePacienteDrawerStore } from './pacienteStore';
-import { useCreatePaciente, useUpdatePaciente } from './usePacientes';
+import { useUsuarioDrawerStore } from './usuarioStore';
+import { useCreateUsuario, useUpdateUsuario } from './useUsuarios';
 import { maskCpf, maskTelefone } from '../../shared/utils/masks';
-import { useAuthStore } from '../../shared/store/authStore';
-import type { PacienteFormData } from './types';
+import type { UsuarioFormData } from './types';
 
 const schema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   email: z.string().min(1, 'E-mail obrigatório').email('E-mail inválido'),
-  telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
   cpf: z.string().min(14, 'CPF incompleto — use 000.000.000-00'),
+  telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
@@ -28,7 +30,9 @@ const schema = z.object({
     (val) => new Date(val) < new Date(),
     'Data não pode ser futura'
   ),
-  observacoesMedicas: z.string().max(500, 'Máximo 500 caracteres').optional().default(''),
+  perfil: z.enum(['ADMIN', 'RECEPCAO'], {
+    errorMap: () => ({ message: 'Selecione um perfil' }),
+  }),
   senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 });
 
@@ -37,22 +41,24 @@ interface Props {
   onError: (msg: string) => void;
 }
 
-export default function PacienteDrawer({ onSuccess, onError }: Props) {
-  const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = usePacienteDrawerStore();
+export default function UsuarioDrawer({ onSuccess, onError }: Props) {
+  const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = useUsuarioDrawerStore();
   const isEditing = editingId !== null;
   const [confirmClose, setConfirmClose] = useState(false);
-  const [acessoExpanded, setAcessoExpanded] = useState(false);
+  const [senhaExpanded, setSenhaExpanded] = useState(false);
 
-  const isAdmin = useAuthStore((s) => s.usuario?.perfil === 'ADMIN');
+  const create = useCreateUsuario();
+  const update = useUpdateUsuario(editingId ?? 0);
 
-  const create = useCreatePaciente();
-  const update = useUpdatePaciente(editingId ?? 0);
-
-  const { control, handleSubmit, reset, watch, formState: { errors, isDirty } } = useForm<PacienteFormData>({
+  const {
+    control, handleSubmit, reset, watch,
+    formState: { errors, isDirty },
+  } = useForm<UsuarioFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      nome: '', email: '', telefone: '', cpf: '',
-      genero: 'NAO_INFORMADO', dataNascimento: '', observacoesMedicas: '', senha: '',
+      nome: '', email: '', cpf: '', telefone: '',
+      genero: 'NAO_INFORMADO', dataNascimento: '',
+      perfil: 'RECEPCAO', senha: '',
     },
   });
 
@@ -61,14 +67,14 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
       reset({
         nome: draft.nome ?? '',
         email: draft.email ?? '',
-        telefone: draft.telefone ?? '',
         cpf: draft.cpf ?? '',
+        telefone: draft.telefone ?? '',
         genero: draft.genero ?? 'NAO_INFORMADO',
         dataNascimento: draft.dataNascimento ?? '',
-        observacoesMedicas: draft.observacoesMedicas ?? '',
+        perfil: (draft.perfil as any) ?? 'RECEPCAO',
         senha: '',
       });
-      setAcessoExpanded(isEditing && !!draft.email);
+      setSenhaExpanded(false);
     }
   }, [open]);
 
@@ -82,23 +88,22 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
     else clearDraft();
   };
 
-  const onSubmit = async (data: PacienteFormData) => {
+  const onSubmit = async (data: UsuarioFormData) => {
     try {
       if (isEditing) {
         await update.mutateAsync(data);
-        onSuccess('Paciente atualizado com sucesso!');
+        onSuccess('Usuário atualizado com sucesso!');
       } else {
         await create.mutateAsync(data);
-        onSuccess('Paciente cadastrado com sucesso!');
+        onSuccess('Usuário cadastrado com sucesso!');
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar paciente');
+      onError(e.message ?? 'Erro ao salvar usuário');
     }
   };
 
   const loading = create.isPending || update.isPending;
-  const obsValue = watch('observacoesMedicas') ?? '';
 
   return (
     <>
@@ -106,16 +111,23 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
         anchor="right"
         open={open}
         onClose={handleClose}
-        PaperProps={{ sx: { width: { xs: '100%', sm: 440 }, display: 'flex', flexDirection: 'column' } }}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 440 }, display: 'flex', flexDirection: 'column' },
+        }}
       >
+        {/* Header */}
         <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PersonOutlined sx={{ fontSize: 17, color: '#185FA5' }} />
+            <Box sx={{
+              width: 32, height: 32, borderRadius: '8px',
+              backgroundColor: '#F1EFE8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <ManageAccountsOutlined sx={{ fontSize: 17, color: '#5F5E5A' }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                {isEditing ? 'Editar paciente' : 'Novo paciente'}
+                {isEditing ? 'Editar usuário' : 'Novo usuário'}
               </Typography>
               {hasDraft && !isEditing && (
                 <Typography variant="caption" sx={{ color: '#BA7517' }}>rascunho salvo</Typography>
@@ -129,9 +141,12 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
 
         <Divider />
 
-        <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
+        {/* Form */}
+        <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}
+          sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
           <Stack spacing={2.5}>
 
+            {/* ── Dados pessoais ── */}
             <Typography variant="overline" sx={{ color: 'text.disabled' }}>Dados pessoais</Typography>
 
             <Controller name="nome" control={control} render={({ field }) => (
@@ -172,24 +187,42 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
               )} />
             </Stack>
 
+            {/* ── Acesso ── */}
             <Divider />
-            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Informações médicas</Typography>
+            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Acesso</Typography>
 
-            <Controller name="observacoesMedicas" control={control} render={({ field }) => (
-              <TextField {...field} label="Observações médicas" multiline rows={3}
-                error={!!errors.observacoesMedicas}
-                helperText={errors.observacoesMedicas?.message ?? `${obsValue.length}/500`}
-                fullWidth inputProps={{ maxLength: 500 }} />
+            <Controller name="email" control={control} render={({ field }) => (
+              <TextField {...field} label="E-mail *" type="email"
+                error={!!errors.email} helperText={errors.email?.message}
+                fullWidth inputProps={{ maxLength: 120 }} />
             )} />
 
-            {/* ── Acesso — só para ADMIN ── */}
-            {isAdmin && (
+            <Controller name="perfil" control={control} render={({ field }) => (
+              <TextField {...field} select label="Perfil *"
+                error={!!errors.perfil} helperText={errors.perfil?.message} fullWidth>
+                <MenuItem value="ADMIN">Administrador</MenuItem>
+                <MenuItem value="RECEPCAO">Recepção</MenuItem>
+              </TextField>
+            )} />
+
+            {/* Senha ao criar — direto */}
+            {!isEditing && (
+              <Controller name="senha" control={control} render={({ field }) => (
+                <TextField {...field} label="Senha *" type="password"
+                  error={!!errors.senha}
+                  helperText={errors.senha?.message ?? 'Mínimo 6 caracteres'}
+                  fullWidth inputProps={{ maxLength: 64 }} />
+              )} />
+            )}
+
+            {/* Redefinir senha ao editar — colapsável */}
+            {isEditing && (
               <>
-                <Divider />
                 <Box
-                  onClick={() => setAcessoExpanded((v) => !v)}
+                  onClick={() => setSenhaExpanded((v) => !v)}
                   sx={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between',
                     cursor: 'pointer', userSelect: 'none', py: 0.5,
                     '&:hover': { opacity: 0.75 },
                   }}
@@ -197,26 +230,24 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LockOutlined sx={{ fontSize: 15, color: 'text.disabled' }} />
                     <Typography variant="overline" sx={{ color: 'text.disabled' }}>
-                      Dados de acesso
+                      Redefinir senha
                     </Typography>
                   </Box>
-                  {acessoExpanded
+                  {senhaExpanded
                     ? <ExpandLess sx={{ fontSize: 18, color: 'text.disabled' }} />
                     : <ExpandMore sx={{ fontSize: 18, color: 'text.disabled' }} />
                   }
                 </Box>
 
-                <Collapse in={acessoExpanded} unmountOnExit>
-                  <Stack spacing={2.5} sx={{ pt: 0.5 }}>
-                    <Controller name="email" control={control} render={({ field }) => (
-                      <TextField {...field} label="E-mail *" type="email" error={!!errors.email}
-                        helperText={errors.email?.message} fullWidth inputProps={{ maxLength: 120 }} />
-                    )} />
+                <Collapse in={senhaExpanded} unmountOnExit>
+                  <Stack spacing={1.5}>
+                    <Alert severity="info" sx={{ fontSize: '0.78rem', py: 0.5 }}>
+                      Deixe vazio para manter a senha atual.
+                    </Alert>
                     <Controller name="senha" control={control} render={({ field }) => (
-                      <TextField {...field}
-                        label={isEditing ? 'Nova senha (deixe vazio para manter)' : 'Senha *'}
-                        type="password" error={!!errors.senha}
-                        helperText={errors.senha?.message ?? (isEditing ? '' : 'Mínimo 6 caracteres')}
+                      <TextField {...field} label="Nova senha" type="password"
+                        error={!!errors.senha}
+                        helperText={errors.senha?.message ?? 'Mínimo 6 caracteres'}
                         fullWidth inputProps={{ maxLength: 64 }} />
                     )} />
                   </Stack>
@@ -233,6 +264,7 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
 
         <Divider />
 
+        {/* Footer */}
         <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
           <Button variant="outlined" onClick={handleClose} disabled={loading}>Cancelar</Button>
           <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>

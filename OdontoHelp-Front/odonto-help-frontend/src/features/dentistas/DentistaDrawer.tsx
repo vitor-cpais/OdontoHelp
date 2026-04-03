@@ -1,16 +1,19 @@
+// src/features/dentistas/DentistaDrawer.tsx
 import {
   Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  Collapse,
 } from '@mui/material';
-import { Close, PersonOutlined } from '@mui/icons-material';
+import { Close, PersonOutlined, ExpandMore, ExpandLess, LockOutlined } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { useDentistaDrawerStore } from './dentistaStore';
 import { useCreateDentista, useUpdateDentista } from './useDentistas';
-import { maskCpf, maskCro,maskTelefone } from '../../shared/utils/masks';
+import { maskCpf, maskCro, maskTelefone } from '../../shared/utils/masks';
+import { useAuthStore } from '../../shared/store/authStore';
 import type { DentistaFormData } from './types';
 
 const schema = z.object({
@@ -38,6 +41,9 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = useDentistaDrawerStore();
   const isEditing = editingId !== null;
   const [confirmClose, setConfirmClose] = useState(false);
+  const [acessoExpanded, setAcessoExpanded] = useState(false);
+
+  const isAdmin = useAuthStore((s) => s.usuario?.perfil === 'ADMIN');
 
   const create = useCreateDentista();
   const update = useUpdateDentista(editingId ?? 0);
@@ -65,6 +71,8 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         cro: draft.cro ?? '',
         senha: '',
       });
+      // expande automaticamente ao editar se já tem email
+      setAcessoExpanded(isEditing && !!draft.email);
     }
   }, [open]);
 
@@ -74,11 +82,8 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   }, [JSON.stringify(values), open]);
 
   const handleClose = () => {
-    if (isDirty && !isEditing) {
-      setConfirmClose(true);
-    } else {
-      clearDraft();
-    }
+    if (isDirty && !isEditing) setConfirmClose(true);
+    else clearDraft();
   };
 
   const onSubmit = async (data: DentistaFormData) => {
@@ -141,53 +146,29 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
 
             <Stack direction="row" spacing={1.5}>
               <Controller name="cpf" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="CPF *"
-                  placeholder="000.000.000-00"
-                  error={!!errors.cpf}
-                  helperText={errors.cpf?.message}
-                  fullWidth
+                <TextField {...field} label="CPF *" placeholder="000.000.000-00"
+                  error={!!errors.cpf} helperText={errors.cpf?.message} fullWidth
                   inputProps={{ maxLength: 14 }}
-                  onChange={(e) => field.onChange(maskCpf(e.target.value))}
-                />
+                  onChange={(e) => field.onChange(maskCpf(e.target.value))} />
               )} />
               <Controller name="dataNascimento" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Nascimento *"
-                  type="date"
-                  error={!!errors.dataNascimento}
-                  helperText={errors.dataNascimento?.message}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ max: new Date().toISOString().split('T')[0] }}
-                />
+                <TextField {...field} label="Nascimento *" type="date"
+                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message}
+                  fullWidth InputLabelProps={{ shrink: true }}
+                  inputProps={{ max: new Date().toISOString().split('T')[0] }} />
               )} />
             </Stack>
 
             <Stack direction="row" spacing={1.5}>
               <Controller name="telefone" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Telefone *"
-                  placeholder="(00) 00000-0000"
-                  error={!!errors.telefone}
-                  helperText={errors.telefone?.message}
-                  fullWidth
+                <TextField {...field} label="Telefone *" placeholder="(00) 00000-0000"
+                  error={!!errors.telefone} helperText={errors.telefone?.message} fullWidth
                   inputProps={{ maxLength: 15 }}
-                  onChange={(e) => field.onChange(maskTelefone(e.target.value))}
-                />
+                  onChange={(e) => field.onChange(maskTelefone(e.target.value))} />
               )} />
               <Controller name="genero" control={control} render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Gênero *"
-                  error={!!errors.genero}
-                  helperText={errors.genero?.message}
-                  fullWidth
-                >
+                <TextField {...field} select label="Gênero *"
+                  error={!!errors.genero} helperText={errors.genero?.message} fullWidth>
                   <MenuItem value="NAO_INFORMADO">Não informado</MenuItem>
                   <MenuItem value="MASCULINO">Masculino</MenuItem>
                   <MenuItem value="FEMININO">Feminino</MenuItem>
@@ -200,37 +181,53 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
             <Typography variant="overline" sx={{ color: 'text.disabled' }}>Dados profissionais</Typography>
 
             <Controller name="cro" control={control} render={({ field }) => (
-              <TextField
-                {...field}
-                label="CRO *"
-                placeholder="SP-12345"
-                error={!!errors.cro}
-                helperText={errors.cro?.message ?? 'Formato: UF-NNNNN'}
-                fullWidth
-                inputProps={{ maxLength: 8 }}
-                onChange={(e) => field.onChange(maskCro(e.target.value))}
-              />
+              <TextField {...field} label="CRO *" placeholder="SP-12345"
+                error={!!errors.cro} helperText={errors.cro?.message ?? 'Formato: UF-NNNNN'}
+                fullWidth inputProps={{ maxLength: 8 }}
+                onChange={(e) => field.onChange(maskCro(e.target.value))} />
             )} />
 
-            <Divider />
-            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Acesso</Typography>
+            {/* ── Acesso — só para ADMIN ── */}
+            {isAdmin && (
+              <>
+                <Divider />
+                <Box
+                  onClick={() => setAcessoExpanded((v) => !v)}
+                  sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    cursor: 'pointer', userSelect: 'none', py: 0.5,
+                    '&:hover': { opacity: 0.75 },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LockOutlined sx={{ fontSize: 15, color: 'text.disabled' }} />
+                    <Typography variant="overline" sx={{ color: 'text.disabled' }}>
+                      Dados de acesso
+                    </Typography>
+                  </Box>
+                  {acessoExpanded
+                    ? <ExpandLess sx={{ fontSize: 18, color: 'text.disabled' }} />
+                    : <ExpandMore sx={{ fontSize: 18, color: 'text.disabled' }} />
+                  }
+                </Box>
 
-            <Controller name="email" control={control} render={({ field }) => (
-              <TextField {...field} label="E-mail *" type="email" error={!!errors.email}
-                helperText={errors.email?.message} fullWidth inputProps={{ maxLength: 120 }} />
-            )} />
-
-            <Controller name="senha" control={control} render={({ field }) => (
-              <TextField
-                {...field}
-                label={isEditing ? 'Nova senha (deixe vazio para manter)' : 'Senha *'}
-                type="password"
-                error={!!errors.senha}
-                helperText={errors.senha?.message ?? (isEditing ? '' : 'Mínimo 6 caracteres')}
-                fullWidth
-                inputProps={{ maxLength: 64 }}
-              />
-            )} />
+                <Collapse in={acessoExpanded} unmountOnExit>
+                  <Stack spacing={2.5} sx={{ pt: 0.5 }}>
+                    <Controller name="email" control={control} render={({ field }) => (
+                      <TextField {...field} label="E-mail *" type="email" error={!!errors.email}
+                        helperText={errors.email?.message} fullWidth inputProps={{ maxLength: 120 }} />
+                    )} />
+                    <Controller name="senha" control={control} render={({ field }) => (
+                      <TextField {...field}
+                        label={isEditing ? 'Nova senha (deixe vazio para manter)' : 'Senha *'}
+                        type="password" error={!!errors.senha}
+                        helperText={errors.senha?.message ?? (isEditing ? '' : 'Mínimo 6 caracteres')}
+                        fullWidth inputProps={{ maxLength: 64 }} />
+                    )} />
+                  </Stack>
+                </Collapse>
+              </>
+            )}
 
             <Typography variant="caption" sx={{ color: 'text.disabled', mt: -1 }}>
               * Campos obrigatórios
@@ -258,7 +255,8 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmClose(false)}>Continuar editando</Button>
-          <Button variant="contained" color="error" onClick={() => { setConfirmClose(false); clearDraft(); }}>
+          <Button variant="contained" color="error"
+            onClick={() => { setConfirmClose(false); clearDraft(); }}>
             Descartar
           </Button>
         </DialogActions>

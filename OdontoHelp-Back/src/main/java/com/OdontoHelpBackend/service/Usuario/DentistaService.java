@@ -64,12 +64,7 @@ public class DentistaService {
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
-    @Transactional
-    public void desativar(Long id) {
-        Dentista dentista = buscarEntidadePorId(id);
-        dentista.setIsAtivo(false);
-        dentistaRepository.save(dentista);
-    }
+
 
     public Dentista buscarEntidadePorId(Long id) {
         return dentistaRepository.findById(id)
