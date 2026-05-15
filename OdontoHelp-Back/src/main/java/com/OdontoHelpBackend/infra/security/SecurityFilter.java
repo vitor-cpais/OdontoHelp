@@ -30,22 +30,28 @@ public class SecurityFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        String token = extrairToken(request);
+        try {
+            String token = extrairToken(request);
 
-        if (token != null
-                && jwtService.accessTokenValido(token)
-                && !tokenBlacklist.estaBloqueado(token)) { // CORRIGIDO: checa blacklist
+            // Só entra aqui se houver um token para validar
+            if (token != null && !tokenBlacklist.estaBloqueado(token)) {
+                String email = jwtService.extrairEmail(token);
 
-            String email = jwtService.extrairEmail(token);
-            Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
 
-            if (usuario != null && usuario.getIsAtivo()) {
-                var auth = new UsernamePasswordAuthenticationToken(
-                        usuario, null, usuario.getAuthorities()
-                );
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                    if (usuario != null && usuario.getIsAtivo()) {
+                        var auth = new UsernamePasswordAuthenticationToken(
+                                usuario, null, usuario.getAuthorities()
+                        );
+                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
+                }
             }
+        } catch (Exception e) {
+
+            SecurityContextHolder.clearContext();
         }
 
         chain.doFilter(request, response);
