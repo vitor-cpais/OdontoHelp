@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -34,12 +35,21 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
 
-    private CorsConfigurationSource corsConfigurationSource() {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+
+        // Se a lista estiver vazia no properties, garante que o localhost e vercel funcionem
+        if (allowedOrigins == null || allowedOrigins.isEmpty()) {
+            config.setAllowedOrigins(List.of("http://localhost:5173", "https://odonto-help.vercel.app"));
+        } else {
+            config.setAllowedOrigins(allowedOrigins);
+        }
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
@@ -50,61 +60,39 @@ public class SecurityConfig {
         boolean isTestProfile = Arrays.asList(environment.getActiveProfiles()).contains("test");
 
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> {
+                .csrf(AbstractHttpConfigurer::disable)
+                // Ativa o CORS utilizando o bean definido acima
+                .cors(Customizer.withDefaults())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
 
-                // H2 console somente em profile test
-                if (isTestProfile) {
-                    auth.requestMatchers("/h2-console/**").permitAll();
-                }
+                    if (isTestProfile) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                    }
 
-                auth
-                    // ── público ────────────────────────────────────────────
-                    .requestMatchers("/auth/**").permitAll()
-
-                    // ── MVP 1 ──────────────────────────────────────────────
-
-                    // só ADMIN
-                    .requestMatchers("/usuarios/**").hasRole("ADMIN")
-
-                    // dentistas
-                    .requestMatchers(HttpMethod.GET,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                    .requestMatchers(HttpMethod.POST,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PUT,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PATCH, "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-
-                    // pacientes + odontograma (GET /pacientes/{id}/odontograma/** coberto aqui)
-                    .requestMatchers(HttpMethod.GET,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                    .requestMatchers(HttpMethod.POST,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PUT,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PATCH, "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-
-                    // agendamentos — controle de propriedade feito no service
-                    .requestMatchers("/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-
-                    // dashboard
-                    .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
-
-                    // ── MVP 2 ──────────────────────────────────────────────
-
-                    // procedimentos — catálogo: todos leem, só ADMIN/RECEPCAO escrevem
-                    .requestMatchers(HttpMethod.GET,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                    .requestMatchers(HttpMethod.POST,  "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PUT,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                    .requestMatchers(HttpMethod.PATCH, "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-
-                    // atendimentos — controle de propriedade feito no service
-                    .requestMatchers("/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
-
-                    // planos de tratamento — controle de propriedade feito no service
-                    .requestMatchers("/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
-
-                    .anyRequest().authenticated();
-            })
-            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+                    auth
+                            .requestMatchers("/auth/**").permitAll()
+                            .requestMatchers("/usuarios/**").hasRole("ADMIN")
+                            .requestMatchers(HttpMethod.GET,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.GET,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers("/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.GET,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers("/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
+                            .requestMatchers("/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
+                            .anyRequest().authenticated();
+                })
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
