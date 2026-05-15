@@ -1,18 +1,19 @@
 package com.OdontoHelpBackend.domain.Consulta.enums;
 
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-
+/**
+ * Status do AGENDAMENTO (planejamento da consulta).
+ * ATENDIDO é definido pelo backend ao criar o Atendimento — nunca pelo cliente diretamente.
+ */
 @Getter
 @AllArgsConstructor
-@Table(name = "TB_STATUS_CONSULTA")
 public enum StatusConsulta {
 
     AGENDADO("Consulta agendada no sistema"),
     CONFIRMADO("Paciente confirmou o comparecimento"),
-    CONCLUIDO("Atendimento finalizado com sucesso"),
+    ATENDIDO("Atendimento clínico iniciado"),          // ← NOVO: transição automática pelo backend
     CANCELADO("Agendamento cancelado"),
     FALTA("Paciente não compareceu ao horário");
 

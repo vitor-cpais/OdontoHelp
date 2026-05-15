@@ -1,7 +1,7 @@
 package com.OdontoHelpBackend.domain.usuario;
 
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
@@ -14,12 +14,6 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
-
-
-
-
-
-
 @Entity
 @Table(name = "TB_USUARIO")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -27,9 +21,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Usuario  implements UserDetails {
-
-
+public class Usuario implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,8 +38,9 @@ public class Usuario  implements UserDetails {
     @Column(name = "EMAIL", unique = true, length = 100)
     private String email;
 
+    // CORRIGIDO: @JsonIgnore como defesa em profundidade — nunca vaza o hash
+    @JsonIgnore
     @Column(name = "SENHA")
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String senha;
 
     @CPF(message = "CPF inválido")
@@ -70,18 +63,15 @@ public class Usuario  implements UserDetails {
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL)
     private Endereco endereco;
 
-
-
-
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + perfil.name()));
     }
 
     @Override
+    @JsonIgnore
     public String getPassword() {
-        return senha; // nullable — paciente sem senha retorna null, Spring rejeita login
+        return senha;
     }
 
     @Override
@@ -94,41 +84,17 @@ public class Usuario  implements UserDetails {
         return Boolean.TRUE.equals(isAtivo);
     }
 
-
     @Override public boolean isAccountNonExpired()     { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled()               { return Boolean.TRUE.equals(isAtivo); }
 
-
-
-
-
-
-
-
-
     @PrePersist
     @PreUpdate
     private void limparMascaras() {
-        if (this.cpf != null) {
-            this.cpf = this.cpf.replaceAll("\\D", "");
-        }
-
-        if (this.telefone != null) {
-            this.telefone = this.telefone.replaceAll("\\D", "");
-        }
-
-        if (this.email != null) {
-            this.email = this.email.trim().toLowerCase();
-        }
-
-        if (this.nome != null) {
-            this.nome = this.nome.trim().toUpperCase();
-        }
-
-        if (this.genero != null) {
-            this.genero = this.genero.trim().toUpperCase();
-        }
+        if (this.cpf != null)      this.cpf      = this.cpf.replaceAll("\\D", "");
+        if (this.telefone != null) this.telefone = this.telefone.replaceAll("\\D", "");
+        if (this.email != null)    this.email    = this.email.trim().toLowerCase();
+        if (this.nome != null)     this.nome     = this.nome.trim().toUpperCase();
+        if (this.genero != null)   this.genero   = this.genero.trim().toUpperCase();
     }
-
 }

@@ -1,6 +1,5 @@
 package com.OdontoHelpBackend.infra.exception;
 
-
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,5 +49,10 @@ public class ErrorHandler {
         return Map.of("erro", ex.getMessage());
     }
 
-
+    // NOVO: 403 para acesso negado por propriedade do recurso
+    @ExceptionHandler(AcessoNegadoException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, String> handleAcessoNegado(AcessoNegadoException ex) {
+        return Map.of("erro", ex.getMessage());
+    }
 }

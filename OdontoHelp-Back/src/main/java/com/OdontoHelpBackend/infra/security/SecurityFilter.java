@@ -1,6 +1,7 @@
 package com.OdontoHelpBackend.infra.security;
 
 import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.infra.security.token.TokenBlacklist;
 import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,6 +22,7 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
+    private final TokenBlacklist tokenBlacklist; // NOVO: verificação de blacklist
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,7 +32,10 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         String token = extrairToken(request);
 
-        if (token != null && jwtService.accessTokenValido(token)) {
+        if (token != null
+                && jwtService.accessTokenValido(token)
+                && !tokenBlacklist.estaBloqueado(token)) { // CORRIGIDO: checa blacklist
+
             String email = jwtService.extrairEmail(token);
             Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
 
@@ -38,8 +43,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                 var auth = new UsernamePasswordAuthenticationToken(
                         usuario, null, usuario.getAuthorities()
                 );
-                auth.setDetails(new WebAuthenticationDetailsSource()
-                        .buildDetails(request));
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

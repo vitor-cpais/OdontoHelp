@@ -1,8 +1,10 @@
 package com.OdontoHelpBackend.infra.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -26,68 +29,84 @@ import java.util.List;
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
+    private final Environment environment;
+
+    @Value("${cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:4200",
-                "http://localhost:5173",
-                "https://odonto-help.vercel.app"
-        ));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 
-
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s ->
-                        s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
+        boolean isTestProfile = Arrays.asList(environment.getActiveProfiles()).contains("test");
 
-                        // público
-                        .requestMatchers("/auth/**").permitAll()
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> {
 
-                        // só ADMIN
-                        .requestMatchers("/usuarios/**").hasRole("ADMIN")
+                // H2 console somente em profile test
+                if (isTestProfile) {
+                    auth.requestMatchers("/h2-console/**").permitAll();
+                }
 
-                        // ADMIN + RECEPCAO
-                        .requestMatchers(HttpMethod.POST, "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                        .requestMatchers(HttpMethod.PUT,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                        .requestMatchers(HttpMethod.PATCH,"/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                        .requestMatchers(HttpMethod.GET,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                auth
+                    // ── público ────────────────────────────────────────────
+                    .requestMatchers("/auth/**").permitAll()
 
-                        // ADMIN + RECEPCAO + DENTISTA (leitura)
-                        .requestMatchers(HttpMethod.GET,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                        .requestMatchers(HttpMethod.POST, "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                        .requestMatchers(HttpMethod.PUT,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                        .requestMatchers(HttpMethod.PATCH,"/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    // ── MVP 1 ──────────────────────────────────────────────
 
-                        // agendamentos — todos autenticados (filtro por dono no service)
-                        .requestMatchers("/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                    // só ADMIN
+                    .requestMatchers("/usuarios/**").hasRole("ADMIN")
 
-                        // dashboard — ADMIN + RECEPCAO
-                        .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    // dentistas
+                    .requestMatchers(HttpMethod.GET,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                    .requestMatchers(HttpMethod.POST,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PUT,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PATCH, "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
 
-                        .anyRequest().authenticated()
-                )
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin())
-                )
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                    // pacientes + odontograma (GET /pacientes/{id}/odontograma/** coberto aqui)
+                    .requestMatchers(HttpMethod.GET,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                    .requestMatchers(HttpMethod.POST,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PUT,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PATCH, "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                    // agendamentos — controle de propriedade feito no service
+                    .requestMatchers("/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+
+                    // dashboard
+                    .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                    // ── MVP 2 ──────────────────────────────────────────────
+
+                    // procedimentos — catálogo: todos leem, só ADMIN/RECEPCAO escrevem
+                    .requestMatchers(HttpMethod.GET,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                    .requestMatchers(HttpMethod.POST,  "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PUT,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                    .requestMatchers(HttpMethod.PATCH, "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                    // atendimentos — controle de propriedade feito no service
+                    .requestMatchers("/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
+
+                    // planos de tratamento — controle de propriedade feito no service
+                    .requestMatchers("/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
+
+                    .anyRequest().authenticated();
+            })
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
@@ -96,8 +115,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 }

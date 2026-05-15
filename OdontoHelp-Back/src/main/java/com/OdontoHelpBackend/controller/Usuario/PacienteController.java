@@ -1,6 +1,5 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
-import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
@@ -34,14 +33,14 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.listar(nome, isAtivo, pageable));
     }
 
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PostMapping
-    public ResponseEntity<PacienteResponseDTO> criar(
-            @RequestBody @Valid PacienteRequestDTO dto) {
+    public ResponseEntity<PacienteResponseDTO> criar(@RequestBody @Valid PacienteRequestDTO dto) {
         PacienteResponseDTO criado = pacienteService.criar(dto);
-        URI uri = URI.create("/pacientes/" + criado.id());
-        return ResponseEntity.created(uri).body(criado);
+        return ResponseEntity.created(URI.create("/pacientes/" + criado.id())).body(criado);
     }
 
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PutMapping("/{id}")
     public ResponseEntity<PacienteResponseDTO> atualizar(
             @PathVariable Long id,
@@ -49,6 +48,7 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.atualizar(id, dto));
     }
 
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PatchMapping("/{id}/status")
     public ResponseEntity<PacienteResponseDTO> toggleStatus(
             @PathVariable Long id,

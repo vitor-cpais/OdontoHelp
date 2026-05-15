@@ -42,7 +42,9 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;
-    const message = (error.response?.data as any)?.message ?? 'Erro inesperado';
+    const message = (error.response?.data as any)?.erro 
+             ?? (error.response?.data as any)?.message 
+             ?? 'Erro inesperado';
 
     // ── erros de negócio (sem retry) ──
     if (status === 404) return Promise.reject(new Error('Recurso não encontrado'));

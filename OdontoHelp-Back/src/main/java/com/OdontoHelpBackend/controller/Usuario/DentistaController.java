@@ -1,7 +1,5 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
-
-
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
@@ -12,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.net.URI;
 
 @RestController
@@ -34,15 +33,14 @@ public class DentistaController {
         return ResponseEntity.ok(dentistaService.listar(nome, isAtivo, pageable));
     }
 
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PostMapping
-    public ResponseEntity<DentistaResponseDTO> criar(
-            @RequestBody
-            @Valid DentistaRequestDTO dto) {
+    public ResponseEntity<DentistaResponseDTO> criar(@RequestBody @Valid DentistaRequestDTO dto) {
         DentistaResponseDTO criado = dentistaService.criar(dto);
-        URI uri = URI.create("/dentistas/" + criado.id());
-        return ResponseEntity.created(uri).body(criado);
+        return ResponseEntity.created(URI.create("/dentistas/" + criado.id())).body(criado);
     }
 
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PutMapping("/{id}")
     public ResponseEntity<DentistaResponseDTO> atualizar(
             @PathVariable Long id,
@@ -50,13 +48,11 @@ public class DentistaController {
         return ResponseEntity.ok(dentistaService.atualizar(id, dto));
     }
 
-
-
+    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PatchMapping("/{id}/status")
     public ResponseEntity<DentistaResponseDTO> toggleStatus(
             @PathVariable Long id,
             @RequestParam boolean isAtivo) {
         return ResponseEntity.ok(dentistaService.toggleStatus(id, isAtivo));
     }
-
 }

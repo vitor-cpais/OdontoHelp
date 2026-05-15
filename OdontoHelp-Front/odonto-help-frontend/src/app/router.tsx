@@ -4,12 +4,13 @@ import AppShell from '../shared/components/AppShell';
 import { PrivateRoute, RoleRoute } from '../shared/components/RouteGuards';
 import LoginPage from '../features/auth/LoginPage';
 
-
-import AgendamentosPage from '../features/agendamentos/pages/AgendamentosPage';
-import DashboardPage    from '../features/dashboard/pages/DashboardPage';
-import DentistasPage    from '../features/dentistas/pages/DentistasPage';
-import PacientesPage    from '../features/pacientes/pages/PacientesPage';
-import UsuariosPage     from '../features/usuarios/pages/UsuariosPage';
+import AgendamentosPage  from '../features/agendamentos/pages/AgendamentosPage';
+import DashboardPage     from '../features/dashboard/pages/DashboardPage';
+import DentistasPage     from '../features/dentistas/pages/DentistasPage';
+import PacientesPage     from '../features/pacientes/pages/PacientesPage';
+import UsuariosPage      from '../features/usuarios/pages/UsuariosPage';
+import ProcedimentosPage from '../features/procedimentos/pages/ProcedimentosPage';
+import AtendimentosPage  from '../features/atendimentos/pages/AtendimentosPage';
 
 const router = createBrowserRouter([
   // ─── pública ────────────────────────────────────────────────────────────────
@@ -23,15 +24,14 @@ const router = createBrowserRouter([
         path: '/',
         element: <AppShell />,
         children: [
-          // redireciona raiz para dashboard
           { index: true, element: <Navigate to="/dashboard" replace /> },
 
           // ADMIN + RECEPCAO
           {
             element: <RoleRoute allowed={['ADMIN', 'RECEPCAO']} />,
             children: [
-              { path: 'dashboard',    element: <DashboardPage /> },
-              { path: 'dentistas',    element: <DentistasPage /> },
+              { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'dentistas', element: <DentistasPage /> },
             ],
           },
 
@@ -39,9 +39,17 @@ const router = createBrowserRouter([
           {
             element: <RoleRoute allowed={['ADMIN', 'RECEPCAO', 'DENTISTA']} />,
             children: [
-              { path: 'agendamentos', element: <AgendamentosPage /> },
-              { path: 'pacientes',    element: <PacientesPage /> },
-              // TODO MVP 1.5 — validar se DENTISTA precisa de view separada em /pacientes
+              { path: 'agendamentos',   element: <AgendamentosPage /> },
+              { path: 'pacientes',      element: <PacientesPage /> },
+              { path: 'procedimentos',  element: <ProcedimentosPage /> },
+            ],
+          },
+
+          // ADMIN + DENTISTA (módulo clínico)
+          {
+            element: <RoleRoute allowed={['ADMIN', 'DENTISTA']} />,
+            children: [
+              { path: 'atendimentos', element: <AtendimentosPage /> },
             ],
           },
 

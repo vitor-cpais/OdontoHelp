@@ -19,6 +19,8 @@ import {
   DashboardOutlined,
   PersonOutlined,
   LogoutOutlined,
+  MedicalInformationOutlined,
+  HealingOutlined,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, type PerfilUsuario } from '../store/authStore';
@@ -57,6 +59,18 @@ const navItems: NavItem[] = [
     icon: <MedicalServicesOutlined sx={{ fontSize: 18 }} />,
     path: '/dentistas',
     allowed: ['ADMIN', 'RECEPCAO'],
+  },
+  {
+    label: 'Procedimentos',
+    icon: <MedicalInformationOutlined sx={{ fontSize: 18 }} />,
+    path: '/procedimentos',
+    allowed: ['ADMIN', 'RECEPCAO', 'DENTISTA'],
+  },
+  {
+    label: 'Atendimentos',
+    icon: <HealingOutlined sx={{ fontSize: 18 }} />,
+    path: '/atendimentos',
+    allowed: ['ADMIN', 'DENTISTA'],
   },
   {
     label: 'Usuários',
@@ -187,11 +201,10 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         </ListItem>
       </List>
 
-      {/* Rodapé */}
       <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          v0..0 • OdontoHelp © 2026
+          v2.0 • OdontoHelp © 2026
         </Typography>
       </Box>
     </Box>
@@ -199,7 +212,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   return (
     <Box component="nav" sx={{ width: { lg: SIDEBAR_WIDTH }, flexShrink: { lg: 0 } }}>
-      {/* Mobile/iPad: Temporária */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
@@ -213,7 +225,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         {SidebarContent}
       </Drawer>
 
-      {/* Desktop: Fixa */}
       <Drawer
         variant="permanent"
         sx={{
