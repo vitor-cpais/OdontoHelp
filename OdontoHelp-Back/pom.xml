@@ -16,25 +16,17 @@
 	<description>Backend para Sistema Odontológico</description>
 
 	<properties>
-		<properties>
-			<java.version>22</java.version>
-			<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-			<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		</properties>
-
 		<java.version>22</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
 
 	<dependencies>
-
-
-		<!-- Spring Security -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!-- JWT -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -52,10 +44,6 @@
 			<version>0.12.6</version>
 			<scope>runtime</scope>
 		</dependency>
-
-
-
-
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
