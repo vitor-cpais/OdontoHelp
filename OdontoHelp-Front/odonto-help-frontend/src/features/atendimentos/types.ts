@@ -1,7 +1,6 @@
 // src/features/atendimentos/types.ts
 //
 // FONTE ÚNICA de verdade para o domínio de Atendimentos.
-// Arquivo atendimento.types.ts foi removido — não usar mais.
 
 /* ── Status ──────────────────────────────────────────────────────────────── */
 
@@ -89,7 +88,7 @@ export interface Atendimento {
   atualizadoEm: string;
 }
 
-/* ── Interfaces de formulário ────────────────────────────────────────────── */
+/* ── Interfaces de formulário e payloads ─────────────────────────────────── */
 
 export interface ItemAtendimentoFormData {
   procedimentoId: number | '';
@@ -104,6 +103,16 @@ export interface AtendimentoUpdateData {
   horaInicio?: string;
   observacoesGerais?: string;
   itens?: ItemAtendimentoFormData[];
+}
+
+/* ── Filtros e Paginação ─────────────────────────────────────────────────── */
+
+/** Filtros para a tela de listagem de Atendimentos */
+export interface AtendimentoFiltros {
+  nomePaciente?: string;
+  status?: StatusAtendimento;
+  dataInicio?: string; // ISO: "2025-01-01T00:00:00"
+  dataFim?: string;
 }
 
 export interface AtendimentoPageParams {

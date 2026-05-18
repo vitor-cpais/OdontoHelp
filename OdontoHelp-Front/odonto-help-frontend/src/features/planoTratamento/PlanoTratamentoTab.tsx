@@ -198,9 +198,10 @@ function PlanoCard({
 interface Props {
   pacienteId: number;
   dentistaId?: number; // pré-preenche o drawer se vier da tela do dentista
+  useDialogForDrawer?: boolean;
 }
 
-export default function PlanoTratamentoTab({ pacienteId, dentistaId }: Props) {
+export default function PlanoTratamentoTab({ pacienteId, dentistaId, useDialogForDrawer }: Props) {
   const [page, setPage] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({
@@ -263,6 +264,7 @@ export default function PlanoTratamentoTab({ pacienteId, dentistaId }: Props) {
         open={drawerOpen}
         pacienteId={pacienteId}
         dentistaId={dentistaId}
+        useDialog={useDialogForDrawer}
         onClose={() => setDrawerOpen(false)}
         onSuccess={(msg) => { showToast(msg, 'success'); setDrawerOpen(false); }}
         onError={(msg) => showToast(msg, 'error')}

@@ -18,9 +18,9 @@ import type { PacienteFormData } from './types';
 
 const schema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
-  email: z.string().min(1, 'E-mail obrigatório').email('E-mail inválido'),
   telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
   cpf: z.string().min(14, 'CPF incompleto — use 000.000.000-00'),
+  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
@@ -29,7 +29,6 @@ const schema = z.object({
     'Data não pode ser futura'
   ),
   observacoesMedicas: z.string().max(500, 'Máximo 500 caracteres').optional().default(''),
-  senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 });
 
 interface Props {

@@ -1,10 +1,10 @@
 // src/features/atendimentos/atendimentoService.ts
 import api from '../../shared/lib/axios';
-import type { Atendimento, AtendimentoUpdateData } from './types';
+import type { Atendimento, AtendimentoUpdateData, AtendimentoFiltros } from './types';
 import type { SliceResponse } from '../dentistas/types';
 
-const BASE_ATENDIMENTOS  = '/atendimentos';
-const BASE_AGENDAMENTOS  = '/agendamentos';
+const BASE_ATENDIMENTOS = '/atendimentos';
+const BASE_AGENDAMENTOS = '/agendamentos';
 
 export const atendimentoService = {
   buscarPorId: async (id: number): Promise<Atendimento> => {
@@ -22,24 +22,29 @@ export const atendimentoService = {
     return data;
   },
 
+  // CORREÇÃO: aceita filtros opcionais de nomePaciente, status, dataInicio, dataFim.
+  // Quando dentistaId é null (ADMIN), usa GET /atendimentos sem filtro de dentista.
+  // O backend precisa ter esses params — ver AtendimentoController e AtendimentoRepository.
   listarPorDentista: async (
-    dentistaId: number,
+    dentistaId: number | null,
     page = 0,
     size = 10,
+    filtros: AtendimentoFiltros = {},
   ): Promise<SliceResponse<Atendimento>> => {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
-    const { data } = await api.get(`${BASE_ATENDIMENTOS}/dentista/${dentistaId}?${query}`);
+    if (filtros.nomePaciente) query.set('nomePaciente', filtros.nomePaciente);
+    if (filtros.status)       query.set('status', filtros.status);
+    if (filtros.dataInicio)   query.set('dataInicio', filtros.dataInicio);
+    if (filtros.dataFim)      query.set('dataFim', filtros.dataFim);
+
+    const url = dentistaId !== null
+      ? `${BASE_ATENDIMENTOS}/dentista/${dentistaId}?${query}`
+      : `${BASE_ATENDIMENTOS}?${query}`;
+
+    const { data } = await api.get(url);
     return data;
   },
 
-  /**
-   * Ação explícita: "Iniciar Atendimento".
-   * Chama POST /agendamentos/{agendamentoId}/iniciar-atendimento.
-   * O backend cria o Atendimento (EM_ANDAMENTO) e muda o Agendamento para ATENDIDO.
-   *
-   * @param agendamentoId ID do agendamento-pai (não do atendimento)
-   * @param observacoesGerais Observações opcionais de abertura
-   */
   iniciar: async (agendamentoId: number, observacoesGerais?: string): Promise<Atendimento> => {
     const { data } = await api.post(
       `${BASE_AGENDAMENTOS}/${agendamentoId}/iniciar-atendimento`,
@@ -48,28 +53,20 @@ export const atendimentoService = {
     return data;
   },
 
-  /**
-   * Edita observações e/ou lista de procedimentos de um atendimento EM_ANDAMENTO.
-   * Rejeitado pelo backend se status == FINALIZADO.
-   */
   atualizar: async (id: number, payload: AtendimentoUpdateData): Promise<Atendimento> => {
     const { data } = await api.put(`${BASE_ATENDIMENTOS}/${id}`, {
       observacoesGerais: payload.observacoesGerais ?? null,
       itens: payload.itens?.map((item) => ({
-        procedimentoId:     item.procedimentoId,
-        numeroDente:        item.numeroDente,
-        face:               item.face || null,
+        procedimentoId:       item.procedimentoId,
+        numeroDente:          item.numeroDente,
+        face:                 item.face || null,
         situacaoIdentificada: item.situacaoIdentificada,
-        observacao:         item.observacao || null,
+        observacao:           item.observacao || null,
       })),
     });
     return data;
   },
 
-  /**
-   * Finaliza o atendimento: EM_ANDAMENTO → FINALIZADO.
-   * O backend registra horaFim e atualiza o odontograma.
-   */
   finalizar: async (id: number): Promise<Atendimento> => {
     const { data } = await api.post(`${BASE_ATENDIMENTOS}/${id}/finalizar`);
     return data;

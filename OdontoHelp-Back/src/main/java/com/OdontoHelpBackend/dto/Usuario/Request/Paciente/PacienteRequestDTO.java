@@ -16,11 +16,11 @@ public record PacienteRequestDTO(
         @NotBlank(message = "Telefone é obrigatório")
         String telefone,
 
-        @NotBlank(message = "E-mail é obrigatório")
+
         @Email(message = "E-mail inválido")
         String email,
 
-        @NotBlank(message = "Senha é obrigatória")
+
         String senha,
 
         @NotBlank(message = "CPF é obrigatório")

@@ -85,6 +85,9 @@ public class AuthService {
                         usuario.getNome(),
                         usuario.getEmail(),
                         usuario.getPerfil().name()
+
+
+
                 )
         );
     }

@@ -5,13 +5,14 @@ import {
   Snackbar, Alert, Skeleton, InputAdornment, Badge,
 } from '@mui/material';
 import {
-  AddOutlined, EditOutlined, ToggleOnOutlined, ToggleOffOutlined, SearchOutlined,
+  AddOutlined, EditOutlined, ToggleOnOutlined, ToggleOffOutlined, SearchOutlined, InfoOutlined,
 } from '@mui/icons-material';
 import { useState, useCallback } from 'react';
 import { usePacientes, useToggleAtivoPaciente } from '../usePacientes';
 import { usePacienteDrawerStore } from '../pacienteStore';
 import StatusChip from '../../../shared/components/StatusChip';
 import PacienteDrawer from '../PacienteDrawer';
+import PacienteDetalheModal from '../PacienteDetalheModal';
 import type { Paciente } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { maskTelefone } from '../../../shared/utils/masks';
@@ -44,6 +45,10 @@ export default function PacientesPage() {
   const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
     setToast({ open: true, msg, severity });
   }, []);
+
+  const [detalhePaciente, setDetalhePaciente] = useState<Paciente | null>(null);
+  const openDetalhes = (p: Paciente) => setDetalhePaciente(p);
+  const closeDetalhes = () => setDetalhePaciente(null);
 
   const handleToggleAtivo = async (paciente: Paciente) => {
     try {
@@ -140,6 +145,11 @@ export default function PacientesPage() {
                       <StatusChip isAtivo={p.isAtivo} />
                     </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                      <Tooltip title="Detalhes">
+                        <IconButton size="small" onClick={() => openDetalhes(p)}>
+                          <InfoOutlined sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Editar">
                         <IconButton size="small" onClick={() => openEdit(p)}>
                           <EditOutlined sx={{ fontSize: 16 }} />
@@ -173,6 +183,12 @@ export default function PacientesPage() {
       <PacienteDrawer
         onSuccess={(msg) => showToast(msg, 'success')}
         onError={(msg) => showToast(msg, 'error')}
+      />
+
+      <PacienteDetalheModal
+        open={!!detalhePaciente}
+        paciente={detalhePaciente}
+        onClose={closeDetalhes}
       />
 
       <Snackbar open={toast.open} autoHideDuration={3500}

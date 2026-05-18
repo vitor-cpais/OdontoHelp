@@ -4,8 +4,7 @@
  * Arcada superior: 18-11 (direita→centro) + 21-28 (centro→esquerda)
  * Arcada inferior: 48-41 (direita→centro) + 31-38 (centro→esquerda)
  */
-import { Box, Typography, Tooltip, Skeleton, Chip } from '@mui/material';
-import { useState } from 'react';
+import { Box, Typography, Tooltip, Skeleton } from '@mui/material';
 import { useOdontograma } from './useOdontograma';
 import { SITUACAO_DENTE_COLORS, SITUACAO_DENTE_LABELS } from '../atendimentos/types';
 import type { SituacaoDente } from '../atendimentos/types';
@@ -57,6 +56,17 @@ function Dente({ numero, mapa, onClick, selected }: DenteProps) {
     >
       <Box
         onClick={() => onClick?.(numero)}
+        onKeyDown={(e) => {
+          if (!onClick) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(numero);
+          }
+        }}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        aria-pressed={!!selected}
+        aria-label={`Dente ${numero} - ${label}`}
         sx={{
           width: 36,
           height: 44,

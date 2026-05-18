@@ -1,16 +1,11 @@
 // src/features/atendimentos/pages/AtendimentosPage.tsx
-//
-// IMPORTANTE: Atendimentos NÃO são criados aqui.
-// O fluxo correto é: Agendamentos → "Iniciar Atendimento" → Atendimento criado.
-// Esta página é apenas visualização/edição de atendimentos já existentes.
-
 import {
   Box, TextField, MenuItem, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Tooltip, Typography, TablePagination,
-  Snackbar, Alert, Skeleton,
+  Snackbar, Alert, Skeleton, InputAdornment,
 } from '@mui/material';
-import { EditOutlined, VisibilityOutlined } from '@mui/icons-material';
+import { EditOutlined, VisibilityOutlined, SearchOutlined } from '@mui/icons-material';
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useAtendimentosPorDentista } from '../useAtendimentos';
@@ -18,6 +13,7 @@ import AtendimentoStatusChip from '../AtendimentoStatusChip';
 import AtendimentoDrawer from '../AtendimentoDrawer';
 import { STATUS_ATENDIMENTO_LABELS } from '../types';
 import type { Atendimento, StatusAtendimento } from '../types';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 
 type FiltroStatus = 'TODOS' | StatusAtendimento;
 
@@ -30,9 +26,13 @@ function formatDT(dt: string) {
 
 export default function AtendimentosPage() {
   const usuario = useAuthStore((s) => s.usuario);
+  const isAdmin = usuario?.perfil === 'ADMIN';
 
   const [page, setPage] = useState(0);
+  const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODOS');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [atendimentoSelecionado, setAtendimentoSelecionado] = useState<Atendimento | null>(null);
   const [toast, setToast] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({
@@ -43,17 +43,21 @@ export default function AtendimentosPage() {
     setToast({ open: true, msg, severity });
   }, []);
 
-  /**
-   * dentistaId: usa o dentista vinculado ao usuário, não o usuário diretamente.
-   * O backend /atendimentos/dentista/{dentistaId} espera o ID da entidade Dentista.
-   * TODO: buscar dentistaId do perfil do usuário logado (via /dentistas/me ou similar).
-   */
-  const dentistaId = usuario?.id ?? null;
-  const { data, isLoading } = useAtendimentosPorDentista(dentistaId, page);
+  const nomePaciente = useDebounce(busca, 400);
 
-  const atendimentos = (data?.content ?? []).filter((a) =>
-    filtroStatus === 'TODOS' ? true : a.status === filtroStatus
-  );
+
+  const dentistaId = isAdmin ? null : (usuario?.dentistaId ?? null);
+
+  const { data, isLoading } = useAtendimentosPorDentista(dentistaId, page, {
+    nomePaciente: nomePaciente || undefined,
+    status: filtroStatus === 'TODOS' ? undefined : filtroStatus,
+    dataInicio: dataInicio ? `${dataInicio}T00:00:00` : undefined,
+    dataFim:    dataFim    ? `${dataFim}T23:59:59`    : undefined,
+  });
+
+  const atendimentos = data?.content ?? [];
+
+  const resetPage = () => setPage(0);
 
   const handleOpenEditar = (a: Atendimento) => {
     setAtendimentoSelecionado(a);
@@ -67,14 +71,30 @@ export default function AtendimentosPage() {
 
   return (
     <Box>
-      {/* Toolbar — sem botão "Novo Atendimento": criação é feita via Agendamentos */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        {/* Busca por nome do paciente */}
+        <TextField
+          placeholder="Buscar paciente..."
+          value={busca}
+          onChange={(e) => { setBusca(e.target.value); resetPage(); }}
+          size="small"
+          sx={{ width: 220 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchOutlined sx={{ fontSize: 17, color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        {/* Filtro de status */}
         <TextField
           select
           size="small"
           label="Status"
           value={filtroStatus}
-          onChange={(e) => { setFiltroStatus(e.target.value as FiltroStatus); setPage(0); }}
+          onChange={(e) => { setFiltroStatus(e.target.value as FiltroStatus); resetPage(); }}
           sx={{ width: 160 }}
         >
           <MenuItem value="TODOS">Todos</MenuItem>
@@ -83,14 +103,39 @@ export default function AtendimentosPage() {
           ))}
         </TextField>
 
-        <Box sx={{ flex: 1 }} />
+        {/* Filtro de período */}
+        <TextField
+          label="De"
+          type="date"
+          size="small"
+          value={dataInicio}
+          onChange={(e) => { setDataInicio(e.target.value); resetPage(); }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 150 }}
+        />
+        <TextField
+          label="Até"
+          type="date"
+          size="small"
+          value={dataFim}
+          onChange={(e) => { setDataFim(e.target.value); resetPage(); }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 150 }}
+        />
 
+        <Box sx={{ flex: 1 }} />
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          Para iniciar um novo atendimento, acesse a tela de Agendamentos.
+          Para iniciar um atendimento, acesse Agendamentos.
         </Typography>
       </Box>
 
-      {/* Table */}
+      {/* Aviso se DENTISTA sem dentistaId no store (sessão antiga, precisa re-logar) */}
+      {!isAdmin && dentistaId === null && (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+          Sessão desatualizada — faça logout e login novamente para carregar seus atendimentos.
+        </Alert>
+      )}
+
       <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
         <TableContainer>
           <Table size="small">
@@ -98,6 +143,7 @@ export default function AtendimentosPage() {
               <TableRow sx={{ backgroundColor: 'background.default' }}>
                 <TableCell>#</TableCell>
                 <TableCell>Paciente</TableCell>
+                {isAdmin && <TableCell>Dentista</TableCell>}
                 <TableCell>Início</TableCell>
                 <TableCell>Procedimentos</TableCell>
                 <TableCell>Status</TableCell>
@@ -108,14 +154,14 @@ export default function AtendimentosPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: isAdmin ? 7 : 6 }).map((_, j) => (
                       <TableCell key={j}><Skeleton height={20} /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : atendimentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={isAdmin ? 7 : 6} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.disabled">
                       Nenhum atendimento encontrado
                     </Typography>
@@ -123,26 +169,22 @@ export default function AtendimentosPage() {
                 </TableRow>
               ) : (
                 atendimentos.map((a) => (
-                  <TableRow
-                    key={a.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => handleOpenEditar(a)}
-                  >
+                  <TableRow key={a.id} hover sx={{ cursor: 'pointer' }} onClick={() => handleOpenEditar(a)}>
                     <TableCell>
                       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>
                         #{a.id}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {a.pacienteNome}
-                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{a.pacienteNome}</Typography>
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">{a.dentistaNome}</Typography>
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDT(a.horaInicio)}
-                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{formatDT(a.horaInicio)}</Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
@@ -158,16 +200,13 @@ export default function AtendimentosPage() {
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <AtendimentoStatusChip status={a.status} />
-                    </TableCell>
+                    <TableCell><AtendimentoStatusChip status={a.status} /></TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title={a.status === 'FINALIZADO' ? 'Visualizar' : 'Editar'}>
                         <IconButton size="small" onClick={() => handleOpenEditar(a)}>
                           {a.status === 'FINALIZADO'
                             ? <VisibilityOutlined sx={{ fontSize: 16 }} />
-                            : <EditOutlined       sx={{ fontSize: 16 }} />
-                          }
+                            : <EditOutlined       sx={{ fontSize: 16 }} />}
                         </IconButton>
                       </Tooltip>
                     </TableCell>

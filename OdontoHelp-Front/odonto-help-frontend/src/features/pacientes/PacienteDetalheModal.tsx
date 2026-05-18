@@ -2,7 +2,7 @@
 import {
   Dialog, DialogTitle, DialogContent,
   Box, Tabs, Tab, Typography, IconButton,
-  Divider, Skeleton, Chip,
+  Divider, Chip,
 } from '@mui/material';
 import { Close, PersonOutlined } from '@mui/icons-material';
 import { useState } from 'react';
@@ -179,7 +179,7 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
 
         {/* Aba Plano de Tratamento */}
         <TabPanel value={tab} index={3}>
-          <PlanoTratamentoTab pacienteId={paciente.id} />
+          <PlanoTratamentoTab pacienteId={paciente.id} useDialogForDrawer />
         </TabPanel>
       </DialogContent>
     </Dialog>

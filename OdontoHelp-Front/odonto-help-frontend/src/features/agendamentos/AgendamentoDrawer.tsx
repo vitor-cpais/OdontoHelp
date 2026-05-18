@@ -12,7 +12,9 @@ import { useAgendamentoDrawerStore } from './agendamentoStore';
 import {
   useCreateAgendamento, useUpdateAgendamento,
   useAtualizarStatus, useCancelarAgendamento, useAgendamentos,
+  useAtualizarStatusAgendamentoComItens,
 } from './useAgendamentos';
+import { useIniciarAtendimento } from '../atendimentos/useAtendimentos';
 import StatusTransition from './StatusTransition';
 import { STATUS_LABELS } from './types';
 import type { AgendamentoFormData, StatusConsulta } from './types';
@@ -55,7 +57,9 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const create = useCreateAgendamento();
   const update = useUpdateAgendamento(editingId ?? 0);
   const atualizarStatus = useAtualizarStatus();
+  const atualizarStatusComItens = useAtualizarStatusAgendamentoComItens();
   const cancelar = useCancelarAgendamento();
+  const iniciarAtendimento = useIniciarAtendimento();
 
   const { data: dentistasData } = useDentistas(
   { page: 0, size: 100, isAtivo: true },
@@ -147,7 +151,11 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const handleStatusChange = async (status: StatusConsulta) => {
     if (!editingId) return;
     try {
-      await atualizarStatus.mutateAsync({ id: editingId, status });
+      await atualizarStatusComItens.mutateAsync({
+        agendamentoId: editingId,
+        pacienteId: draft.pacienteId ?? 0,
+        status,
+      });
       onSuccess(`Status atualizado para ${STATUS_LABELS[status]}`);
       clearDraft();
     } catch (e: any) {
@@ -167,7 +175,21 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
     }
   };
 
-  const loading = create.isPending || update.isPending || atualizarStatus.isPending;
+  const handleIniciarAtendimento = async () => {
+    if (!editingId) return;
+    try {
+      await iniciarAtendimento.mutateAsync({
+        agendamentoId: editingId,
+        observacoesGerais: draft.observacoes,
+      });
+      onSuccess('Atendimento iniciado! Clique no agendamento para abrir o formulário de atendimento.');
+      clearDraft();
+    } catch (e: any) {
+      onError(e.message ?? 'Erro ao iniciar atendimento');
+    }
+  };
+
+  const loading = create.isPending || update.isPending || atualizarStatusComItens.isPending || iniciarAtendimento.isPending;
   const fieldsDisabled = isView || !!isFinalStatus;
 
   const drawerTitle = isNew ? 'Novo agendamento' : isEdit ? 'Editar agendamento' : 'Agendamento';
@@ -305,6 +327,13 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
           {/* Direita */}
           <Stack direction="row" spacing={1.5} alignItems="center">
             {loading && <CircularProgress size={16} />}
+
+            {isView && draft.status === 'CONFIRMADO' && (
+              <Button variant="contained" color="success" onClick={handleIniciarAtendimento}
+                disabled={loading}>
+                Iniciar Atendimento
+              </Button>
+            )}
 
             {isView && !isFinalStatus && (
               <Button variant="outlined" startIcon={<EditOutlined sx={{ fontSize: 16 }} />}

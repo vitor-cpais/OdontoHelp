@@ -1,5 +1,6 @@
 package com.OdontoHelpBackend.controller.Clinico;
 
+import com.OdontoHelpBackend.domain.Clinico.Enums.StatusAtendimento;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtendimentoUpdateDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.AtendimentoResponseDTO;
@@ -8,23 +9,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Operações sobre um Atendimento já existente.
- *
- * NÃO existe POST /atendimentos — a criação é feita exclusivamente via
- * POST /agendamentos/{id}/iniciar-atendimento (fluxo explícito e auditável).
- *
- * Ciclo de vida exposto:
- *   GET    /atendimentos/{id}                    → buscar
- *   GET    /atendimentos/paciente/{id}            → histórico do paciente
- *   GET    /atendimentos/dentista/{id}            → agenda do dentista
- *   PUT    /atendimentos/{id}                     → editar observações/itens (apenas EM_ANDAMENTO)
- *   POST   /atendimentos/{id}/finalizar           → finalizar (EM_ANDAMENTO → FINALIZADO)
- */
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/atendimentos")
 @RequiredArgsConstructor
@@ -45,18 +36,35 @@ public class AtendimentoController {
         return ResponseEntity.ok(atendimentoService.listarPorPaciente(pacienteId, pageable, usuario));
     }
 
+    // CORREÇÃO: adicionados filtros opcionais de nomePaciente, dataInicio, dataFim e status
     @GetMapping("/dentista/{dentistaId}")
     public ResponseEntity<Slice<AtendimentoResponseDTO>> listarPorDentista(
             @PathVariable Long dentistaId,
+            @RequestParam(required = false) String nomePaciente,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
+            @RequestParam(required = false) StatusAtendimento status,
             @AuthenticationPrincipal Usuario usuario,
             Pageable pageable) {
-        return ResponseEntity.ok(atendimentoService.listarPorDentista(dentistaId, pageable, usuario));
+        return ResponseEntity.ok(
+                atendimentoService.listarPorDentista(dentistaId, nomePaciente, dataInicio, dataFim, status, pageable, usuario)
+        );
     }
 
-    /**
-     * Edita observações e/ou substitui a lista de procedimentos.
-     * Rejeitado se status == FINALIZADO.
-     */
+    // NOVO: endpoint para ADMIN ver todos os atendimentos sem filtro de dentista
+    @GetMapping
+    public ResponseEntity<Slice<AtendimentoResponseDTO>> listarTodos(
+            @RequestParam(required = false) String nomePaciente,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
+            @RequestParam(required = false) StatusAtendimento status,
+            @AuthenticationPrincipal Usuario usuario,
+            Pageable pageable) {
+        return ResponseEntity.ok(
+                atendimentoService.listarTodos(nomePaciente, dataInicio, dataFim, status, pageable)
+        );
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<AtendimentoResponseDTO> atualizar(
             @PathVariable Long id,
@@ -65,14 +73,6 @@ public class AtendimentoController {
         return ResponseEntity.ok(atendimentoService.atualizar(id, dto, usuario));
     }
 
-    /**
-     * Finaliza o atendimento.
-     * Efeitos colaterais (no service):
-     *   - status: EM_ANDAMENTO → FINALIZADO
-     *   - horaFim = LocalDateTime.now()
-     *   - odontograma do paciente é atualizado
-     *   - histórico imutável é gravado por item
-     */
     @PostMapping("/{id}/finalizar")
     public ResponseEntity<AtendimentoResponseDTO> finalizar(
             @PathVariable Long id,

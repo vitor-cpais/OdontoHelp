@@ -1,11 +1,12 @@
 // src/features/odontograma/HistoricoOdontogramaTab.tsx
+// CORREÇÃO: page reseta para 0 ao trocar denteFiltro — evita query vazia em página inexistente
 import {
-  Box, Typography, Skeleton, Button, Chip,
+  Box, Typography, Skeleton, Chip,
   Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, TablePagination,
 } from '@mui/material';
 import { ArrowForwardOutlined } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHistoricoOdontograma, useHistoricoPorDente } from './useOdontograma';
 import { SITUACAO_DENTE_COLORS, SITUACAO_DENTE_LABELS } from '../atendimentos/types';
 import type { SituacaoDente } from '../atendimentos/types';
@@ -39,13 +40,17 @@ function formatDT(dt: string) {
 
 interface Props {
   pacienteId: number;
-  /** Se passado, filtra pelo dente selecionado no odontograma visual */
   denteFiltro?: number | null;
   onClearFiltro?: () => void;
 }
 
 export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onClearFiltro }: Props) {
   const [page, setPage] = useState(0);
+
+
+  useEffect(() => {
+    setPage(0);
+  }, [denteFiltro]);
 
   const queryGeral = useHistoricoOdontograma(denteFiltro ? null : pacienteId, page);
   const queryDente = useHistoricoPorDente(denteFiltro ? pacienteId : null, denteFiltro ?? null, page);
@@ -55,7 +60,6 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
 
   return (
     <Box>
-      {/* Filtro ativo */}
       {denteFiltro && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
@@ -111,15 +115,11 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
                         {r.numeroDente}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <SituacaoTag situacao={r.situacaoAnterior} />
-                    </TableCell>
+                    <TableCell><SituacaoTag situacao={r.situacaoAnterior} /></TableCell>
                     <TableCell sx={{ px: 0.5 }}>
                       <ArrowForwardOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
                     </TableCell>
-                    <TableCell>
-                      <SituacaoTag situacao={r.situacaoNova} />
-                    </TableCell>
+                    <TableCell><SituacaoTag situacao={r.situacaoNova} /></TableCell>
                     <TableCell>
                       <Typography variant="body2">{r.dentistaNome}</Typography>
                     </TableCell>

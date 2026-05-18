@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
     label: 'Procedimentos',
     icon: <MedicalInformationOutlined sx={{ fontSize: 18 }} />,
     path: '/procedimentos',
-    allowed: ['ADMIN', 'RECEPCAO', 'DENTISTA'],
+    allowed: ['ADMIN'],
   },
   {
     label: 'Atendimentos',

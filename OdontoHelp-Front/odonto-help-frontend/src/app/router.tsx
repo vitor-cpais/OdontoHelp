@@ -26,7 +26,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
 
-          // ADMIN + RECEPCAO
+          // ADMIN + RECEPCAO (administrativo + gestão)
           {
             element: <RoleRoute allowed={['ADMIN', 'RECEPCAO']} />,
             children: [
@@ -35,13 +35,12 @@ const router = createBrowserRouter([
             ],
           },
 
-          // ADMIN + RECEPCAO + DENTISTA
+          // ADMIN + RECEPCAO + DENTISTA (agenda de consultas)
           {
             element: <RoleRoute allowed={['ADMIN', 'RECEPCAO', 'DENTISTA']} />,
             children: [
-              { path: 'agendamentos',   element: <AgendamentosPage /> },
-              { path: 'pacientes',      element: <PacientesPage /> },
-              { path: 'procedimentos',  element: <ProcedimentosPage /> },
+              { path: 'agendamentos', element: <AgendamentosPage /> },
+              { path: 'pacientes',    element: <PacientesPage /> },
             ],
           },
 
@@ -53,11 +52,12 @@ const router = createBrowserRouter([
             ],
           },
 
-          // ADMIN only
+          // ADMIN only (gestão de sistema)
           {
             element: <RoleRoute allowed={['ADMIN']} />,
             children: [
-              { path: 'usuarios', element: <UsuariosPage /> },
+              { path: 'usuarios',     element: <UsuariosPage /> },
+              { path: 'procedimentos', element: <ProcedimentosPage /> },
             ],
           },
         ],

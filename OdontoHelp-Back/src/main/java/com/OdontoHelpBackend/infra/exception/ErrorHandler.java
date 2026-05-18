@@ -1,6 +1,7 @@
 package com.OdontoHelpBackend.infra.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,6 +13,15 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class ErrorHandler {
+
+    // CORREÇÃO: sem este handler, BadCredentialsException é interceptada pelo Spring Security
+    // antes do @RestControllerAdvice e vira 403 silencioso sem nenhum log Java.
+    // Com ele, o nosso AuthService lança BadCredentialsException → chega aqui → 401 limpo.
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Map<String, String> handleBadCredentials(BadCredentialsException ex) {
+        return Map.of("message", "E-mail ou senha inválidos");
+    }
 
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -49,7 +59,6 @@ public class ErrorHandler {
         return Map.of("erro", ex.getMessage());
     }
 
-    // NOVO: 403 para acesso negado por propriedade do recurso
     @ExceptionHandler(AcessoNegadoException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Map<String, String> handleAcessoNegado(AcessoNegadoException ex) {

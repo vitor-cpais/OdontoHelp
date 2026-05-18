@@ -50,6 +50,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
+            System.out.println("Erro no filtro: " + e.getMessage());
 
             SecurityContextHolder.clearContext();
         }

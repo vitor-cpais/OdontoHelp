@@ -21,7 +21,6 @@ public interface PacienteMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "isAtivo", ignore = true)
     @Mapping(target = "cpf", ignore = true)
-    @Mapping(target = "email", ignore = true)
     @Mapping(target = "senha", ignore = true)
     @Mapping(target = "perfil", ignore = true)
     void updateEntity(PacienteUpdateDTO dto, @MappingTarget Paciente paciente);

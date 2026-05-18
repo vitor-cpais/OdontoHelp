@@ -16,7 +16,7 @@ export function useOdontograma(pacienteId: number | null) {
       return mapa;
     },
     enabled: pacienteId !== null,
-    staleTime: 30_000,
+    staleTime: 0, // Sempre fresco para exibir atualizações em tempo real
   });
 }
 
