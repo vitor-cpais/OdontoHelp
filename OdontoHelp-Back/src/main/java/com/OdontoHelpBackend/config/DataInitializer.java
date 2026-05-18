@@ -10,7 +10,7 @@ import com.OdontoHelpBackend.repository.Clinico.*;
 import com.OdontoHelpBackend.repository.Consulta.AgendamentoRepository;
 import com.OdontoHelpBackend.repository.Usuario.*;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,8 +23,13 @@ import java.util.List;
 import java.util.Random;
 
 @Component
-@RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
+
+    @Value("${app.admin.email}")
+    private String adminEmail;
+
+    @Value("${app.admin.password}")
+    private String adminPassword;
 
     private final UsuarioRepository usuarioRepository;
     private final DentistaRepository dentistaRepository;
@@ -40,39 +45,58 @@ public class DataInitializer implements ApplicationRunner {
 
     private final Random random = new Random();
 
+    public DataInitializer(UsuarioRepository usuarioRepository, DentistaRepository dentistaRepository,
+                           PacienteRepository pacienteRepository, EnderecoRepository enderecoRepository,
+                           AgendamentoRepository agendamentoRepository, ProcedimentoRepository procedimentoRepository,
+                           AtendimentoRepository atendimentoRepository, OdontogramaRepository odontogramaRepository,
+                           HistoricoOdontogramaRepository historicoOdontogramaRepository, PlanoDeTratamentoRepository planoRepository,
+                           PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.dentistaRepository = dentistaRepository;
+        this.pacienteRepository = pacienteRepository;
+        this.enderecoRepository = enderecoRepository;
+        this.agendamentoRepository = agendamentoRepository;
+        this.procedimentoRepository = procedimentoRepository;
+        this.atendimentoRepository = atendimentoRepository;
+        this.odontogramaRepository = odontogramaRepository;
+        this.historicoOdontogramaRepository = historicoOdontogramaRepository;
+        this.planoRepository = planoRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (usuarioRepository.count() > 0) return;
+        if (usuarioRepository.count() > 0) {
+            historicoOdontogramaRepository.deleteAll();
+            odontogramaRepository.deleteAll();
+            atendimentoRepository.deleteAll();
+            planoRepository.deleteAll();
+            agendamentoRepository.deleteAll();
+            enderecoRepository.deleteAll();
+            dentistaRepository.deleteAll();
+            pacienteRepository.deleteAll();
+            usuarioRepository.deleteAll();
+        }
 
-        // ── MVP 1 — Usuários ───────────────────────────────────────────────────
         criarAdmin();
         criarRecepcionista();
         List<Dentista> dentistas = criarDentistas();
         List<Paciente> pacientes = criarPacientes();
 
-        // ── MVP 2 — Clínico ────────────────────────────────────────────────────
         List<Procedimento> procedimentos = criarProcedimentos();
-        List<Agendamento>  agendamentos  = criarAgendamentos(dentistas, pacientes);
+        List<Agendamento> agendamentos = criarAgendamentos(dentistas, pacientes);
         criarAtendimentosEOdontograma(agendamentos, procedimentos, dentistas, pacientes);
         criarPlanosDeTratamento(dentistas, pacientes, procedimentos);
 
         System.out.println("✅ Base de dados inicializada com sucesso!");
-        System.out.println("─────────────────────────────────────────");
-        System.out.println("👤 admin@odonto.com       | senha: admin123");
-        System.out.println("👤 recepcao@odonto.com    | senha: recepcao123");
-        System.out.println("👤 dentista1@odonto.com   | senha: dentista123");
-        System.out.println("👤 dentista2@odonto.com   | senha: dentista123");
-        System.out.println("─────────────────────────────────────────");
     }
-
-    // ─── USUÁRIOS ─────────────────────────────────────────────────────────────
 
     private Usuario criarAdmin() {
         Usuario admin = new Usuario();
-        admin.setNome("Administrador Sistema");
-        admin.setEmail("admin@odonto.com");
-        admin.setSenha(passwordEncoder.encode("admin123"));
+        admin.setNome("ADMINISTRADOR SISTEMA");
+        admin.setEmail(adminEmail);
+        admin.setSenha(passwordEncoder.encode(adminPassword));
         admin.setCpf(gerarCpfValido());
         admin.setTelefone("11999990000");
         admin.setPerfil(PerfilUsuario.ADMIN);
@@ -86,7 +110,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private Usuario criarRecepcionista() {
         Usuario recep = new Usuario();
-        recep.setNome("Recepcionista Padrão");
+        recep.setNome("RECEPCIONISTA PADRÃO");
         recep.setEmail("recepcao@odonto.com");
         recep.setSenha(passwordEncoder.encode("recepcao123"));
         recep.setCpf(gerarCpfValido());
@@ -102,11 +126,11 @@ public class DataInitializer implements ApplicationRunner {
 
     private List<Dentista> criarDentistas() {
         String[][] dados = {
-                {"Ricardo Oliveira",  "dentista1@odonto.com", "SP-10001", "M"},
-                {"Beatriz Costa",     "dentista2@odonto.com", "SP-10002", "F"},
-                {"Marcos Santos",     "dentista3@odonto.com", "SP-10003", "M"},
-                {"Helena Melo",       "dentista4@odonto.com", "SP-10004", "F"},
-                {"Tiago Barbosa",     "dentista5@odonto.com", "SP-10005", "M"},
+                {"RICARDO OLIVEIRA",  "dentista1@odonto.com", "SP-10001", "M"},
+                {"BEATRIZ COSTA",     "dentista2@odonto.com", "SP-10002", "F"},
+                {"MARCOS SANTOS",     "dentista3@odonto.com", "SP-10003", "M"},
+                {"HELENA MELO",       "dentista4@odonto.com", "SP-10004", "F"},
+                {"TIAGO BARBOSA",     "dentista5@odonto.com", "SP-10005", "M"},
         };
 
         return java.util.Arrays.stream(dados).map(d -> {
@@ -115,7 +139,7 @@ public class DataInitializer implements ApplicationRunner {
             dentista.setEmail(d[1]);
             dentista.setSenha(passwordEncoder.encode("dentista123"));
             dentista.setCpf(gerarCpfValido());
-            dentista.setTelefone("119800" + random.nextInt(9999));
+            dentista.setTelefone("119800" + String.format("%04d", random.nextInt(9999)));
             dentista.setPerfil(PerfilUsuario.DENTISTA);
             dentista.setGenero(d[3]);
             dentista.setDataNascimento(LocalDate.of(1975 + random.nextInt(20), 6, 15));
@@ -129,14 +153,14 @@ public class DataInitializer implements ApplicationRunner {
 
     private List<Paciente> criarPacientes() {
         String[][] dados = {
-                {"Bruno Silva",     "paciente1@email.com", "M", "Sem observações"},
-                {"Camila Pereira",  "paciente2@email.com", "F", "Alérgica a penicilina"},
-                {"Daniel Alves",    "paciente3@email.com", "M", "Hipertenso"},
-                {"Elaine Ribeiro",  "paciente4@email.com", "F", "Sem observações"},
-                {"Fábio Martins",   "paciente5@email.com", "M", "Diabético tipo 2"},
-                {"Gisele Carvalho", "paciente6@email.com", "F", "Sem observações"},
-                {"Hugo Lopes",      "paciente7@email.com", "M", "Sem observações"},
-                {"Isabela Ferreira","paciente8@email.com", "F", "Gestante"},
+                {"BRUNO SILVA",     "paciente1@email.com", "M", "Sem observações"},
+                {"CAMILA PEREIRA",  "paciente2@email.com", "F", "Alérgica a penicilina"},
+                {"DANIEL ALVES",    "paciente3@email.com", "M", "Hipertenso"},
+                {"ELAINE RIBEIRO",  "paciente4@email.com", "F", "Sem observações"},
+                {"FÁBIO MARTINS",   "paciente5@email.com", "M", "Diabético tipo 2"},
+                {"GISELE CARVALHO", "paciente6@email.com", "F", "Sem observações"},
+                {"HUGO LOPES",      "paciente7@email.com", "M", "Sem observações"},
+                {"ISABELA FERREIRA","paciente8@email.com", "F", "Gestante"},
         };
 
         return java.util.Arrays.stream(dados).map(d -> {
@@ -145,7 +169,7 @@ public class DataInitializer implements ApplicationRunner {
             p.setEmail(d[1]);
             p.setSenha(passwordEncoder.encode("paciente123"));
             p.setCpf(gerarCpfValido());
-            p.setTelefone("119700" + random.nextInt(9999));
+            p.setTelefone("119700" + String.format("%04d", random.nextInt(9999)));
             p.setPerfil(PerfilUsuario.PACIENTE);
             p.setGenero(d[2]);
             p.setDataNascimento(LocalDate.of(1985 + random.nextInt(25), 3, 10));
@@ -157,9 +181,9 @@ public class DataInitializer implements ApplicationRunner {
         }).toList();
     }
 
-    // ─── MVP 2 ────────────────────────────────────────────────────────────────
-
     private List<Procedimento> criarProcedimentos() {
+        if (procedimentoRepository.count() > 0) return procedimentoRepository.findAll();
+
         record ProcData(String nome, String desc, double valor, int min, String cor) {}
 
         List<ProcData> lista = List.of(
@@ -188,22 +212,19 @@ public class DataInitializer implements ApplicationRunner {
     private List<Agendamento> criarAgendamentos(List<Dentista> dentistas, List<Paciente> pacientes) {
         LocalDateTime base = LocalDateTime.now().withHour(9).withMinute(0).withSecond(0).withNano(0);
 
-        // Futuros — ainda não atendidos
-        Agendamento a1 = salvarAgendamento(pacientes.get(0), dentistas.get(0), base.plusDays(1),          30, StatusConsulta.AGENDADO,    null);
-        Agendamento a2 = salvarAgendamento(pacientes.get(1), dentistas.get(0), base.plusDays(1).plusHours(1), 45, StatusConsulta.CONFIRMADO,  null);
-        Agendamento a3 = salvarAgendamento(pacientes.get(2), dentistas.get(1), base.plusDays(2),          60, StatusConsulta.AGENDADO,    null);
-        Agendamento a4 = salvarAgendamento(pacientes.get(3), dentistas.get(1), base.plusDays(2).plusHours(1), 30, StatusConsulta.AGENDADO, null);
+        salvarAgendamento(pacientes.get(0), dentistas.get(0), base.plusDays(1),          30, StatusConsulta.AGENDADO,    null);
+        salvarAgendamento(pacientes.get(1), dentistas.get(0), base.plusDays(1).plusHours(1), 45, StatusConsulta.CONFIRMADO,  null);
+        salvarAgendamento(pacientes.get(2), dentistas.get(1), base.plusDays(2),          60, StatusConsulta.AGENDADO,    null);
+        salvarAgendamento(pacientes.get(3), dentistas.get(1), base.plusDays(2).plusHours(1), 30, StatusConsulta.AGENDADO, null);
 
-        // Passados — atendimento iniciado (status ATENDIDO — transição correta do modelo atual)
         Agendamento a5 = salvarAgendamento(pacientes.get(0), dentistas.get(0), base.minusDays(3), 45, StatusConsulta.ATENDIDO, null);
         Agendamento a6 = salvarAgendamento(pacientes.get(1), dentistas.get(1), base.minusDays(5), 60, StatusConsulta.ATENDIDO, null);
         Agendamento a7 = salvarAgendamento(pacientes.get(2), dentistas.get(0), base.minusDays(7), 30, StatusConsulta.ATENDIDO, null);
 
-        // Cancelado e falta
         salvarAgendamento(pacientes.get(4), dentistas.get(2), base.plusDays(3),  30, StatusConsulta.CANCELADO, "Paciente solicitou cancelamento");
         salvarAgendamento(pacientes.get(5), dentistas.get(2), base.minusDays(2), 30, StatusConsulta.FALTA,     "Paciente não compareceu");
 
-        return List.of(a5, a6, a7); // retorna só os ATENDIDO para gerar atendimentos
+        return List.of(a5, a6, a7);
     }
 
     private Agendamento salvarAgendamento(Paciente paciente, Dentista dentista,
@@ -220,15 +241,14 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void criarAtendimentosEOdontograma(List<Agendamento> agendamentosAtendidos,
-                                                List<Procedimento> procedimentos,
-                                                List<Dentista> dentistas,
-                                                List<Paciente> pacientes) {
-        Procedimento limpeza     = procedimentos.get(1); // LIMPEZA
-        Procedimento restauracao = procedimentos.get(2); // RESTAURACAO
-        Procedimento consulta    = procedimentos.get(0); // CONSULTA
-        Procedimento canal       = procedimentos.get(4); // TRATAMENTO_CANAL
+                                               List<Procedimento> procedimentos,
+                                               List<Dentista> dentistas,
+                                               List<Paciente> pacientes) {
+        Procedimento limpeza     = procedimentos.get(1);
+        Procedimento restauracao = procedimentos.get(2);
+        Procedimento consulta    = procedimentos.get(0);
+        Procedimento canal       = procedimentos.get(4);
 
-        // ── Atendimento 1 — FINALIZADO com limpeza (36) + restauração (46) ──
         Agendamento ag1 = agendamentosAtendidos.get(0);
         Atendimento at1 = Atendimento.iniciar(ag1, ag1.getDentista(), "Cárie no dente 36. Limpeza e restauração realizadas.");
 
@@ -247,14 +267,12 @@ public class DataInitializer implements ApplicationRunner {
 
         at1.adicionarItem(item1a);
         at1.adicionarItem(item1b);
-        at1.finalizar(); // EM_ANDAMENTO → FINALIZADO (único ciclo de vida válido)
+        at1.finalizar();
         atendimentoRepository.save(at1);
 
-        // Atualiza odontograma dos dois itens
         salvarOdontograma(ag1.getPaciente(), ag1.getDentista(), at1, item1a);
         salvarOdontograma(ag1.getPaciente(), ag1.getDentista(), at1, item1b);
 
-        // ── Atendimento 2 — EM_ANDAMENTO (dentista ainda atendendo) ──
         Agendamento ag2 = agendamentosAtendidos.get(1);
         Atendimento at2 = Atendimento.iniciar(ag2, ag2.getDentista(), "Consulta de rotina. Necessário retorno para limpeza.");
 
@@ -265,10 +283,8 @@ public class DataInitializer implements ApplicationRunner {
         item2.setObservacao("Dente em bom estado");
 
         at2.adicionarItem(item2);
-        // Não chama finalizar() — permanece EM_ANDAMENTO
         atendimentoRepository.save(at2);
 
-        // ── Atendimento 3 — EM_ANDAMENTO sem itens ainda ──
         Agendamento ag3 = agendamentosAtendidos.get(2);
         Atendimento at3 = Atendimento.iniciar(ag3, ag3.getDentista(), "Avaliação em andamento.");
 
@@ -285,18 +301,16 @@ public class DataInitializer implements ApplicationRunner {
 
     private void salvarOdontograma(Paciente paciente, Dentista dentista,
                                    Atendimento atendimento, ItemAtendimento item) {
-        // Histórico imutável — um registro por evento
         HistoricoOdontograma historico = new HistoricoOdontograma();
         historico.setPaciente(paciente);
         historico.setNumeroDente(item.getNumeroDente());
-        historico.setSituacaoAnterior(null); // primeiro registro deste dente
+        historico.setSituacaoAnterior(null);
         historico.setSituacaoNova(item.getSituacaoIdentificada());
         historico.setDentista(dentista);
         historico.setAtendimento(atendimento);
         historico.setObservacao(item.getObservacao());
         historicoOdontogramaRepository.save(historico);
 
-        // Estado atual do dente — upsert
         Odontograma odontograma = odontogramaRepository
                 .findByPacienteIdAndNumeroDente(paciente.getId(), item.getNumeroDente())
                 .orElseGet(() -> {
@@ -311,12 +325,11 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void criarPlanosDeTratamento(List<Dentista> dentistas, List<Paciente> pacientes,
-                                          List<Procedimento> procedimentos) {
-        Procedimento canal       = procedimentos.get(4); // TRATAMENTO_CANAL
-        Procedimento restauracao = procedimentos.get(2); // RESTAURACAO
-        Procedimento limpeza     = procedimentos.get(1); // LIMPEZA
+                                         List<Procedimento> procedimentos) {
+        Procedimento canal       = procedimentos.get(4);
+        Procedimento restauracao = procedimentos.get(2);
+        Procedimento limpeza     = procedimentos.get(1);
 
-        // Plano 1 — paciente 0, dentista 0
         PlanoDeTratamento plano1 = new PlanoDeTratamento();
         plano1.setPaciente(pacientes.get(0));
         plano1.setDentista(dentistas.get(0));
@@ -349,7 +362,6 @@ public class DataInitializer implements ApplicationRunner {
         plano1.getItens().addAll(List.of(ip1, ip2, ip3));
         planoRepository.save(plano1);
 
-        // Plano 2 — paciente 1, dentista 1
         PlanoDeTratamento plano2 = new PlanoDeTratamento();
         plano2.setPaciente(pacientes.get(1));
         plano2.setDentista(dentistas.get(1));
@@ -357,7 +369,7 @@ public class DataInitializer implements ApplicationRunner {
 
         ItemPlanoDeTratamento ip4 = new ItemPlanoDeTratamento();
         ip4.setPlano(plano2);
-        ip4.setProcedimento(procedimentos.get(5)); // CLAREAMENTO
+        ip4.setProcedimento(procedimentos.get(5));
         ip4.setNumeroDente(11);
         ip4.setPrioridade(1);
         ip4.setStatus(StatusItemPlano.PENDENTE);
@@ -366,8 +378,6 @@ public class DataInitializer implements ApplicationRunner {
         plano2.getItens().add(ip4);
         planoRepository.save(plano2);
     }
-
-    // ─── HELPERS ──────────────────────────────────────────────────────────────
 
     private void vincularEndereco(Usuario usuario) {
         Endereco endereco = new Endereco();
