@@ -30,9 +30,9 @@ public interface AtendimentoRepository extends JpaRepository<Atendimento, Long> 
         JOIN a.paciente p
         WHERE a.dentista.id = :dentistaId
         AND (CAST(:nomePaciente AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:nomePaciente AS string), '%')))
-        AND (:dataInicio   IS NULL OR a.horaInicio >= :dataInicio)
-        AND (:dataFim      IS NULL OR a.horaInicio <= :dataFim)
-        AND (:status       IS NULL OR a.status = :status)
+        AND (CAST(:dataInicio AS localdatetime) IS NULL OR a.horaInicio >= :dataInicio)
+        AND (CAST(:dataFim AS localdatetime) IS NULL OR a.horaInicio <= :dataFim)
+        AND (CAST(:status AS string) IS NULL OR a.status = :status)
         ORDER BY a.horaInicio DESC
     """)
     Slice<Atendimento> filtrarPorDentista(
@@ -49,9 +49,9 @@ public interface AtendimentoRepository extends JpaRepository<Atendimento, Long> 
         SELECT a FROM Atendimento a
         JOIN a.paciente p
         WHERE (CAST(:nomePaciente AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:nomePaciente AS string), '%')))
-        AND (:dataInicio IS NULL OR a.horaInicio >= :dataInicio)
-        AND (:dataFim    IS NULL OR a.horaInicio <= :dataFim)
-        AND (:status     IS NULL OR a.status = :status)
+        AND (CAST(:dataInicio AS localdatetime) IS NULL OR a.horaInicio >= :dataInicio)
+        AND (CAST(:dataFim AS localdatetime) IS NULL OR a.horaInicio <= :dataFim)
+        AND (CAST(:status AS string) IS NULL OR a.status = :status)
         ORDER BY a.horaInicio DESC
     """)
     Slice<Atendimento> filtrarTodos(
