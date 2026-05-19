@@ -72,23 +72,34 @@ public class SecurityConfig {
 
                     auth
                             .requestMatchers("/auth/**").permitAll()
-                            .requestMatchers("/usuarios/**").hasRole("ADMIN")
-                            .requestMatchers(HttpMethod.GET,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers(HttpMethod.POST,  "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PUT,   "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PATCH, "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.GET,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers(HttpMethod.POST,  "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PUT,   "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PATCH, "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers("/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.GET,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers(HttpMethod.POST,  "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PUT,   "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PATCH, "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers("/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
-                            .requestMatchers("/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
+                            .requestMatchers("/usuarios", "/usuarios/**").hasRole("ADMIN")
+
+                            // Dentistas
+                            .requestMatchers(HttpMethod.GET,   "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                            // Pacientes
+                            .requestMatchers(HttpMethod.GET,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                            // Agendamentos e Dashboard (Corrigido para evitar 403 na rota raiz)
+                            .requestMatchers("/agendamentos", "/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers("/dashboard", "/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                            // Procedimentos
+                            .requestMatchers(HttpMethod.GET,   "/procedimentos", "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.POST,  "/procedimentos", "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PUT,   "/procedimentos", "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.PATCH, "/procedimentos", "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO")
+
+                            // Atendimentos e Planos de Tratamento
+                            .requestMatchers("/atendimentos", "/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
+                            .requestMatchers("/planos-tratamento", "/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
+
                             .anyRequest().authenticated();
                 })
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
