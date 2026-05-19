@@ -5,7 +5,8 @@ import {
   Divider, Chip,
 } from '@mui/material';
 import { Close, PersonOutlined } from '@mui/icons-material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '../../shared/store/authStore';
 import OdontogramaVisual from '../odontograma/OdontogramaVisual';
 import HistoricoOdontogramaTab from '../odontograma/HistoricoOdontogramaTab';
 import PlanoTratamentoTab from '../planoTratamento/PlanoTratamentoTab';
@@ -31,8 +32,16 @@ interface Props {
 }
 
 export default function PacienteDetalheModal({ open, paciente, onClose }: Props) {
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const hasClinicoAccess = perfil === 'ADMIN' || perfil === 'DENTISTA';
   const [tab, setTab] = useState(0);
   const [denteSelecionado, setDenteSelecionado] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!hasClinicoAccess && tab !== 0) {
+      setTab(0);
+    }
+  }, [hasClinicoAccess, tab]);
 
   if (!paciente) return null;
 
@@ -103,23 +112,25 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
           }}
         >
           <Tab label="Dados" />
-          <Tab label="Odontograma" />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                Histórico
-                {denteSelecionado && (
-                  <Chip
-                    label={`Dente ${denteSelecionado}`}
-                    size="small"
-                    color="primary"
-                    sx={{ fontSize: '0.62rem', height: 16, borderRadius: '4px' }}
-                  />
-                )}
-              </Box>
-            }
-          />
-          <Tab label="Plano de tratamento" />
+          {hasClinicoAccess && <Tab label="Odontograma" />}
+          {hasClinicoAccess && (
+            <Tab
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  Histórico
+                  {denteSelecionado && (
+                    <Chip
+                      label={`Dente ${denteSelecionado}`}
+                      size="small"
+                      color="primary"
+                      sx={{ fontSize: '0.62rem', height: 16, borderRadius: '4px' }}
+                    />
+                  )}
+                </Box>
+              }
+            />
+          )}
+          {hasClinicoAccess && <Tab label="Plano de tratamento" />}
         </Tabs>
 
         {/* Aba Dados */}
@@ -156,31 +167,34 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
           </Box>
         </TabPanel>
 
-        {/* Aba Odontograma */}
-        <TabPanel value={tab} index={1}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Clique em um dente para filtrar o histórico por ele.
-          </Typography>
-          <OdontogramaVisual
-            pacienteId={paciente.id}
-            selectedDente={denteSelecionado}
-            onDenteClick={handleDenteClick}
-          />
-        </TabPanel>
+        {hasClinicoAccess && (
+          <TabPanel value={tab} index={1}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Clique em um dente para filtrar o histórico por ele.
+            </Typography>
+            <OdontogramaVisual
+              pacienteId={paciente.id}
+              selectedDente={denteSelecionado}
+              onDenteClick={handleDenteClick}
+            />
+          </TabPanel>
+        )}
 
-        {/* Aba Histórico */}
-        <TabPanel value={tab} index={2}>
-          <HistoricoOdontogramaTab
-            pacienteId={paciente.id}
-            denteFiltro={denteSelecionado}
-            onClearFiltro={() => setDenteSelecionado(null)}
-          />
-        </TabPanel>
+        {hasClinicoAccess && (
+          <TabPanel value={tab} index={2}>
+            <HistoricoOdontogramaTab
+              pacienteId={paciente.id}
+              denteFiltro={denteSelecionado}
+              onClearFiltro={() => setDenteSelecionado(null)}
+            />
+          </TabPanel>
+        )}
 
-        {/* Aba Plano de Tratamento */}
-        <TabPanel value={tab} index={3}>
-          <PlanoTratamentoTab pacienteId={paciente.id} useDialogForDrawer />
-        </TabPanel>
+        {hasClinicoAccess && (
+          <TabPanel value={tab} index={3}>
+            <PlanoTratamentoTab pacienteId={paciente.id} useDialogForDrawer />
+          </TabPanel>
+        )}
       </DialogContent>
     </Dialog>
   );

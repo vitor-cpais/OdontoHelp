@@ -67,16 +67,10 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        // Se já existirem dados, para a execução imediatamente para proteger o banco
         if (usuarioRepository.count() > 0) {
-            historicoOdontogramaRepository.deleteAll();
-            odontogramaRepository.deleteAll();
-            atendimentoRepository.deleteAll();
-            planoRepository.deleteAll();
-            agendamentoRepository.deleteAll();
-            enderecoRepository.deleteAll();
-            dentistaRepository.deleteAll();
-            pacienteRepository.deleteAll();
-            usuarioRepository.deleteAll();
+            System.out.println("✨ Base de dados já possui registros. Pulando carga de dados.");
+            return;
         }
 
         criarAdmin();
