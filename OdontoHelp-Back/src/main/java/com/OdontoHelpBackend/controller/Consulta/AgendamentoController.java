@@ -63,10 +63,7 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentoService.atualizar(id, dto, usuario));
     }
 
-    /**
-     * Transições manuais de status permitidas: AGENDADO → CONFIRMADO, CANCELADO, FALTA.
-     * A transição para ATENDIDO é feita EXCLUSIVAMENTE via POST /{id}/iniciar-atendimento.
-     */
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<AgendamentoResponseDTO> atualizarStatus(
             @PathVariable Long id,
@@ -75,20 +72,7 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentoService.atualizarStatus(id, status, usuario));
     }
 
-    /**
-     * Ação explícita para iniciar o atendimento clínico.
-     *
-     * POST /agendamentos/{id}/iniciar-atendimento
-     *
-     * Efeitos colaterais (gerenciados pelo service, não pelo controller):
-     *   1. Cria um Atendimento com status EM_ANDAMENTO vinculado a este Agendamento.
-     *   2. Muda o Agendamento para status ATENDIDO.
-     *
-     * Regras validadas no service:
-     *   - Agendamento deve estar em AGENDADO ou CONFIRMADO.
-     *   - Não pode já existir um Atendimento para este Agendamento.
-     *   - Dentista logado deve ser o dono do agendamento (perfil DENTISTA).
-     */
+
     @PostMapping("/{id}/iniciar-atendimento")
     public ResponseEntity<AtendimentoResponseDTO> iniciarAtendimento(
             @PathVariable Long id,
@@ -115,8 +99,13 @@ public class AgendamentoController {
             @RequestParam(required = false) Long dentistaId,
             @RequestParam(required = false) Long pacienteId,
             @RequestParam(required = false) String nome,
-            @AuthenticationPrincipal Usuario usuario,
-            Pageable pageable) {
+            Pageable pageable) { // 🟢 Removido o @AuthenticationPrincipal daqui
+
+        Usuario usuario = (Usuario) org.springframework.security.core.context.SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
         return ResponseEntity.ok(agendamentoService.filtrar(
                 dataInicio != null ? dataInicio.atStartOfDay() : null,
                 dataFim    != null ? dataFim.atTime(23, 59, 59) : null,

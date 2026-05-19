@@ -11,7 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,12 +31,12 @@ public class AtendimentoController {
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<Slice<AtendimentoResponseDTO>> listarPorPaciente(
             @PathVariable Long pacienteId,
-            @AuthenticationPrincipal Usuario usuario,
             Pageable pageable) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(atendimentoService.listarPorPaciente(pacienteId, pageable, usuario));
     }
 
-    // CORREÇÃO: adicionados filtros opcionais de nomePaciente, dataInicio, dataFim e status
     @GetMapping("/dentista/{dentistaId}")
     public ResponseEntity<Slice<AtendimentoResponseDTO>> listarPorDentista(
             @PathVariable Long dentistaId,
@@ -44,21 +44,20 @@ public class AtendimentoController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
             @RequestParam(required = false) StatusAtendimento status,
-            @AuthenticationPrincipal Usuario usuario,
             Pageable pageable) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(
                 atendimentoService.listarPorDentista(dentistaId, nomePaciente, dataInicio, dataFim, status, pageable, usuario)
         );
     }
 
-    // NOVO: endpoint para ADMIN ver todos os atendimentos sem filtro de dentista
     @GetMapping
     public ResponseEntity<Slice<AtendimentoResponseDTO>> listarTodos(
             @RequestParam(required = false) String nomePaciente,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
             @RequestParam(required = false) StatusAtendimento status,
-            @AuthenticationPrincipal Usuario usuario,
             Pageable pageable) {
         return ResponseEntity.ok(
                 atendimentoService.listarTodos(nomePaciente, dataInicio, dataFim, status, pageable)
@@ -69,14 +68,17 @@ public class AtendimentoController {
     public ResponseEntity<AtendimentoResponseDTO> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid AtendimentoUpdateDTO dto,
-            @AuthenticationPrincipal Usuario usuario) {
+            Pageable pageable) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(atendimentoService.atualizar(id, dto, usuario));
     }
 
     @PostMapping("/{id}/finalizar")
     public ResponseEntity<AtendimentoResponseDTO> finalizar(
-            @PathVariable Long id,
-            @AuthenticationPrincipal Usuario usuario) {
+            @PathVariable Long id) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(atendimentoService.finalizarAtendimento(id, usuario));
     }
 }
