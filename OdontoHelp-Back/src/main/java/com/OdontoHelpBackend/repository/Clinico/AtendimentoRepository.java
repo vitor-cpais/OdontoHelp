@@ -24,12 +24,12 @@ public interface AtendimentoRepository extends JpaRepository<Atendimento, Long> 
     boolean existsByPacienteIdAndStatusIn(Long pacienteId, List<StatusAtendimento> statuses);
     boolean existsByDentistaIdAndStatusIn(Long dentistaId, List<StatusAtendimento> statuses);
 
-    // CORREÇÃO: query com filtros opcionais por nome do paciente, período e status
+
     @Query("""
         SELECT a FROM Atendimento a
         JOIN a.paciente p
         WHERE a.dentista.id = :dentistaId
-        AND (:nomePaciente IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :nomePaciente, '%')))
+        AND (CAST(:nomePaciente AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:nomePaciente AS string), '%')))
         AND (:dataInicio   IS NULL OR a.horaInicio >= :dataInicio)
         AND (:dataFim      IS NULL OR a.horaInicio <= :dataFim)
         AND (:status       IS NULL OR a.status = :status)
@@ -44,11 +44,11 @@ public interface AtendimentoRepository extends JpaRepository<Atendimento, Long> 
             Pageable pageable
     );
 
-    // Para ADMIN — sem restrição de dentista
+
     @Query("""
         SELECT a FROM Atendimento a
         JOIN a.paciente p
-        WHERE (:nomePaciente IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :nomePaciente, '%')))
+        WHERE (CAST(:nomePaciente AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:nomePaciente AS string), '%')))
         AND (:dataInicio IS NULL OR a.horaInicio >= :dataInicio)
         AND (:dataFim    IS NULL OR a.horaInicio <= :dataFim)
         AND (:status     IS NULL OR a.status = :status)

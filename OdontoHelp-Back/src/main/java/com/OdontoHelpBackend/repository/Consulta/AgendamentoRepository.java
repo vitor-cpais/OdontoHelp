@@ -29,6 +29,7 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataInicio
     );
 
+    // CORREÇÃO: Adicionado CAST(:nome AS string) para evitar que parâmetros nulos sejam interpretados como bytea
     @Query("""
     SELECT a FROM Agendamento a
     JOIN a.paciente p
@@ -38,8 +39,9 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     AND (:status IS NULL OR a.status = :status)
     AND (:dentistaId IS NULL OR d.id = :dentistaId)
     AND (:pacienteId IS NULL OR p.id = :pacienteId)
-    AND (:nome IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))
-        OR LOWER(d.nome) LIKE LOWER(CONCAT('%', :nome, '%')))
+    AND (CAST(:nome AS string) IS NULL 
+        OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:nome AS string), '%'))
+        OR LOWER(d.nome) LIKE LOWER(CONCAT('%', CAST(:nome AS string), '%')))
 """)
     Slice<Agendamento> filtrar(
             @Param("dataInicio") LocalDateTime dataInicio,

@@ -99,9 +99,8 @@ public class AgendamentoController {
             @RequestParam(required = false) Long dentistaId,
             @RequestParam(required = false) Long pacienteId,
             @RequestParam(required = false) String nome,
-            Pageable pageable) { // 🟢 Removido o @AuthenticationPrincipal daqui
-
-        Usuario usuario = (Usuario) org.springframework.security.core.context.SecurityContextHolder
+            Pageable pageable) {  Usuario usuario = (Usuario) org.springframework.security.core.context
+                .SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getPrincipal();
