@@ -12,13 +12,14 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useUsuarioDrawerStore } from './usuarioStore';
 import { useCreateUsuario, useUpdateUsuario } from './useUsuarios';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import { maskCpf, maskTelefone } from '../../shared/utils/masks';
 import type { UsuarioFormData } from './types';
 
-const schema = z.object({
+const baseSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   email: z.string().min(1, 'E-mail obrigatório').email('E-mail inválido'),
   cpf: z.string().min(14, 'CPF incompleto — use 000.000.000-00'),
@@ -30,9 +31,16 @@ const schema = z.object({
     (val) => new Date(val) < new Date(),
     'Data não pode ser futura'
   ),
-  perfil: z.enum(['ADMIN', 'RECEPCAO'], {
+  perfil: z.enum(['ADMIN', 'DENTISTA', 'RECEPCAO'], {
     errorMap: () => ({ message: 'Selecione um perfil' }),
   }),
+});
+
+const createSchema = baseSchema.extend({
+  senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
+});
+
+const editSchema = baseSchema.extend({
   senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 });
 
@@ -50,11 +58,14 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
   const create = useCreateUsuario();
   const update = useUpdateUsuario(editingId ?? 0);
 
+  const schema = useMemo(() => (isEditing ? editSchema : createSchema), [isEditing]);
+  const resolver = useMemo(() => zodResolver(schema), [schema]);
+
   const {
     control, handleSubmit, reset, watch,
     formState: { errors, isDirty },
   } = useForm<UsuarioFormData>({
-    resolver: zodResolver(schema),
+    resolver,
     defaultValues: {
       nome: '', email: '', cpf: '', telefone: '',
       genero: 'NAO_INFORMADO', dataNascimento: '',
@@ -99,7 +110,7 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar usuário');
+      onError(getApiErrorMessage(e, 'Erro ao salvar usuário'));
     }
   };
 

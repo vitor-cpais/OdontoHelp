@@ -4,6 +4,7 @@ import {
   IconButton, Tooltip, Typography, TablePagination,
   Snackbar, Alert, Skeleton, InputAdornment, Badge,
 } from '@mui/material';
+import { buildTablePaginationCount } from '../../../shared/utils/pagination';
 import {
   AddOutlined, EditOutlined, ToggleOnOutlined,
   ToggleOffOutlined, SearchOutlined,
@@ -12,11 +13,10 @@ import { useState, useCallback } from 'react';
 import { useDentistas, useToggleAtivoDentista } from '../useDentistas';
 import { useDentistaDrawerStore } from '../dentistaStore';
 import StatusChip from '../../../shared/components/StatusChip';
-import DentistaDrawer from '../DentistaDrawer';
+import DentistaDrawer from '../DentistaDrawer'; // 🌟 Corrigido aqui!
 import type { Dentista } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { maskTelefone } from '../../../shared/utils/masks';
-
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
 export default function DentistasPage() {
@@ -39,9 +39,11 @@ export default function DentistasPage() {
     isAtivo: statusFiltro === 'TODOS' ? undefined : statusFiltro === 'ATIVO',
   };
 
+
   const { data, isLoading } = useDentistas(params);
+  const paginationCount = buildTablePaginationCount(data, page, rowsPerPage);
+
   const dentistas = data?.content ?? [];
-  const total = (data?.number ?? 0) * rowsPerPage + (data?.numberOfElements ?? 0) + (data?.last ? 0 : 1);
 
   const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
     setToast({ open: true, msg, severity });
@@ -188,13 +190,14 @@ export default function DentistasPage() {
 
         <TablePagination
           component="div"
-          count={-1}
+          count={isLoading ? 0 : paginationCount}
           page={page}
           rowsPerPage={rowsPerPage}
           rowsPerPageOptions={[10]}
           onPageChange={(_, p) => setPage(p)}
           labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-          nextIconButtonProps={{ disabled: data?.last ?? true }}
+          backIconButtonProps={{ disabled: page === 0 || isLoading }}
+          nextIconButtonProps={{ disabled: (data?.last ?? true) || isLoading }}
           sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
         />
       </Paper>

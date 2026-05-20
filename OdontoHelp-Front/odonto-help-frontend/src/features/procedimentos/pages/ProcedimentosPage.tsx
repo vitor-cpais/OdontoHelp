@@ -1,4 +1,4 @@
-// src/features/procedimentos/pages/ProcedimentosPage.tsx
+
 import {
   Box, Button, TextField, MenuItem, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -10,6 +10,7 @@ import {
   ToggleOffOutlined, SearchOutlined,
 } from '@mui/icons-material';
 import { useState, useCallback } from 'react';
+import { buildTablePaginationCount } from '../../../shared/utils/pagination';
 import { useProcedimentos, useToggleAtivoProcedimento } from '../useProcedimentos';
 import { useProcedimentoDrawerStore } from '../procedimentoStore';
 import StatusChip from '../../../shared/components/StatusChip';
@@ -51,7 +52,10 @@ export default function ProcedimentosPage() {
   };
 
   const { data, isLoading } = useProcedimentos(params);
+  
   const procedimentos = data?.content ?? [];
+  
+  const paginationCount = buildTablePaginationCount(data, page, rowsPerPage);
 
   const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
     setToast({ open: true, msg, severity });
@@ -217,13 +221,15 @@ export default function ProcedimentosPage() {
 
         <TablePagination
           component="div"
-          count={-1}
+          count={isLoading ? 0 : paginationCount}
           page={page}
           rowsPerPage={rowsPerPage}
           rowsPerPageOptions={[10]}
           onPageChange={(_, p) => setPage(p)}
           labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-          nextIconButtonProps={{ disabled: data?.last ?? true }}
+  
+          backIconButtonProps={{ disabled: page === 0 || isLoading }}
+          nextIconButtonProps={{ disabled: (data?.last ?? true) || isLoading }}
           sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
         />
       </Paper>

@@ -9,14 +9,15 @@ import { Close, PersonOutlined, ExpandMore, ExpandLess, LockOutlined } from '@mu
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDentistaDrawerStore } from './dentistaStore';
 import { useCreateDentista, useUpdateDentista } from './useDentistas';
 import { maskCpf, maskCro, maskTelefone } from '../../shared/utils/masks';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { DentistaFormData } from './types';
 
-const schema = z.object({
+const baseSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   email: z.string().min(1, 'E-mail obrigatório').email('E-mail inválido'),
   telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
@@ -29,6 +30,13 @@ const schema = z.object({
     'Data não pode ser futura'
   ),
   cro: z.string().min(4, 'CRO inválido — ex: SP-12345'),
+});
+
+const createSchema = baseSchema.extend({
+  senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
+});
+
+const editSchema = baseSchema.extend({
   senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 });
 
@@ -48,11 +56,14 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   const create = useCreateDentista();
   const update = useUpdateDentista(editingId ?? 0);
 
+  const schema = useMemo(() => (isEditing ? editSchema : createSchema), [isEditing]);
+  const resolver = useMemo(() => zodResolver(schema), [schema]);
+
   const {
     control, handleSubmit, reset, watch,
     formState: { errors, isDirty },
   } = useForm<DentistaFormData>({
-    resolver: zodResolver(schema),
+    resolver,
     defaultValues: {
       nome: '', email: '', telefone: '', cpf: '',
       genero: 'NAO_INFORMADO', dataNascimento: '', cro: '', senha: '',
@@ -97,7 +108,7 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar dentista');
+      onError(getApiErrorMessage(e, 'Erro ao salvar dentista'));
     }
   };
 

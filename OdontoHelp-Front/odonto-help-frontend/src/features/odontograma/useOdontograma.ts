@@ -1,5 +1,5 @@
 // src/features/odontograma/useOdontograma.ts
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { odontogramaService } from './odontogramaService';
 import type { OdontogramaMap } from './types';
 
@@ -39,5 +39,20 @@ export function useHistoricoPorDente(
     queryFn: () => odontogramaService.historicoPorDente(pacienteId!, numeroDente!, page),
     enabled: pacienteId !== null && numeroDente !== null,
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useUpdateOdontograma(pacienteId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { numeroDente: number; situacaoAtual: string; observacao?: string | null }) =>
+      odontogramaService.atualizar(pacienteId!, data.numeroDente, {
+        situacaoAtual: data.situacaoAtual,
+        observacao: data.observacao,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY, pacienteId] });
+      qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY, 'historico', pacienteId] });
+    },
   });
 }

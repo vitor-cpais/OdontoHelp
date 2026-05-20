@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { usePlanosPorPaciente, useAtualizarStatusItem } from './usePlanoTratamento';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import PlanoTratamentoDrawer from './PlanoTratamentoDrawer';
 import {
   STATUS_ITEM_PLANO_LABELS, STATUS_ITEM_PLANO_COLORS,
@@ -43,7 +44,7 @@ function ItemStatusSelect({
       await atualizar.mutateAsync({ planoId, itemId: item.id, status: novoStatus });
       onSuccess('Status do item atualizado!');
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao atualizar status');
+      onError(getApiErrorMessage(e, 'Erro ao atualizar status'));
     }
   };
 

@@ -1,9 +1,11 @@
+
 import { useState, useRef, useCallback } from 'react';
 import {
   Box, Button, TextField, MenuItem, Stack, Typography,
   ToggleButton, ToggleButtonGroup, Snackbar, Alert,
   InputAdornment, TablePagination,
 } from '@mui/material';
+import { buildTablePaginationCount } from '../../../shared/utils/pagination';
 import { AddOutlined, CalendarMonthOutlined, TableRowsOutlined, SearchOutlined } from '@mui/icons-material';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -27,7 +29,7 @@ const daqui7 = new Date(hoje);
 daqui7.setDate(daqui7.getDate() + 7);
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-const STATUS_FILTRO: StatusConsulta[] = ['AGENDADO', 'CONFIRMADO', 'CONCLUIDO', 'FALTA'];
+const STATUS_FILTRO: StatusConsulta[] = ['AGENDADO', 'CONFIRMADO', 'FALTA'];
 
 export default function AgendamentosPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('calendario');
@@ -54,7 +56,9 @@ export default function AgendamentosPage() {
     nome: viewMode === 'lista' ? (nomeBusca || undefined) : undefined,
   };
 
-  const { data } = useAgendamentos(params);
+  const { data, isLoading } = useAgendamentos(params);
+
+  const paginationCount = buildTablePaginationCount(data, page, 10);
 
   const agendamentos = (data?.content ?? []).filter((a) => {
     if (viewMode === 'calendario' && !statusFiltro && a.status === 'CANCELADO') return false;
@@ -70,9 +74,9 @@ export default function AgendamentosPage() {
     title: `${a.pacienteNome} · ${a.dentistaNome}`,
     start: a.dataInicio,
     end: a.dataFim,
-    backgroundColor: STATUS_COLORS[a.status].bg,
-    borderColor: STATUS_COLORS[a.status].border,
-    textColor: STATUS_COLORS[a.status].text,
+    backgroundColor: STATUS_COLORS[a.status]?.bg ?? '#ccc',
+    borderColor: STATUS_COLORS[a.status]?.border ?? '#999',
+    textColor: STATUS_COLORS[a.status]?.text ?? '#000',
     extendedProps: { agendamento: a },
   }));
 
@@ -153,7 +157,6 @@ export default function AgendamentosPage() {
         </Button>
       </Stack>
 
-      {/* Calendário */}
       {viewMode === 'calendario' && (
         <Box sx={{
           '& .fc': { fontFamily: 'inherit', fontSize: '0.82rem' },
@@ -182,12 +185,13 @@ export default function AgendamentosPage() {
         </Box>
       )}
 
-      {/* Lista */}
       {viewMode === 'lista' && (
         <Box sx={{ border: '0.5px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden', backgroundColor: 'background.paper' }}>
           {agendamentos.length === 0 ? (
             <Box sx={{ py: 8, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.disabled">Nenhum agendamento encontrado</Typography>
+              <Typography variant="body2" color="text.disabled">
+                {isLoading ? 'Carregando agendamentos...' : 'Nenhum agendamento encontrado'}
+              </Typography>
             </Box>
           ) : (
             agendamentos.map((a, i) => (
@@ -198,7 +202,7 @@ export default function AgendamentosPage() {
                 borderColor: 'divider',
                 '&:hover': { backgroundColor: 'background.default' },
               }}>
-                <Box sx={{ width: 4, alignSelf: 'stretch', borderRadius: 1, backgroundColor: STATUS_COLORS[a.status].border, flexShrink: 0 }} />
+                <Box sx={{ width: 4, alignSelf: 'stretch', borderRadius: 1, backgroundColor: STATUS_COLORS[a.status]?.border ?? '#999', flexShrink: 0 }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>{a.pacienteNome}</Typography>
                   <Typography variant="caption" color="text.disabled">{a.dentistaNome}</Typography>
@@ -220,13 +224,14 @@ export default function AgendamentosPage() {
           <Box sx={{ borderTop: '0.5px solid', borderColor: 'divider' }}>
             <TablePagination
               component="div"
-              count={-1}
+              count={isLoading ? 0 : paginationCount}
               page={page}
               rowsPerPage={10}
               rowsPerPageOptions={[10]}
               onPageChange={(_, p) => setPage(p)}
               labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-              nextIconButtonProps={{ disabled: data?.last ?? true }}
+              backIconButtonProps={{ disabled: page === 0 || isLoading }}
+              nextIconButtonProps={{ disabled: (data?.last ?? true) || isLoading }}
               sx={{ fontSize: '0.8rem' }}
             />
           </Box>

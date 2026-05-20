@@ -1,8 +1,8 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
-import com.OdontoHelpBackend.domain.usuario.Usuario;
+
+import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
-import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
 import com.OdontoHelpBackend.service.Usuario.UsuarioService;
 import jakarta.validation.Valid;
@@ -10,7 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -40,6 +44,17 @@ public class UsuarioController {
     }
 
 
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UsuarioResponseDTO> criar(@RequestBody @Valid UsuarioRequestDTO dto) {
+        UsuarioResponseDTO response = usuarioService.criar(dto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.id())
+                .toUri();
+        return ResponseEntity.created(location).body(response);
+    }
 
 
     @PatchMapping("/{id}/status")

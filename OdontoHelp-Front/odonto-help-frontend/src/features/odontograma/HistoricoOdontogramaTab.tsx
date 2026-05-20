@@ -1,7 +1,7 @@
 // src/features/odontograma/HistoricoOdontogramaTab.tsx
 // CORREÇÃO: page reseta para 0 ao trocar denteFiltro — evita query vazia em página inexistente
 import {
-  Box, Typography, Skeleton, Chip,
+  Box, Typography, Skeleton, Chip, Button,
   Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, TablePagination,
 } from '@mui/material';
@@ -42,9 +42,10 @@ interface Props {
   pacienteId: number;
   denteFiltro?: number | null;
   onClearFiltro?: () => void;
+  onCriarPlano?: () => void;
 }
 
-export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onClearFiltro }: Props) {
+export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onClearFiltro, onCriarPlano }: Props) {
   const [page, setPage] = useState(0);
 
 
@@ -57,21 +58,37 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
 
   const query = denteFiltro ? queryDente : queryGeral;
   const registros = query.data?.content ?? [];
+  const paginationCount = query.data
+    ? (query.data.last
+      ? (page * 20) + query.data.numberOfElements
+      : (page * 20) + query.data.numberOfElements + 20)
+    : 0;
 
   return (
     <Box>
       {denteFiltro && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Filtrando por dente:
-          </Typography>
-          <Chip
-            label={`Dente ${denteFiltro}`}
-            size="small"
-            color="primary"
-            variant="outlined"
-            onDelete={onClearFiltro}
-          />
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" color="text.secondary">
+              Filtrando por dente:
+            </Typography>
+            <Chip
+              label={`Dente ${denteFiltro}`}
+              size="small"
+              color="primary"
+              variant="outlined"
+              onDelete={onClearFiltro}
+            />
+          </Box>
+          {onCriarPlano && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={onCriarPlano}
+            >
+              Criar plano para dente {denteFiltro}
+            </Button>
+          )}
         </Box>
       )}
 
@@ -130,7 +147,7 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
                     </TableCell>
                     <TableCell>
                       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>
-                        #{r.atendimentoId}
+                        {r.atendimentoId != null ? `#${r.atendimentoId}` : 'Direto'}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -140,13 +157,14 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
           </TableContainer>
           <TablePagination
             component="div"
-            count={-1}
+            count={paginationCount}
             page={page}
             rowsPerPage={20}
             rowsPerPageOptions={[20]}
             onPageChange={(_, p) => setPage(p)}
             labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-            nextIconButtonProps={{ disabled: query.data?.last ?? true }}
+            backIconButtonProps={{ disabled: query.isLoading }}
+            nextIconButtonProps={{ disabled: (query.data?.last ?? true) || query.isLoading }}
             sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
           />
         </Paper>

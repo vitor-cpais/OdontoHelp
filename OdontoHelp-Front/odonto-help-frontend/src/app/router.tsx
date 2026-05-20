@@ -11,6 +11,7 @@ import PacientesPage     from '../features/pacientes/pages/PacientesPage';
 import UsuariosPage      from '../features/usuarios/pages/UsuariosPage';
 import ProcedimentosPage from '../features/procedimentos/pages/ProcedimentosPage';
 import AtendimentosPage  from '../features/atendimentos/pages/AtendimentosPage';
+import AtendimentoDetailPage from '../features/atendimentos/pages/AtendimentoDetailPage';
 
 const router = createBrowserRouter([
   // ─── pública ────────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ const router = createBrowserRouter([
             element: <RoleRoute allowed={['ADMIN', 'DENTISTA']} />,
             children: [
               { path: 'atendimentos', element: <AtendimentosPage /> },
+              { path: 'atendimentos/:id', element: <AtendimentoDetailPage /> },
             ],
           },
 

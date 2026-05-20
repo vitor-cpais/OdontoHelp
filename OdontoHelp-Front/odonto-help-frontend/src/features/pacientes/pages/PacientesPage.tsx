@@ -4,6 +4,7 @@ import {
   IconButton, Tooltip, Typography, TablePagination,
   Snackbar, Alert, Skeleton, InputAdornment, Badge,
 } from '@mui/material';
+import { buildTablePaginationCount } from '../../../shared/utils/pagination';
 import {
   AddOutlined, EditOutlined, ToggleOnOutlined, ToggleOffOutlined, SearchOutlined, InfoOutlined,
 } from '@mui/icons-material';
@@ -40,7 +41,10 @@ export default function PacientesPage() {
   };
 
   const { data, isLoading } = usePacientes(params);
+
   const pacientes = data?.content ?? [];
+  
+  const paginationCount = buildTablePaginationCount(data, page, rowsPerPage);
 
   const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
     setToast({ open: true, msg, severity });
@@ -172,10 +176,15 @@ export default function PacientesPage() {
         </TableContainer>
 
         <TablePagination
-          component="div" count={-1} page={page} rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[10]} onPageChange={(_, p) => setPage(p)}
+          component="div"
+          count={isLoading ? 0 : paginationCount}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10]}
+          onPageChange={(_, p) => setPage(p)}
           labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-          nextIconButtonProps={{ disabled: data?.last ?? true }}
+          backIconButtonProps={{ disabled: page === 0 || isLoading }}
+          nextIconButtonProps={{ disabled: (data?.last ?? true) || isLoading }}
           sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
         />
       </Paper>

@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { useAgendamentoDrawerStore } from './agendamentoStore';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import {
   useCreateAgendamento, useUpdateAgendamento,
   useAtualizarStatus, useCancelarAgendamento, useAgendamentos,
@@ -144,7 +145,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar agendamento');
+      onError(getApiErrorMessage(e, 'Erro ao salvar agendamento'));
     }
   };
 
@@ -159,7 +160,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
       onSuccess(`Status atualizado para ${STATUS_LABELS[status]}`);
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao atualizar status');
+      onError(getApiErrorMessage(e, 'Erro ao atualizar status'));
     }
   };
 
@@ -171,7 +172,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
       setConfirmCancel(false);
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao cancelar');
+      onError(getApiErrorMessage(e, 'Erro ao cancelar'));
     }
   };
 
@@ -185,7 +186,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
       onSuccess('Atendimento iniciado! Clique no agendamento para abrir o formulário de atendimento.');
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao iniciar atendimento');
+      onError(getApiErrorMessage(e, 'Erro ao iniciar atendimento'));
     }
   };
 

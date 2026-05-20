@@ -18,7 +18,6 @@ public interface DentistaRepository extends JpaRepository<Dentista, Long> {
     Slice<Dentista> findByIsAtivo(Boolean isAtivo, Pageable pageable);
     Long countByIsAtivo(Boolean isAtivo);
 
-    // Dentista usa herança JOINED — o id do usuário É o próprio id da entidade
     @Query("SELECT d FROM Dentista d WHERE d.id = :usuarioId")
     Optional<Dentista> findByUsuarioId(@Param("usuarioId") Long usuarioId);
 }

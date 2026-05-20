@@ -9,6 +9,18 @@ export const odontogramaService = {
     return data;
   },
 
+  atualizar: async (
+    pacienteId: number,
+    numeroDente: number,
+    payload: { situacaoAtual: string; observacao?: string | null }
+  ): Promise<OdontogramaEntry> => {
+    const { data } = await api.patch(
+      `/pacientes/${pacienteId}/odontograma/${numeroDente}`,
+      payload,
+    );
+    return data;
+  },
+
   historico: async (
     pacienteId: number,
     page = 0,

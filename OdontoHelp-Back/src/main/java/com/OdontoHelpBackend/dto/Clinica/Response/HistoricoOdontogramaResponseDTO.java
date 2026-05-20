@@ -1,6 +1,4 @@
-// ─── HistoricoOdontogramaResponseDTO.java ────────────────────────────────────
 package com.OdontoHelpBackend.dto.Clinica.Response;
-
 
 import com.OdontoHelpBackend.domain.Clinico.Enums.SituacaoDente;
 

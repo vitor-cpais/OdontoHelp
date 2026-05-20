@@ -1,12 +1,20 @@
 package com.OdontoHelpBackend.controller.Clinico;
 
+import com.OdontoHelpBackend.domain.usuario.Dentista;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
+import com.OdontoHelpBackend.dto.Clinica.Request.AtualizarDenteRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.HistoricoOdontogramaResponseDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaResponseDTO;
+import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
 import com.OdontoHelpBackend.service.Clinico.OdontogramaService;
+import com.OdontoHelpBackend.service.Usuario.DentistaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +25,7 @@ import java.util.List;
 public class OdontogramaController {
 
     private final OdontogramaService odontogramaService;
+    private final DentistaService dentistaService;
 
     @GetMapping
     public ResponseEntity<List<OdontogramaResponseDTO>> buscar(@PathVariable Long pacienteId) {
@@ -36,5 +45,34 @@ public class OdontogramaController {
             @PathVariable Integer numeroDente,
             Pageable pageable) {
         return ResponseEntity.ok(odontogramaService.buscarHistoricoPorDente(pacienteId, numeroDente, pageable));
+    }
+
+    /**
+     * Atualização direta de um dente — sem necessidade de atendimento formal.
+     * DENTISTA: usa o próprio dentista do usuário logado.
+     * ADMIN: resolve o dentista responsável pelo paciente (último que atendeu ou primeiro ativo).
+     * RECEPCAO: acesso negado.
+     */
+    @PatchMapping("/{numeroDente}")
+    public ResponseEntity<OdontogramaResponseDTO> atualizarDente(
+            @PathVariable Long pacienteId,
+            @PathVariable Integer numeroDente,
+            @Valid @RequestBody AtualizarDenteRequestDTO dto,
+            @AuthenticationPrincipal Usuario usuarioLogado) {
+
+        if (usuarioLogado.getPerfil() == PerfilUsuario.RECEPCAO) {
+            throw new AcessoNegadoException("Recepcionista não pode alterar o odontograma diretamente");
+        }
+
+        Dentista dentista;
+        if (usuarioLogado.getPerfil() == PerfilUsuario.ADMIN) {
+            dentista = odontogramaService.resolverDentistaResponsavel(pacienteId);
+        } else {
+            dentista = dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
+        }
+
+        return ResponseEntity.ok(
+                odontogramaService.atualizarDiretamente(pacienteId, numeroDente, dto, dentista)
+        );
     }
 }

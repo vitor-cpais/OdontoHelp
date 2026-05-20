@@ -1,18 +1,19 @@
-// src/features/atendimentos/pages/AtendimentosPage.tsx
+
 import {
   Box, TextField, MenuItem, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Tooltip, Typography, TablePagination,
-  Snackbar, Alert, Skeleton, InputAdornment,
+  Alert, Skeleton, InputAdornment,
 } from '@mui/material';
 import { EditOutlined, VisibilityOutlined, SearchOutlined } from '@mui/icons-material';
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { buildTablePaginationCount } from '../../../shared/utils/pagination';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useAtendimentosPorDentista } from '../useAtendimentos';
 import AtendimentoStatusChip from '../AtendimentoStatusChip';
-import AtendimentoDrawer from '../AtendimentoDrawer';
 import { STATUS_ATENDIMENTO_LABELS } from '../types';
-import type { Atendimento, StatusAtendimento } from '../types';
+import type { StatusAtendimento } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 
 type FiltroStatus = 'TODOS' | StatusAtendimento;
@@ -25,26 +26,23 @@ function formatDT(dt: string) {
 }
 
 export default function AtendimentosPage() {
+  const navigate = useNavigate();
   const usuario = useAuthStore((s) => s.usuario);
   const isAdmin = usuario?.perfil === 'ADMIN';
 
+  const today = new Date().toISOString().split('T')[0];
   const [page, setPage] = useState(0);
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODOS');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [atendimentoSelecionado, setAtendimentoSelecionado] = useState<Atendimento | null>(null);
-  const [toast, setToast] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({
-    open: false, msg: '', severity: 'success',
-  });
+  const [dataInicio, setDataInicio] = useState(today);
+  const [dataFim, setDataFim] = useState(today);
 
-  const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
-    setToast({ open: true, msg, severity });
-  }, []);
+  useEffect(() => {
+    setDataInicio(today);
+    setDataFim(today);
+  }, [today]);
 
   const nomePaciente = useDebounce(busca, 400);
-
 
   const dentistaId = isAdmin ? null : (usuario?.dentistaId ?? null);
 
@@ -56,18 +54,9 @@ export default function AtendimentosPage() {
   });
 
   const atendimentos = data?.content ?? [];
+  const paginationCount = buildTablePaginationCount(data, page, 10);
 
   const resetPage = () => setPage(0);
-
-  const handleOpenEditar = (a: Atendimento) => {
-    setAtendimentoSelecionado(a);
-    setDrawerOpen(true);
-  };
-
-  const handleClose = () => {
-    setDrawerOpen(false);
-    setAtendimentoSelecionado(null);
-  };
 
   return (
     <Box>
@@ -129,7 +118,7 @@ export default function AtendimentosPage() {
         </Typography>
       </Box>
 
-      {/* Aviso se DENTISTA sem dentistaId no store (sessão antiga, precisa re-logar) */}
+      {/* Aviso se DENTISTA sem dentistaId no store */}
       {!isAdmin && dentistaId === null && (
         <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
           Sessão desatualizada — faça logout e login novamente para carregar seus atendimentos.
@@ -169,7 +158,7 @@ export default function AtendimentosPage() {
                 </TableRow>
               ) : (
                 atendimentos.map((a) => (
-                  <TableRow key={a.id} hover sx={{ cursor: 'pointer' }} onClick={() => handleOpenEditar(a)}>
+                  <TableRow key={a.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/atendimentos/${a.id}`)}>
                     <TableCell>
                       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>
                         #{a.id}
@@ -203,7 +192,7 @@ export default function AtendimentosPage() {
                     <TableCell><AtendimentoStatusChip status={a.status} /></TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title={a.status === 'FINALIZADO' ? 'Visualizar' : 'Editar'}>
-                        <IconButton size="small" onClick={() => handleOpenEditar(a)}>
+                        <IconButton size="small" onClick={() => navigate(`/atendimentos/${a.id}`)}>
                           {a.status === 'FINALIZADO'
                             ? <VisibilityOutlined sx={{ fontSize: 16 }} />
                             : <EditOutlined       sx={{ fontSize: 16 }} />}
@@ -219,37 +208,17 @@ export default function AtendimentosPage() {
 
         <TablePagination
           component="div"
-          count={-1}
+          count={isLoading ? 0 : paginationCount}
           page={page}
           rowsPerPage={10}
           rowsPerPageOptions={[10]}
           onPageChange={(_, p) => setPage(p)}
           labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-          nextIconButtonProps={{ disabled: data?.last ?? true }}
+          backIconButtonProps={{ disabled: page === 0 || isLoading }}
+          nextIconButtonProps={{ disabled: (data?.last ?? true) || isLoading }}
           sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
         />
       </Paper>
-
-      {atendimentoSelecionado && (
-        <AtendimentoDrawer
-          open={drawerOpen}
-          atendimento={atendimentoSelecionado}
-          onClose={handleClose}
-          onSuccess={(msg) => showToast(msg, 'success')}
-          onError={(msg) => showToast(msg, 'error')}
-        />
-      )}
-
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={3500}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity={toast.severity} variant="filled" sx={{ borderRadius: 2, fontSize: '0.85rem' }}>
-          {toast.msg}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

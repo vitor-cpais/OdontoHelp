@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useEffect } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import { useCreatePlano } from './usePlanoTratamento';
 import { useProcedimentosAtivos } from '../procedimentos/useProcedimentos';
 import { usePacientes } from '../pacientes/usePacientes';
@@ -67,12 +68,14 @@ interface Props {
   pacienteId?: number;
   dentistaId?: number;
   atendimentoId?: number;
+  selectedDente?: number;
+  selectedDentes?: number[];
   onClose: () => void;
   onSuccess: (msg: string) => void;
   onError: (msg: string) => void;
 }
 export default function PlanoTratamentoDrawer({
-  open, pacienteId, dentistaId, atendimentoId, onClose, onSuccess, onError,
+  open, pacienteId, dentistaId, atendimentoId, selectedDente, selectedDentes, onClose, onSuccess, onError,
   // quando usado dentro de uma Dialog (ex: modal de paciente) evita conflito de z-index
   useDialog,
 }: Props & { useDialog?: boolean }) {
@@ -109,14 +112,18 @@ export default function PlanoTratamentoDrawer({
 
   useEffect(() => {
     if (!open) return;
+    const itensPreenchidos = selectedDentes && selectedDentes.length > 0
+      ? selectedDentes.map((numeroDente) => ({ ...ITEM_VAZIO, numeroDente }))
+      : [selectedDente != null ? { ...ITEM_VAZIO, numeroDente: selectedDente } : ITEM_VAZIO];
+
     reset({
       pacienteId: pacienteId ?? '',
       dentistaId: dentistaId ?? '',
       atendimentoId: atendimentoId ?? '',
       observacoes: '',
-      itens: [ITEM_VAZIO],
+      itens: itensPreenchidos,
     });
-  }, [open]);
+  }, [open, pacienteId, dentistaId, atendimentoId, selectedDente, selectedDentes]);
 
   const onSubmit = async (data: PlanoFormData) => {
     try {
@@ -124,7 +131,7 @@ export default function PlanoTratamentoDrawer({
       onSuccess('Plano de tratamento criado com sucesso!');
       onClose();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao criar plano de tratamento');
+      onError(getApiErrorMessage(e, 'Erro ao criar plano de tratamento'));
     }
   };
 

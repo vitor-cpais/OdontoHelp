@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { usePacienteDrawerStore } from './pacienteStore';
 import { useCreatePaciente, useUpdatePaciente } from './usePacientes';
 import { maskCpf, maskTelefone } from '../../shared/utils/masks';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { PacienteFormData } from './types';
 
@@ -29,6 +30,25 @@ const schema = z.object({
     'Data não pode ser futura'
   ),
   observacoesMedicas: z.string().max(500, 'Máximo 500 caracteres').optional().default(''),
+  senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
+}).superRefine((data, ctx) => {
+  const hasEmail = !!data.email?.trim();
+  const hasSenha = !!data.senha?.trim();
+
+  if (hasEmail && !hasSenha) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['senha'],
+      message: 'Senha obrigatória ao cadastrar acesso',
+    });
+  }
+  if (hasSenha && !hasEmail) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['email'],
+      message: 'E-mail obrigatório para cadastrar acesso',
+    });
+  }
 });
 
 interface Props {
@@ -92,7 +112,7 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar paciente');
+      onError(getApiErrorMessage(e, 'Erro ao salvar paciente'));
     }
   };
 

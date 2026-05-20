@@ -3,7 +3,7 @@ import {
   Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Alert,
+  Tooltip, Alert, InputAdornment,
 } from '@mui/material';
 import {
   Close, MedicalServicesOutlined, AddOutlined,
@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { useUpdateAtendimento, useFinalizarAtendimento } from './useAtendimentos';
 import { useProcedimentosAtivos } from '../procedimentos/useProcedimentos';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import { SITUACAO_DENTE_LABELS, FACE_DENTE_LABELS } from './types';
 import type {
   Atendimento, AtendimentoUpdateData,
@@ -30,6 +31,39 @@ const DENTES_VALIDOS = new Set([
   41,42,43,44,45,46,47,48,
 ]);
 
+function parseDentesInput(value: string): number[] {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, '');
+  if (!normalized) return [];
+  if (normalized === 'todos' || normalized === 'todososdentes' || normalized === 'all') {
+    return Array.from(DENTES_VALIDOS).sort((a, b) => a - b);
+  }
+
+  const dentes = new Set<number>();
+
+  for (const token of normalized.split(',')) {
+    if (!token) continue;
+    if (token.includes('-')) {
+      const [start, end] = token.split('-').map(Number);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start > end) {
+        throw new Error('Intervalo de dentes inválido');
+      }
+      for (let n = start; n <= end; n += 1) {
+        if (!DENTES_VALIDOS.has(n)) throw new Error('Dente inválido no intervalo');
+        dentes.add(n);
+      }
+      continue;
+    }
+
+    const numero = Number(token);
+    if (!Number.isInteger(numero) || !DENTES_VALIDOS.has(numero)) {
+      throw new Error('Dente inválido');
+    }
+    dentes.add(numero);
+  }
+
+  return Array.from(dentes).sort((a, b) => a - b);
+}
+
 /*
  * O schema Zod é usado APENAS para validação em runtime (zodResolver).
  * O tipo do formulário vem das interfaces do types.ts para evitar o conflito
@@ -40,10 +74,53 @@ const itemSchema = z.object({
   procedimentoId: z.union([z.number().positive(), z.literal('')])
     .refine((v) => v !== '', { message: 'Procedimento obrigatório' }),
   numeroDente: z.union([z.number(), z.literal('')])
-    .refine((v) => v !== '' && DENTES_VALIDOS.has(Number(v)), { message: 'Dente inválido (FDI 11-48)' }),
+    .optional(),
+  dentes: z.string().optional().default(''),
   face: z.string().optional().default(''),
   situacaoIdentificada: z.string().min(1, 'Situação obrigatória'),
   observacao: z.string().optional().default(''),
+}).superRefine((item, ctx) => {
+  const hasNumero = item.numeroDente !== '' && item.numeroDente !== undefined;
+  const hasDentes = !!item.dentes?.trim();
+  if (!hasNumero && !hasDentes) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['numeroDente'],
+      message: 'Informe um dente ou múltiplos dentes',
+    });
+  }
+  if (hasNumero && hasDentes) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dentes'],
+      message: 'Use apenas um dos campos de dente',
+    });
+  }
+  if (hasDentes) {
+    try {
+      const parsed = parseDentesInput(item.dentes);
+      if (parsed.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['dentes'],
+          message: 'Informe ao menos um dente válido',
+        });
+      }
+    } catch (err) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dentes'],
+        message: err instanceof Error ? err.message : 'Dentes inválidos',
+      });
+    }
+  }
+  if (hasNumero && !DENTES_VALIDOS.has(Number(item.numeroDente))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['numeroDente'],
+      message: 'Dente inválido (FDI 11-48)',
+    });
+  }
 });
 
 const schema = z.object({
@@ -62,6 +139,7 @@ type FormData = {
 const ITEM_VAZIO: ItemAtendimentoFormData = {
   procedimentoId: '',
   numeroDente: '',
+  dentes: '',
   face: '',
   situacaoIdentificada: '',
   observacao: '',
@@ -88,7 +166,7 @@ export default function AtendimentoDrawer({
   const finalizar = useFinalizarAtendimento();
 
   const {
-    control, handleSubmit, reset,
+    control, handleSubmit, reset, getValues,
     formState: { errors },
   } = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +189,7 @@ export default function AtendimentoDrawer({
         ? atendimento.itens.map((item) => ({
             procedimentoId: item.procedimentoId,
             numeroDente: item.numeroDente,
+            dentes: '',
             face: (item.face ?? '') as FaceDente | '',
             situacaoIdentificada: item.situacaoIdentificada as SituacaoDente,
             observacao: item.observacao ?? '',
@@ -119,29 +198,50 @@ export default function AtendimentoDrawer({
     });
   }, [open, atendimento]);
 
+  const expandItens = (items: ItemAtendimentoFormData[]): ItemAtendimentoFormData[] => {
+    return items.flatMap((item) => {
+      const { dentes, ...rest } = item;
+      if (dentes?.trim()) {
+        return parseDentesInput(dentes).map((numeroDente) => ({
+          ...rest,
+          numeroDente,
+        }));
+      }
+      return [{ ...rest, numeroDente: item.numeroDente }];
+    });
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       const payload: AtendimentoUpdateData = {
         horaInicio: data.horaInicio,
         observacoesGerais: data.observacoesGerais,
-        itens: data.itens,
+        itens: expandItens(data.itens),
       };
       await update.mutateAsync(payload);
       onSuccess('Atendimento atualizado com sucesso!');
       onClose();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar atendimento');
+      onError(getApiErrorMessage(e, 'Erro ao salvar atendimento'));
     }
   };
 
   const handleFinalizar = async () => {
     setConfirmFinalizar(false);
     try {
+      const currentValues = getValues();
+      const payload: AtendimentoUpdateData = {
+        horaInicio: currentValues.horaInicio,
+        observacoesGerais: currentValues.observacoesGerais,
+        itens: expandItens(currentValues.itens),
+      };
+
+      await update.mutateAsync(payload);
       await finalizar.mutateAsync(atendimento.id);
       onSuccess('Atendimento finalizado! Odontograma atualizado.');
       onClose();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao finalizar atendimento');
+      onError(getApiErrorMessage(e, 'Erro ao finalizar atendimento'));
     }
   };
 
@@ -308,7 +408,7 @@ export default function AtendimentoDrawer({
                       render={({ field: f }) => (
                         <TextField
                           {...f}
-                          label="Dente (FDI) *"
+                          label="Dente (FDI)"
                           type="number"
                           error={!!errors.itens?.[index]?.numeroDente}
                           helperText={errors.itens?.[index]?.numeroDente?.message ?? '11–48'}
@@ -320,6 +420,35 @@ export default function AtendimentoDrawer({
                       )}
                     />
                   </Stack>
+
+                  <Controller
+                    name={`itens.${index}.dentes`}
+                    control={control}
+                    render={({ field: f }) => (
+                      <TextField
+                        {...f}
+                        label="Dentes"
+                        placeholder="11,12,13-18 ou todos"
+                        error={!!errors.itens?.[index]?.dentes}
+                        helperText={errors.itens?.[index]?.dentes?.message ?? 'Informe intervalo ou lista de dentes'}
+                        fullWidth
+                        disabled={isFinalizado}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Button
+                                size="small"
+                                onClick={() => f.onChange('todos')}
+                                disabled={isFinalizado}
+                              >
+                                Todos
+                              </Button>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
 
                   <Stack direction="row" spacing={1.5}>
                     <Controller

@@ -204,7 +204,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          v2.0 • OdontoHelp © 2026
+          v0.5 • OdontoHelp © 2026
         </Typography>
       </Box>
     </Box>

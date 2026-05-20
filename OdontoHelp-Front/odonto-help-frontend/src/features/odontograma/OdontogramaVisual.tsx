@@ -28,13 +28,14 @@ interface DenteProps {
 function Dente({ numero, mapa, onClick, selected }: DenteProps) {
   const entry = mapa[numero];
   const situacao = entry?.situacaoAtual as SituacaoDente | undefined;
-  const cor = situacao ? SITUACAO_DENTE_COLORS[situacao] : COR_SAUDAVEL;
-  const label = situacao ? SITUACAO_DENTE_LABELS[situacao] : 'Saudável';
+  const isSemMarca = !situacao || situacao === 'SAUDAVEL';
+  const cor = isSemMarca ? COR_SAUDAVEL : SITUACAO_DENTE_COLORS[situacao!];
+  const label = isSemMarca ? 'Saudável' : SITUACAO_DENTE_LABELS[situacao!];
 
   // Converte cor hex → rgba com alpha para fundo
-  const bgColor = situacao ? `${cor}22` : COR_SAUDAVEL;
-  const borderColor = situacao ? cor : COR_BORDA_SAUDAVEL;
-  const textColor = situacao ? cor : COR_TEXTO_SAUDAVEL;
+  const bgColor = isSemMarca ? COR_SAUDAVEL : `${cor}22`;
+  const borderColor = isSemMarca ? COR_BORDA_SAUDAVEL : cor;
+  const textColor = isSemMarca ? COR_TEXTO_SAUDAVEL : cor;
 
   return (
     <Tooltip
@@ -100,7 +101,7 @@ function Dente({ numero, mapa, onClick, selected }: DenteProps) {
             width: 18,
             height: 18,
             borderRadius: '50%',
-            backgroundColor: situacao ? cor : 'transparent',
+            backgroundColor: isSemMarca ? 'transparent' : cor,
             border: '1.5px solid',
             borderColor: borderColor,
             flexShrink: 0,
@@ -156,14 +157,16 @@ function Legenda() {
 /* ── Componente principal ─────────────────────────────────────────────────── */
 interface OdontogramaVisualProps {
   pacienteId: number;
-  selectedDente?: number | null;
+  selectedDentes?: number[];
   onDenteClick?: (numero: number) => void;
+  mapaOverride?: OdontogramaMap;
 }
 
 export default function OdontogramaVisual({
   pacienteId,
-  selectedDente,
+  selectedDentes,
   onDenteClick,
+  mapaOverride,
 }: OdontogramaVisualProps) {
   const { data: mapa, isLoading } = useOdontograma(pacienteId);
 
@@ -175,7 +178,7 @@ export default function OdontogramaVisual({
     );
   }
 
-  const odontogramaMap = mapa ?? {};
+  const odontogramaMap = mapaOverride ?? mapa ?? {};
 
   return (
     <Box>
@@ -201,7 +204,7 @@ export default function OdontogramaVisual({
                 numero={n}
                 mapa={odontogramaMap}
                 onClick={onDenteClick}
-                selected={selectedDente === n}
+                selected={selectedDentes?.includes(n)}
               />
             ))}
           </Box>
@@ -219,7 +222,7 @@ export default function OdontogramaVisual({
                 numero={n}
                 mapa={odontogramaMap}
                 onClick={onDenteClick}
-                selected={selectedDente === n}
+                selected={selectedDentes?.includes(n)}
               />
             ))}
           </Box>

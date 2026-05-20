@@ -6,9 +6,33 @@ import { useAuthStore } from '../store/authStore';
 // ─── instância base ───────────────────────────────────────────────────────────
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 5000,
 });
+
+export function getApiErrorMessage(error: unknown, fallback = 'Erro inesperado') {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data as any;
+    if (responseData) {
+      const backendMessage = responseData.erro
+        ?? responseData.error
+        ?? responseData.message
+        ?? responseData.detail
+        ?? responseData.mensagem;
+      if (typeof backendMessage === 'string' && backendMessage.trim()) {
+        return backendMessage;
+      }
+      if (Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+        const firstError = responseData.errors[0];
+        if (typeof firstError === 'string') return firstError;
+        if (firstError?.message) return String(firstError.message);
+      }
+    }
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) return error.message || fallback;
+  return typeof error === 'string' ? error : fallback;
+}
 
 // ─── fila de requests pendentes durante o refresh ────────────────────────────
 type FailedRequest = {
@@ -33,6 +57,12 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken && config.headers) {
     config.headers['Authorization'] = `Bearer ${accessToken}`;
   }
+  if (config.data != null && config.method && !['get', 'head'].includes(config.method)) {
+    config.headers = config.headers || {};
+    if (!('Content-Type' in config.headers)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+  }
   return config;
 });
 
@@ -42,9 +72,7 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;
-    const message = (error.response?.data as any)?.erro 
-             ?? (error.response?.data as any)?.message 
-             ?? 'Erro inesperado';
+    const message = getApiErrorMessage(error, 'Erro inesperado');
 
     // ── erros de negócio (sem retry) ──
     if (status === 404) return Promise.reject(new Error('Recurso não encontrado'));
@@ -83,6 +111,12 @@ api.interceptors.response.use(
 
     const { refreshToken, setAuth, clearAuth } = useAuthStore.getState();
 
+    if (!refreshToken) {
+      clearAuth();
+      window.location.href = '/login';
+      return Promise.reject(new Error('Sessão expirada'));
+    }
+
     try {
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
@@ -97,6 +131,7 @@ api.interceptors.response.use(
       });
 
       processQueue(null, data.accessToken);
+      original.headers = original.headers || {};
       original.headers['Authorization'] = `Bearer ${data.accessToken}`;
       return api(original);
     } catch (refreshError) {

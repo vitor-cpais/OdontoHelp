@@ -93,6 +93,7 @@ export interface Atendimento {
 export interface ItemAtendimentoFormData {
   procedimentoId: number | '';
   numeroDente: number | '';
+  dentes?: string;
   face: FaceDente | '';
   situacaoIdentificada: SituacaoDente | '';
   observacao: string;

@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { useProcedimentoDrawerStore } from './procedimentoStore';
 import { useCreateProcedimento, useUpdateProcedimento } from './useProcedimentos';
+import { getApiErrorMessage } from '../../shared/lib/axios';
 import type { ProcedimentoFormData } from './types';
 
 const schema = z.object({
@@ -89,7 +90,7 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
       }
       clearDraft();
     } catch (e: any) {
-      onError(e.message ?? 'Erro ao salvar procedimento');
+      onError(getApiErrorMessage(e, 'Erro ao salvar procedimento'));
     }
   };
 

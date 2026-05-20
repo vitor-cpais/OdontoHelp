@@ -1,6 +1,5 @@
 package com.OdontoHelpBackend.domain.Clinico;
 
-
 import com.OdontoHelpBackend.domain.Clinico.Enums.SituacaoDente;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
@@ -27,34 +26,29 @@ public class HistoricoOdontograma {
     @JoinColumn(name = "paciente_id", nullable = false)
     private Paciente paciente;
 
-    // Numeração FDI: dentes 11-48
     @Min(11) @Max(48)
     @Column(nullable = false)
     private Integer numeroDente;
 
-    // Situação ANTES da mudança (null se é o primeiro registro do dente)
     @Enumerated(EnumType.STRING)
     private SituacaoDente situacaoAnterior;
 
-    // Situação APÓS a mudança
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SituacaoDente situacaoNova;
 
-    // Dentista que realizou a mudança
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dentista_id", nullable = false)
     private Dentista dentista;
 
-    // Atendimento que originou a mudança
+    // Nullable — pode ser null quando a atualização é feita diretamente (sem atendimento formal)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "atendimento_id", nullable = false)
+    @JoinColumn(name = "atendimento_id", nullable = true)
     private Atendimento atendimento;
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    // Imutável — nunca atualizado após criação
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private LocalDateTime registradoEm;

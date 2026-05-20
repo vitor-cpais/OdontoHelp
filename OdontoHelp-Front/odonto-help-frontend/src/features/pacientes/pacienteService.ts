@@ -21,22 +21,34 @@ export const pacienteService = {
   },
 
   criar: async (payload: PacienteFormData): Promise<Paciente> => {
-    const { data } = await api.post(BASE, {
+    const body: Record<string, unknown> = {
       ...payload,
       cpf: payload.cpf.replace(/\D/g, ''),
       telefone: payload.telefone.replace(/\D/g, ''),
       perfil: 'PACIENTE',
       isAtivo: true,
-    });
+    };
+
+    if (!payload.senha) {
+      delete body.senha;
+    }
+
+    const { data } = await api.post(BASE, body);
     return data;
   },
 
   atualizar: async (id: number, payload: Partial<PacienteFormData>): Promise<Paciente> => {
-    const { data } = await api.put(`${BASE}/${id}`, {
+    const body: Record<string, unknown> = {
       ...payload,
       cpf: payload.cpf?.replace(/\D/g, ''),
       telefone: payload.telefone?.replace(/\D/g, ''),
-    });
+    };
+
+    if (!payload.senha) {
+      delete body.senha;
+    }
+
+    const { data } = await api.put(`${BASE}/${id}`, body);
     return data;
   },
 

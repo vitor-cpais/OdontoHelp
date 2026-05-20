@@ -3,7 +3,9 @@ package com.OdontoHelpBackend.service.Clinico;
 import com.OdontoHelpBackend.Mapper.AtendimentoMapper;
 import com.OdontoHelpBackend.domain.Clinico.Atendimento;
 import com.OdontoHelpBackend.domain.Clinico.Enums.StatusAtendimento;
+import com.OdontoHelpBackend.domain.Clinico.Enums.StatusItemPlano;
 import com.OdontoHelpBackend.domain.Clinico.ItemAtendimento;
+import com.OdontoHelpBackend.domain.Clinico.ItemPlanoDeTratamento;
 import com.OdontoHelpBackend.domain.Consulta.Agendamento;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
@@ -18,6 +20,7 @@ import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Clinico.AtendimentoRepository;
+import com.OdontoHelpBackend.repository.Clinico.ItemPlanoDeTratamentoRepository;
 import com.OdontoHelpBackend.repository.Consulta.AgendamentoRepository;
 import com.OdontoHelpBackend.service.Consulta.AgendamentoService;
 import com.OdontoHelpBackend.service.Usuario.DentistaService;
@@ -43,8 +46,7 @@ public class AtendimentoService {
     private final DentistaService dentistaService;
     private final ProcedimentoService procedimentoService;
     private final OdontogramaService odontogramaService;
-
-    // ─── Queries existentes ───────────────────────────────────────────────────
+    private final ItemPlanoDeTratamentoRepository itemPlanoRepository;
 
     public AtendimentoResponseDTO buscarPorId(Long id) {
         return atendimentoMapper.toResponse(buscarEntidadePorId(id));
@@ -55,7 +57,6 @@ public class AtendimentoService {
                 .map(atendimentoMapper::toResponse);
     }
 
-    // CORREÇÃO: recebe filtros opcionais — delega ao repository em vez de filtrar client-side
     public Slice<AtendimentoResponseDTO> listarPorDentista(
             Long dentistaId, String nomePaciente,
             LocalDateTime dataInicio, LocalDateTime dataFim,
@@ -72,7 +73,6 @@ public class AtendimentoService {
                 .map(atendimentoMapper::toResponse);
     }
 
-    // NOVO: ADMIN vê todos sem restrição de dentista
     public Slice<AtendimentoResponseDTO> listarTodos(
             String nomePaciente, LocalDateTime dataInicio,
             LocalDateTime dataFim, StatusAtendimento status, Pageable pageable) {
@@ -80,8 +80,6 @@ public class AtendimentoService {
                 .filtrarTodos(nomePaciente, dataInicio, dataFim, status, pageable)
                 .map(atendimentoMapper::toResponse);
     }
-
-    // ─── Comandos (inalterados) ────────────────────────────────────────────────
 
     @Transactional
     public AtendimentoResponseDTO iniciarAtendimento(Long agendamentoId,
@@ -135,14 +133,17 @@ public class AtendimentoService {
 
         atendimento.finalizar();
 
-        atendimento.getItens().forEach(item ->
+        Long pacienteId = atendimento.getPaciente().getId();
+
+        atendimento.getItens().forEach(item -> {
             odontogramaService.atualizarPorAtendimento(
                 atendimento.getPaciente(),
                 item,
                 atendimento.getDentista(),
                 atendimento
-            )
-        );
+            );
+            marcarItensPlanoComoRealizados(pacienteId, item.getNumeroDente(), atendimento);
+        });
 
         return atendimentoMapper.toResponse(atendimentoRepository.save(atendimento));
     }
@@ -152,7 +153,19 @@ public class AtendimentoService {
                 .orElseThrow(() -> new NotFoundException("Atendimento não encontrado"));
     }
 
-    // ─── Privados (inalterados) ────────────────────────────────────────────────
+    private void marcarItensPlanoComoRealizados(Long pacienteId, Integer numeroDente, Atendimento atendimento) {
+        List<ItemPlanoDeTratamento> itensPendentes = itemPlanoRepository
+                .findByPacienteIdAndNumeroDenteAndStatus(pacienteId, numeroDente, StatusItemPlano.PENDENTE);
+
+        itensPendentes.forEach(item -> {
+            item.setStatus(StatusItemPlano.REALIZADO);
+            item.setAtendimentoRealizacao(atendimento);
+        });
+
+        if (!itensPendentes.isEmpty()) {
+            itemPlanoRepository.saveAll(itensPendentes);
+        }
+    }
 
     private List<ItemAtendimento> montarItens(List<ItemAtendimentoRequestDTO> dtos, Atendimento atendimento) {
         List<ItemAtendimento> itens = new ArrayList<>();

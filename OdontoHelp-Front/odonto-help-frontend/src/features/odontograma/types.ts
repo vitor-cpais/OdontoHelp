@@ -16,7 +16,7 @@ export interface HistoricoOdontograma {
   situacaoNova: SituacaoDente;
   dentistaId: number;
   dentistaNome: string;
-  atendimentoId: number;
+  atendimentoId: number | null;
   observacao: string | null;
   registradoEm: string;
 }

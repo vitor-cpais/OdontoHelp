@@ -31,11 +31,17 @@ export const dentistaService = {
   },
 
   atualizar: async (id: number, payload: Partial<DentistaFormData>): Promise<Dentista> => {
-    const { data } = await api.put(`${BASE}/${id}`, {
+    const body: Record<string, unknown> = {
       ...payload,
       cpf: payload.cpf?.replace(/\D/g, ''),
       telefone: payload.telefone?.replace(/\D/g, ''),
-    });
+    };
+
+    if (!payload.senha) {
+      delete body.senha;
+    }
+
+    const { data } = await api.put(`${BASE}/${id}`, body);
     return data;
   },
   
