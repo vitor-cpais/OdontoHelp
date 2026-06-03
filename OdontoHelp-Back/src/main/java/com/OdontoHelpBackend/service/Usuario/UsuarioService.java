@@ -17,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioRequestDTO;
 
-
-
+import java.time.LocalDate;
 
 
 @Service
@@ -88,6 +87,7 @@ public class UsuarioService {
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
         validarCpfDuplicado(dto.cpf());
         validarEmailDuplicado(dto.email());
+        validarDataNascimento(dto.dataNascimento());
 
         Usuario usuario = new Usuario();
         usuario.setNome(dto.nome());
@@ -103,9 +103,24 @@ public class UsuarioService {
         return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
 
+    private void validarDataNascimento(LocalDate dataNascimento) {
+        if (dataNascimento == null) {
+            throw new IllegalArgumentException("Data de nascimento é obrigatória.");
+            // Ou use a sua exceção personalizada do projeto (ex: BusinessException)
+        }
+
+        // Regra 1: Impede anos absurdos como 1111, 0001, etc.
+        if (dataNascimento.getYear() < 1900) {
+            throw new IllegalArgumentException("Data de nascimento inválida. O ano deve ser maior ou igual a 1900.");
+        }
+
+        // Regra 2: Impede datas no futuro (garantia caso o front falhe)
+        if (dataNascimento.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Data de nascimento não pode ser uma data futura.");
+        }
+    }
 
     protected void validarCpfDuplicado(String cpf) {
-        // Garante que o CPF chegue liso para a consulta no banco
         String cpfLimpo = (cpf != null) ? cpf.replaceAll("\\D", "") : null;
         if (usuarioRepository.existsByCpf(cpfLimpo))
             throw new ConflictException("CPF já cadastrado");

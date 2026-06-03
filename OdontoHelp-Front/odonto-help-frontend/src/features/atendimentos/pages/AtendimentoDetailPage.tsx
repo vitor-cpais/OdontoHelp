@@ -2,23 +2,31 @@ import {
   Box, Tabs, Tab,
   Typography, IconButton, Divider, Button, Stack,
   TextField, Alert, Chip, Paper, Skeleton,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControlLabel, Switch,
 } from '@mui/material';
 import {
   Close, MedicalServicesOutlined, DeleteOutlined,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAtendimento, useUpdateAtendimento, useFinalizarAtendimento } from '../useAtendimentos';
+import {
+  useAtendimento, useUpdateAtendimento, useFinalizarAtendimento,
+  useMarcarOdontogramaRevisado, useBaixaPlanoManual, useRemoverItemAtendimento,
+} from '../useAtendimentos';
+import BaixaPlanoDialog from '../BaixaPlanoDialog';
+import type { ItemPlano } from '../../planoTratamento/types';
 import OdontogramaVisual from '../../odontograma/OdontogramaVisual';
-import { useOdontograma } from '../../odontograma/useOdontograma';
-import type { OdontogramaMap } from '../../odontograma/types';
 import OdontogramaSelectionDialog from '../../odontograma/OdontogramaSelectionDialog';
 import HistoricoOdontogramaTab from '../../odontograma/HistoricoOdontogramaTab';
 import AtendimentoStatusChip from '../AtendimentoStatusChip';
 import AtendimentoProcedimentoDrawer from './AtendimentoProcedimentoDrawer';
 import { getApiErrorMessage } from '../../../shared/lib/axios';
 import { SITUACAO_DENTE_LABELS, SITUACAO_DENTE_COLORS } from '../types';
-import type { Atendimento, ItemAtendimento } from '../types';
+import type { ItemAtendimento } from '../types';
+import { useOdontograma } from '../../odontograma/useOdontograma';
+import type { OdontogramaMap } from '../../odontograma/types';
+import { useItensPlanoPendentes } from '../../planoTratamento/usePlanoTratamento';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -29,38 +37,21 @@ interface TabPanelProps {
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`tab-${index}`}
-      {...other}
-    >
+    <div role="tabpanel" hidden={value !== index} id={`tab-${index}`} {...other}>
       {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
     </div>
   );
 }
 
-interface SituacaoTagProps {
-  situacao: string | null;
-}
-
-function SituacaoTag({ situacao }: SituacaoTagProps) {
+function SituacaoTag({ situacao }: { situacao: string | null }) {
   if (!situacao) return <Typography variant="caption" color="text.disabled">—</Typography>;
   const cor = SITUACAO_DENTE_COLORS[situacao as keyof typeof SITUACAO_DENTE_COLORS] || '#888';
   return (
-    <Box
-      sx={{
-        display: 'inline-block',
-        px: 1.5,
-        py: 0.5,
-        borderRadius: 1,
-        backgroundColor: `${cor}22`,
-        color: cor,
-        border: `1px solid ${cor}55`,
-        fontSize: '0.75rem',
-        fontWeight: 500,
-      }}
-    >
+    <Box sx={{
+      display: 'inline-block', px: 1.5, py: 0.5, borderRadius: 1,
+      backgroundColor: `${cor}22`, color: cor, border: `1px solid ${cor}55`,
+      fontSize: '0.75rem', fontWeight: 500,
+    }}>
       {SITUACAO_DENTE_LABELS[situacao as keyof typeof SITUACAO_DENTE_LABELS] || situacao}
     </Box>
   );
@@ -72,9 +63,13 @@ export default function AtendimentoDetailPage() {
   const atendimentoId = id ? Number(id) : null;
 
   const { data: atendimento, isLoading } = useAtendimento(atendimentoId);
-  const { data: mapaServidor } = useOdontograma(atendimento?.pacienteId ?? null);
   const update = useUpdateAtendimento(atendimentoId!);
   const finalizar = useFinalizarAtendimento();
+  const marcarRevisado = useMarcarOdontogramaRevisado(atendimentoId!);
+  const baixaManual = useBaixaPlanoManual(atendimentoId!);
+  const removerItem = useRemoverItemAtendimento(atendimentoId!);
+  const { data: mapaServidor } = useOdontograma(atendimento?.pacienteId ?? null);
+  const { data: itensPendentes } = useItensPlanoPendentes(atendimento?.pacienteId ?? null);
 
   const [tab, setTab] = useState(0);
   const [observacoes, setObservacoes] = useState('');
@@ -82,9 +77,12 @@ export default function AtendimentoDetailPage() {
   const [modalDentes, setModalDentes] = useState(false);
   const [drawerProcedimento, setDrawerProcedimento] = useState(false);
   const [items, setItems] = useState<ItemAtendimento[]>([]);
+  const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [toast, setToast] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({
     open: false, msg: '', severity: 'success',
   });
+  const [baixaOpen, setBaixaOpen] = useState(false);
+  const [baixaItens, setBaixaItens] = useState<ItemPlano[]>([]);
 
   useEffect(() => {
     if (atendimento) {
@@ -104,15 +102,12 @@ export default function AtendimentoDetailPage() {
         </Box>
       );
     }
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">Atendimento não encontrado</Alert>
-      </Box>
-    );
+    return <Box sx={{ p: 3 }}><Alert severity="error">Atendimento não encontrado</Alert></Box>;
   }
 
   const isFinalizado = atendimento.status === 'FINALIZADO';
 
+  // Mapa local — mescla servidor + itens ainda não salvos para feedback visual imediato
   const mapaLocal: OdontogramaMap = {
     ...(mapaServidor ?? {}),
     ...Object.fromEntries(
@@ -121,7 +116,7 @@ export default function AtendimentoDetailPage() {
         {
           id: item.id,
           numeroDente: item.numeroDente,
-          situacaoAtual: item.situacaoIdentificada,
+          situacaoAtual: item.situacaoNova,
           observacao: item.observacao ?? null,
           atualizadoEm: new Date().toISOString(),
         },
@@ -130,9 +125,9 @@ export default function AtendimentoDetailPage() {
   };
 
   const handleDenteClick = (numero: number) => {
-    setSelectedDentes((prev) => (
+    setSelectedDentes((prev) =>
       prev.includes(numero) ? prev.filter((d) => d !== numero) : [...prev, numero]
-    ));
+    );
   };
 
   const handleConfirmDentes = (dentes: number[]) => {
@@ -147,57 +142,65 @@ export default function AtendimentoDetailPage() {
     setDrawerProcedimento(false);
   };
 
-  const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
+  const buildPayloadItens = () =>
+    items
+      .filter((item) => item.id < 0)
+      .map((item) => ({
+        procedimentoId: item.procedimentoId,
+        numeroDente: item.numeroDente,
+        situacaoNova: item.situacaoNova,
+        observacao: item.observacao ?? '',
+      }));
 
   const handleSalvar = async () => {
     try {
-      await update.mutateAsync({
+      const novos = buildPayloadItens();
+      const result = await update.mutateAsync({
         observacoesGerais: observacoes,
-        itens: items.map((item) => ({
-          procedimentoId: item.procedimentoId,
-          numeroDente: item.numeroDente,
-          face: item.face,
-          situacaoIdentificada: item.situacaoIdentificada,
-          observacao: item.observacao,
-        })),
+        itens: novos.length > 0 ? novos : undefined,
       });
-      setToast({ open: true, msg: 'Atendimento salvo com sucesso!', severity: 'success' });
-    } catch (e: any) {
-      setToast({
-        open: true,
-        msg: getApiErrorMessage(e, 'Erro ao salvar'),
-        severity: 'error',
-      });
+      setItems(result.atendimento.itens);
+      if (result.itensPlanoBaixaManual?.length > 0) {
+        setBaixaItens(result.itensPlanoBaixaManual);
+        setBaixaOpen(true);
+      } else {
+        setToast({ open: true, msg: 'Atendimento salvo com sucesso!', severity: 'success' });
+      }
+    } catch (e: unknown) {
+      setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao salvar'), severity: 'error' });
     }
   };
 
   const handleFinalizar = async () => {
     try {
-      await update.mutateAsync({
-        observacoesGerais: observacoes,
-        itens: items.map((item) => ({
-          procedimentoId: item.procedimentoId,
-          numeroDente: item.numeroDente,
-          face: item.face,
-          situacaoIdentificada: item.situacaoIdentificada,
-          observacao: item.observacao,
-        })),
-      });
+      const novos = buildPayloadItens();
+      if (novos.length > 0) {
+        await update.mutateAsync({ observacoesGerais: observacoes, itens: novos });
+      } else if (observacoes !== (atendimento.observacoesGerais ?? '')) {
+        await update.mutateAsync({ observacoesGerais: observacoes });
+      }
       await finalizar.mutateAsync(atendimentoId!);
-      setToast({
-        open: true,
-        msg: 'Atendimento finalizado! Odontograma atualizado.',
-        severity: 'success',
-      });
-    } catch (e: any) {
-      setToast({
-        open: true,
-        msg: getApiErrorMessage(e, 'Erro ao finalizar'),
-        severity: 'error',
-      });
+      setToast({ open: true, msg: 'Atendimento finalizado!', severity: 'success' });
+      navigate('/atendimentos');
+    } catch (e: unknown) {
+      setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao finalizar'), severity: 'error' });
     }
+  };
+
+  const handleBaixaConfirm = async (ids: number[]) => {
+    try {
+      await baixaManual.mutateAsync(ids);
+      setBaixaOpen(false);
+      setToast({ open: true, msg: 'Baixa no plano registrada!', severity: 'success' });
+    } catch (e: unknown) {
+      setToast({ open: true, msg: getApiErrorMessage(e, 'Erro na baixa manual'), severity: 'error' });
+    }
+  };
+
+  const handleCancelar = () => {
+    setObservacoes(atendimento.observacoesGerais ?? '');
+    setItems(atendimento.itens);
+    setSelectedDentes([]);
   };
 
   return (
@@ -218,7 +221,28 @@ export default function AtendimentoDetailPage() {
                   Atendimento #{atendimento.id}
                 </Typography>
                 <AtendimentoStatusChip status={atendimento.status} />
+                {!atendimento.odontogramaRevisado && !isFinalizado && (
+                  <Chip label="Odontograma não revisado" size="small" color="warning" variant="outlined" />
+                )}
               </Box>
+              {!isFinalizado && (
+                <FormControlLabel
+                  sx={{ mt: 0.5 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={atendimento.odontogramaRevisado}
+                      disabled={marcarRevisado.isPending}
+                      onChange={(_, checked) => marcarRevisado.mutate(checked)}
+                    />
+                  }
+                  label={
+                    <Typography variant="caption" color="text.secondary">
+                      Odontograma revisado
+                    </Typography>
+                  }
+                />
+              )}
               <Typography variant="caption" color="text.disabled">
                 {atendimento.pacienteNome} • {atendimento.dentistaNome}
               </Typography>
@@ -249,19 +273,13 @@ export default function AtendimentoDetailPage() {
         </Tabs>
 
         <Box sx={{ px: 3, py: 2 }}>
+          {/* ── Aba Dados ── */}
           <TabPanel value={tab} index={0}>
             <Stack spacing={2}>
               {isFinalizado && (
-                <Alert severity="info">
-                  Atendimento finalizado — apenas leitura.
-                </Alert>
+                <Alert severity="info">Atendimento finalizado — apenas leitura.</Alert>
               )}
-              <TextField
-                label="ID Agendamento"
-                value={atendimento.agendamentoId}
-                fullWidth
-                disabled
-              />
+              <TextField label="ID Agendamento" value={atendimento.agendamentoId} fullWidth disabled />
               <TextField
                 label="Hora de início"
                 type="datetime-local"
@@ -279,10 +297,64 @@ export default function AtendimentoDetailPage() {
                 fullWidth
                 disabled={isFinalizado}
               />
+              {itensPendentes && itensPendentes.length > 0 && (
+                <Box sx={{
+                  p: 2, border: '1px solid', borderColor: '#F59E0B',
+                  borderRadius: 2, bgcolor: '#FFFBF0',
+                }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#92400E', display: 'block', mb: 1 }}>
+                    Plano pendente — {itensPendentes.length} item{itensPendentes.length > 1 ? 's' : ''}
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {itensPendentes.map((item) => (
+                      <Typography key={item.id} variant="caption" color="text.secondary">
+                        • Dente {item.numeroDente} — {item.procedimentoNome}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </Stack>
           </TabPanel>
 
+          {/* ── Aba Odontograma ── */}
           <TabPanel value={tab} index={1}>
+            <Stack spacing={2}>
+              {selectedDentes.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {selectedDentes.map((d) => (
+                    <Chip
+                      key={d}
+                      label={String(d)}
+                      onDelete={() => setSelectedDentes((prev) => prev.filter((x) => x !== d))}
+                    />
+                  ))}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => setDrawerProcedimento(true)}
+                    sx={{ ml: 'auto' }}
+                  >
+                    Adicionar procedimento
+                  </Button>
+                </Box>
+              )}
+              <Typography variant="caption" color="text.secondary">
+                As situações dos dentes são atualizadas automaticamente ao finalizar o atendimento.
+                Dentes com borda laranja têm plano de tratamento pendente.
+              </Typography>
+              <OdontogramaVisual
+                pacienteId={atendimento.pacienteId}
+                selectedDentes={selectedDentes}
+                onDenteClick={isFinalizado ? undefined : handleDenteClick}
+                mapaOverride={mapaLocal}
+                dentesPendentesPlano={itensPendentes?.map((i) => i.numeroDente) ?? []}
+              />
+            </Stack>
+          </TabPanel>
+
+          {/* ── Aba Procedimentos ── */}
+          <TabPanel value={tab} index={2}>
             <Stack spacing={2}>
               {!isFinalizado && (
                 <Button
@@ -290,30 +362,9 @@ export default function AtendimentoDetailPage() {
                   onClick={() => setModalDentes(true)}
                   sx={{ alignSelf: 'flex-start' }}
                 >
-                  Selecionar dentes para procedimento
+                  + Adicionar procedimento
                 </Button>
               )}
-              <Typography variant="caption" color="text.secondary">
-                O odontograma reflete o estado clínico atual do paciente.
-                As situações dos dentes são atualizadas automaticamente ao finalizar o atendimento.
-              </Typography>
-              <OdontogramaVisual
-                pacienteId={atendimento.pacienteId}
-                selectedDentes={selectedDentes}
-                mapaOverride={mapaLocal}
-              />
-            </Stack>
-          </TabPanel>
-
-          <TabPanel value={tab} index={2}>
-            <Stack spacing={2}>
-              <Button
-                variant="outlined"
-                onClick={() => setModalDentes(true)}
-                disabled={isFinalizado}
-              >
-                + Adicionar procedimento
-              </Button>
               <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'auto', maxHeight: 400 }}>
                 {items.length === 0 ? (
                   <Box sx={{ p: 2, textAlign: 'center' }}>
@@ -327,13 +378,9 @@ export default function AtendimentoDetailPage() {
                       <Box
                         key={idx}
                         sx={{
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: '1px solid',
+                          p: 1.5, borderRadius: 1, border: '1px solid',
                           borderColor: 'divider',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         }}
                       >
                         <Box sx={{ flex: 1 }}>
@@ -344,12 +391,7 @@ export default function AtendimentoDetailPage() {
                             <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600 }}>
                               Dente {item.numeroDente}
                             </Box>
-                            <SituacaoTag situacao={item.situacaoIdentificada} />
-                            {item.face && (
-                              <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                {item.face}
-                              </Box>
-                            )}
+                            <SituacaoTag situacao={item.situacaoNova} />
                           </Box>
                           {item.observacao && (
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
@@ -360,7 +402,7 @@ export default function AtendimentoDetailPage() {
                         {!isFinalizado && (
                           <IconButton
                             size="small"
-                            onClick={() => handleRemoveItem(idx)}
+                            onClick={() => setItemParaExcluir(item.id)}
                             sx={{ color: 'error.main', ml: 1 }}
                           >
                             <DeleteOutlined sx={{ fontSize: 16 }} />
@@ -374,6 +416,7 @@ export default function AtendimentoDetailPage() {
             </Stack>
           </TabPanel>
 
+          {/* ── Aba Histórico ── */}
           <TabPanel value={tab} index={3}>
             <HistoricoOdontogramaTab pacienteId={atendimento.pacienteId} />
           </TabPanel>
@@ -382,25 +425,26 @@ export default function AtendimentoDetailPage() {
         <Divider />
 
         <Box sx={{ px: 3, py: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          {!isFinalizado && (
+            <Button variant="outlined" onClick={handleCancelar}>
+              Cancelar
+            </Button>
+          )}
           <Button variant="outlined" onClick={() => navigate('/atendimentos')}>
-            Cancelar
+            Voltar
           </Button>
           {!isFinalizado && (
             <>
-              <Button
-                variant="contained"
-                onClick={handleSalvar}
-                disabled={update.isPending}
-              >
-                Salvar
+              <Button variant="contained" onClick={handleSalvar} disabled={update.isPending}>
+                {update.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
               <Button
                 variant="contained"
                 color="success"
                 onClick={handleFinalizar}
-                disabled={finalizar.isPending || items.length === 0}
+                disabled={finalizar.isPending || update.isPending}
               >
-                Finalizar Atendimento
+                {finalizar.isPending ? 'Finalizando...' : 'Finalizar Atendimento'}
               </Button>
             </>
           )}
@@ -415,30 +459,66 @@ export default function AtendimentoDetailPage() {
         onClose={() => setModalDentes(false)}
       />
 
+      <BaixaPlanoDialog
+        open={baixaOpen}
+        itens={baixaItens}
+        onClose={() => {
+          setBaixaOpen(false);
+          setToast({ open: true, msg: 'Atendimento salvo!', severity: 'success' });
+        }}
+        onConfirm={handleBaixaConfirm}
+        loading={baixaManual.isPending}
+      />
+
       <AtendimentoProcedimentoDrawer
         open={drawerProcedimento}
         dentes={selectedDentes}
-        onClose={() => {
-          setDrawerProcedimento(false);
-          setSelectedDentes([]);
-        }}
+        onClose={() => { setDrawerProcedimento(false); setSelectedDentes([]); }}
         onAddProcedimento={handleAddProcedimento}
       />
+
+      {/* Dialog confirmação de exclusão de procedimento */}
+      <Dialog open={itemParaExcluir !== null} onClose={() => setItemParaExcluir(null)}>
+        <DialogTitle>Remover procedimento?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            O procedimento será removido da lista. A alteração só será salva ao clicar em "Salvar".
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setItemParaExcluir(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={async () => {
+              const idRem = itemParaExcluir!;
+              if (idRem > 0) {
+                try {
+                  await removerItem.mutateAsync(idRem);
+                  setItems((prev) => prev.filter((i) => i.id !== idRem));
+                } catch (e: unknown) {
+                  setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao remover'), severity: 'error' });
+                }
+              } else {
+                setItems((prev) => prev.filter((i) => i.id !== idRem));
+              }
+              setItemParaExcluir(null);
+            }}
+          >
+            Remover
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {toast.open && (
         <Box
           onClick={() => setToast({ ...toast, open: false })}
           sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
+            position: 'fixed', bottom: 16, right: 16,
             backgroundColor: toast.severity === 'success' ? '#E1F5EE' : '#FFEBEE',
             color: toast.severity === 'success' ? '#0F6E56' : '#C0392B',
             border: `1px solid ${toast.severity === 'success' ? '#9FE1CB' : '#F5A5A5'}`,
-            borderRadius: 2,
-            p: 2,
-            maxWidth: 300,
-            cursor: 'pointer',
+            borderRadius: 2, p: 2, maxWidth: 300, cursor: 'pointer', zIndex: 9999,
           }}
         >
           <Typography variant="body2">{toast.msg}</Typography>

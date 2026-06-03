@@ -1,12 +1,23 @@
 package com.OdontoHelpBackend.config;
 
-import com.OdontoHelpBackend.domain.Clinico.*;
-import com.OdontoHelpBackend.domain.Clinico.Enums.*;
-import com.OdontoHelpBackend.domain.Consulta.Agendamento;
+import com.OdontoHelpBackend.domain.Clinico.Atendimento;
+import com.OdontoHelpBackend.domain.Clinico.ItemAtendimento;
+import com.OdontoHelpBackend.domain.Clinico.ItemPlanoDeTratamento;
+import com.OdontoHelpBackend.domain.Clinico.OdontogramaDente;
+import com.OdontoHelpBackend.domain.Clinico.OdontogramaFdi;
+import com.OdontoHelpBackend.domain.Clinico.OdontogramaSnapshot;
+import com.OdontoHelpBackend.domain.Clinico.PlanoDeTratamento;
+import com.OdontoHelpBackend.domain.Clinico.Procedimento;
+import com.OdontoHelpBackend.domain.Clinico.Enums.SituacaoDente;
+import com.OdontoHelpBackend.domain.Clinico.Enums.StatusItemPlano;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
+import com.OdontoHelpBackend.domain.Consulta.Agendamento;
 import com.OdontoHelpBackend.domain.usuario.*;
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
-import com.OdontoHelpBackend.repository.Clinico.*;
+import com.OdontoHelpBackend.repository.Clinico.AtendimentoRepository;
+import com.OdontoHelpBackend.repository.Clinico.OdontogramaSnapshotRepository;
+import com.OdontoHelpBackend.repository.Clinico.PlanoDeTratamentoRepository;
+import com.OdontoHelpBackend.repository.Clinico.ProcedimentoRepository;
 import com.OdontoHelpBackend.repository.Consulta.AgendamentoRepository;
 import com.OdontoHelpBackend.repository.Usuario.*;
 import jakarta.transaction.Transactional;
@@ -38,8 +49,7 @@ public class DataInitializer implements ApplicationRunner {
     private final AgendamentoRepository agendamentoRepository;
     private final ProcedimentoRepository procedimentoRepository;
     private final AtendimentoRepository atendimentoRepository;
-    private final OdontogramaRepository odontogramaRepository;
-    private final HistoricoOdontogramaRepository historicoOdontogramaRepository;
+    private final OdontogramaSnapshotRepository snapshotRepository;
     private final PlanoDeTratamentoRepository planoRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -48,8 +58,9 @@ public class DataInitializer implements ApplicationRunner {
     public DataInitializer(UsuarioRepository usuarioRepository, DentistaRepository dentistaRepository,
                            PacienteRepository pacienteRepository, EnderecoRepository enderecoRepository,
                            AgendamentoRepository agendamentoRepository, ProcedimentoRepository procedimentoRepository,
-                           AtendimentoRepository atendimentoRepository, OdontogramaRepository odontogramaRepository,
-                           HistoricoOdontogramaRepository historicoOdontogramaRepository, PlanoDeTratamentoRepository planoRepository,
+                           AtendimentoRepository atendimentoRepository,
+                           OdontogramaSnapshotRepository snapshotRepository,
+                           PlanoDeTratamentoRepository planoRepository,
                            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.dentistaRepository = dentistaRepository;
@@ -58,8 +69,7 @@ public class DataInitializer implements ApplicationRunner {
         this.agendamentoRepository = agendamentoRepository;
         this.procedimentoRepository = procedimentoRepository;
         this.atendimentoRepository = atendimentoRepository;
-        this.odontogramaRepository = odontogramaRepository;
-        this.historicoOdontogramaRepository = historicoOdontogramaRepository;
+        this.snapshotRepository = snapshotRepository;
         this.planoRepository = planoRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -77,10 +87,12 @@ public class DataInitializer implements ApplicationRunner {
         criarRecepcionista();
         List<Dentista> dentistas = criarDentistas();
         List<Paciente> pacientes = criarPacientes();
+        Usuario admin = usuarioRepository.findByEmail(adminEmail).orElseThrow();
+        pacientes.forEach(p -> criarSnapshotInicial(p, admin));
 
         List<Procedimento> procedimentos = criarProcedimentos();
         List<Agendamento> agendamentos = criarAgendamentos(dentistas, pacientes);
-        criarAtendimentosEOdontograma(agendamentos, procedimentos, dentistas, pacientes);
+        criarAtendimentosEOdontograma(agendamentos, procedimentos, admin);
         criarPlanosDeTratamento(dentistas, pacientes, procedimentos);
 
         System.out.println("✅ Base de dados inicializada com sucesso!");
@@ -236,8 +248,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private void criarAtendimentosEOdontograma(List<Agendamento> agendamentosAtendidos,
                                                List<Procedimento> procedimentos,
-                                               List<Dentista> dentistas,
-                                               List<Paciente> pacientes) {
+                                               Usuario editor) {
         Procedimento limpeza     = procedimentos.get(1);
         Procedimento restauracao = procedimentos.get(2);
         Procedimento consulta    = procedimentos.get(0);
@@ -249,23 +260,22 @@ public class DataInitializer implements ApplicationRunner {
         ItemAtendimento item1a = new ItemAtendimento();
         item1a.setProcedimento(limpeza);
         item1a.setNumeroDente(36);
-        item1a.setSituacaoIdentificada(SituacaoDente.RESTAURADO);
+        item1a.setSituacaoNova(SituacaoDente.RESTAURADO);
         item1a.setObservacao("Cárie tratada com resina composta");
 
         ItemAtendimento item1b = new ItemAtendimento();
         item1b.setProcedimento(restauracao);
         item1b.setNumeroDente(46);
-        item1b.setFace(FaceDente.OCLUSAL);
-        item1b.setSituacaoIdentificada(SituacaoDente.CARIADO);
+        item1b.setSituacaoNova(SituacaoDente.CARIADO);
         item1b.setObservacao("Cárie identificada — aguarda tratamento na próxima consulta");
 
         at1.adicionarItem(item1a);
         at1.adicionarItem(item1b);
+        at1 = atendimentoRepository.save(at1);
+        salvarSnapshotOdontograma(ag1.getPaciente(), editor, at1, item1a);
+        salvarSnapshotOdontograma(ag1.getPaciente(), editor, at1, item1b);
         at1.finalizar();
         atendimentoRepository.save(at1);
-
-        salvarOdontograma(ag1.getPaciente(), ag1.getDentista(), at1, item1a);
-        salvarOdontograma(ag1.getPaciente(), ag1.getDentista(), at1, item1b);
 
         Agendamento ag2 = agendamentosAtendidos.get(1);
         Atendimento at2 = Atendimento.iniciar(ag2, ag2.getDentista(), "Consulta de rotina. Necessário retorno para limpeza.");
@@ -273,11 +283,12 @@ public class DataInitializer implements ApplicationRunner {
         ItemAtendimento item2 = new ItemAtendimento();
         item2.setProcedimento(consulta);
         item2.setNumeroDente(11);
-        item2.setSituacaoIdentificada(SituacaoDente.SAUDAVEL);
+        item2.setSituacaoNova(SituacaoDente.SAUDAVEL);
         item2.setObservacao("Dente em bom estado");
 
         at2.adicionarItem(item2);
-        atendimentoRepository.save(at2);
+        at2 = atendimentoRepository.save(at2);
+        salvarSnapshotOdontograma(ag2.getPaciente(), editor, at2, item2);
 
         Agendamento ag3 = agendamentosAtendidos.get(2);
         Atendimento at3 = Atendimento.iniciar(ag3, ag3.getDentista(), "Avaliação em andamento.");
@@ -285,37 +296,58 @@ public class DataInitializer implements ApplicationRunner {
         ItemAtendimento item3 = new ItemAtendimento();
         item3.setProcedimento(canal);
         item3.setNumeroDente(47);
-        item3.setFace(FaceDente.DISTAL);
-        item3.setSituacaoIdentificada(SituacaoDente.TRATAMENTO_CANAL);
+        item3.setSituacaoNova(SituacaoDente.TRATAMENTO_CANAL);
         item3.setObservacao("Iniciado tratamento de canal — sessão 1 de 3");
 
         at3.adicionarItem(item3);
-        atendimentoRepository.save(at3);
+        at3 = atendimentoRepository.save(at3);
+        salvarSnapshotOdontograma(ag3.getPaciente(), editor, at3, item3);
     }
 
-    private void salvarOdontograma(Paciente paciente, Dentista dentista,
-                                   Atendimento atendimento, ItemAtendimento item) {
-        HistoricoOdontograma historico = new HistoricoOdontograma();
-        historico.setPaciente(paciente);
-        historico.setNumeroDente(item.getNumeroDente());
-        historico.setSituacaoAnterior(null);
-        historico.setSituacaoNova(item.getSituacaoIdentificada());
-        historico.setDentista(dentista);
-        historico.setAtendimento(atendimento);
-        historico.setObservacao(item.getObservacao());
-        historicoOdontogramaRepository.save(historico);
+    private void criarSnapshotInicial(Paciente paciente, Usuario editor) {
+        if (snapshotRepository.existsByPacienteId(paciente.getId())) return;
+        OdontogramaSnapshot inicial = new OdontogramaSnapshot();
+        inicial.setPaciente(paciente);
+        inicial.setEditadoPor(editor);
+        for (Integer numero : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+            OdontogramaDente d = new OdontogramaDente();
+            d.setNumeroDente(numero);
+            d.setSituacao(SituacaoDente.SAUDAVEL);
+            d.vincularSnapshot(inicial);
+            inicial.getDentes().add(d);
+        }
+        snapshotRepository.save(inicial);
+    }
 
-        Odontograma odontograma = odontogramaRepository
-                .findByPacienteIdAndNumeroDente(paciente.getId(), item.getNumeroDente())
-                .orElseGet(() -> {
-                    Odontograma o = new Odontograma();
-                    o.setPaciente(paciente);
-                    o.setNumeroDente(item.getNumeroDente());
-                    return o;
-                });
-        odontograma.setSituacaoAtual(item.getSituacaoIdentificada());
-        odontograma.setObservacao(item.getObservacao());
-        odontogramaRepository.save(odontograma);
+    private void salvarSnapshotOdontograma(Paciente paciente, Usuario editor,
+                                           Atendimento atendimento, ItemAtendimento item) {
+        if (!snapshotRepository.existsByPacienteId(paciente.getId())) {
+            OdontogramaSnapshot inicial = new OdontogramaSnapshot();
+            inicial.setPaciente(paciente);
+            inicial.setEditadoPor(editor);
+            for (Integer numero : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+                OdontogramaDente d = new OdontogramaDente();
+                d.setNumeroDente(numero);
+                d.setSituacao(SituacaoDente.SAUDAVEL);
+                d.vincularSnapshot(inicial);
+                inicial.getDentes().add(d);
+            }
+            snapshotRepository.save(inicial);
+        }
+
+        OdontogramaSnapshot snap = new OdontogramaSnapshot();
+        snap.setPaciente(paciente);
+        snap.setAtendimento(atendimento);
+        snap.setEditadoPor(editor);
+
+        OdontogramaDente dente = new OdontogramaDente();
+        dente.setNumeroDente(item.getNumeroDente());
+        dente.setSituacao(item.getSituacaoNova());
+        dente.setObservacao(item.getObservacao());
+        dente.vincularSnapshot(snap);
+        snap.getDentes().add(dente);
+
+        snapshotRepository.save(snap);
     }
 
     private void criarPlanosDeTratamento(List<Dentista> dentistas, List<Paciente> pacientes,
@@ -350,7 +382,7 @@ public class DataInitializer implements ApplicationRunner {
         ip3.setProcedimento(limpeza);
         ip3.setNumeroDente(18);
         ip3.setPrioridade(3);
-        ip3.setStatus(StatusItemPlano.AGENDADO);
+        ip3.setStatus(StatusItemPlano.PENDENTE);
         ip3.setObservacao("Limpeza já agendada para próxima semana");
 
         plano1.getItens().addAll(List.of(ip1, ip2, ip3));

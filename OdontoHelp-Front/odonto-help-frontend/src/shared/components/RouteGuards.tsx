@@ -1,8 +1,12 @@
 // src/shared/components/RouteGuards.tsx
+import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import type { PerfilUsuario } from '../store/authStore';
 import { homeByPerfil } from '../../features/auth/useAuth';
+import { isTokenExpired } from '../lib/jwt';
+
+const TOKEN_EXPIRY_MARGIN_MS = 30 * 1000;
 
 /**
  * PrivateRoute — redireciona para /login se não houver token.
@@ -10,27 +14,40 @@ import { homeByPerfil } from '../../features/auth/useAuth';
  */
 export function PrivateRoute() {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const location = useLocation();
+  const tokenExpired = !!accessToken && isTokenExpired(accessToken, TOKEN_EXPIRY_MARGIN_MS);
 
-  if (!accessToken) {
+  useEffect(() => {
+    if (accessToken && tokenExpired) {
+      clearAuth();
+    }
+  }, [accessToken, tokenExpired, clearAuth]);
+
+  if (!accessToken || tokenExpired) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <Outlet />;
 }
 
-/**
- * RoleRoute — restringe rotas por perfil.
- * Se o perfil não tiver permissão, redireciona para a home do perfil.
- */
 interface RoleRouteProps {
   allowed: PerfilUsuario[];
 }
 
 export function RoleRoute({ allowed }: RoleRouteProps) {
   const usuario = useAuthStore((s) => s.usuario);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const tokenExpired = !!accessToken && isTokenExpired(accessToken, TOKEN_EXPIRY_MARGIN_MS);
 
-  if (!usuario) return <Navigate to="/login" replace />;
+  useEffect(() => {
+    if (accessToken && tokenExpired) {
+      clearAuth();
+    }
+  }, [accessToken, tokenExpired, clearAuth]);
+
+  if (!usuario || !accessToken || tokenExpired) return <Navigate to="/login" replace />;
 
   if (!allowed.includes(usuario.perfil)) {
     return <Navigate to={homeByPerfil(usuario.perfil)} replace />;

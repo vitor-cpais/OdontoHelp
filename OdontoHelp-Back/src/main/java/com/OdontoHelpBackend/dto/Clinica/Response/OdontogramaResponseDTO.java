@@ -1,4 +1,3 @@
-// ─── OdontogramaResponseDTO.java ─────────────────────────────────────────────
 package com.OdontoHelpBackend.dto.Clinica.Response;
 
 

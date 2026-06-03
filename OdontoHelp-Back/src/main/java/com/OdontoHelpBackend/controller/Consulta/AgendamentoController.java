@@ -30,8 +30,10 @@ public class AgendamentoController {
     private final AtendimentoService atendimentoService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<AgendamentoResponseDTO> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(agendamentoService.buscarPorId(id));
+    public ResponseEntity<AgendamentoResponseDTO> buscarPorId(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(agendamentoService.buscarPorId(id, usuario));
     }
 
     @GetMapping("/paciente/{pacienteId}")
@@ -44,8 +46,9 @@ public class AgendamentoController {
     @GetMapping("/dentista/{dentistaId}")
     public ResponseEntity<Slice<AgendamentoResponseDTO>> listarPorDentista(
             @PathVariable Long dentistaId,
-            Pageable pageable) {
-        return ResponseEntity.ok(agendamentoService.listarPorDentista(dentistaId, pageable));
+            Pageable pageable,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(agendamentoService.listarPorDentista(dentistaId, pageable, usuario));
     }
 
     @PostMapping

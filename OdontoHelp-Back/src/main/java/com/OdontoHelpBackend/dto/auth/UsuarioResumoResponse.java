@@ -5,5 +5,6 @@ public record UsuarioResumoResponse(
         Long id,
         String nome,
         String email,
-        String perfil
+        String perfil,
+        Long dentistaId
 ) {}

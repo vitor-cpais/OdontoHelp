@@ -19,7 +19,6 @@ public class ValidacoesService {
     private final AtendimentoRepository atendimentoRepository;
 
     public void validarInativacaoUsuario(Long usuarioId) {
-        // Bloqueia se tiver agendamentos pendentes (MVP 1)
         var statusImpedimento = List.of(StatusConsulta.AGENDADO, StatusConsulta.CONFIRMADO);
         boolean temAgendamentoPendente =
                 agendamentoRepository.existsByPacienteIdAndStatusIn(usuarioId, statusImpedimento) ||
@@ -28,7 +27,6 @@ public class ValidacoesService {
         if (temAgendamentoPendente)
             throw new BusinessException("Não é possível desativar: este usuário possui consultas pendentes.");
 
-        // NOVO MVP 2: Bloqueia se tiver atendimentos em aberto
         boolean temAtendimentoAberto =
                 atendimentoRepository.existsByPacienteIdAndStatusIn(usuarioId,
                         List.of(StatusAtendimento.EM_ANDAMENTO)) ||

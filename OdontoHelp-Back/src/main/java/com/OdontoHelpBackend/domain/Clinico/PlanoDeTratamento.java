@@ -26,12 +26,11 @@ public class PlanoDeTratamento {
     @JoinColumn(name = "paciente_id", nullable = false)
     private Paciente paciente;
 
-    // Dentista que criou/é responsável pelo plano
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dentista_id", nullable = false)
     private Dentista dentista;
 
-    // Atendimento que originou o plano (pode ser criado durante ou após consulta)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atendimento_id")
     private Atendimento atendimento;

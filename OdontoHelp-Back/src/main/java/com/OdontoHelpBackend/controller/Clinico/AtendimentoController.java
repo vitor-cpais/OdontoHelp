@@ -3,7 +3,9 @@ package com.OdontoHelpBackend.controller.Clinico;
 import com.OdontoHelpBackend.domain.Clinico.Enums.StatusAtendimento;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtendimentoUpdateDTO;
+import com.OdontoHelpBackend.dto.Clinica.Request.BaixaPlanoManualRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.AtendimentoResponseDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.AtendimentoUpdateResultDTO;
 import com.OdontoHelpBackend.service.Clinico.AtendimentoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,8 @@ public class AtendimentoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AtendimentoResponseDTO> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(atendimentoService.buscarPorId(id));
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(atendimentoService.buscarPorId(id, usuario));
     }
 
     @GetMapping("/paciente/{pacienteId}")
@@ -59,19 +62,29 @@ public class AtendimentoController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim,
             @RequestParam(required = false) StatusAtendimento status,
             Pageable pageable) {
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(
-                atendimentoService.listarTodos(nomePaciente, dataInicio, dataFim, status, pageable)
+                atendimentoService.listarTodos(nomePaciente, dataInicio, dataFim, status, pageable, usuario)
         );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AtendimentoResponseDTO> atualizar(
+    public ResponseEntity<AtendimentoUpdateResultDTO> atualizar(
             @PathVariable Long id,
-            @RequestBody @Valid AtendimentoUpdateDTO dto,
-            Pageable pageable) {
+            @RequestBody @Valid AtendimentoUpdateDTO dto) {
 
         Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(atendimentoService.atualizar(id, dto, usuario));
+    }
+
+    @DeleteMapping("/{id}/itens/{itemId}")
+    public ResponseEntity<Void> removerItem(
+            @PathVariable Long id,
+            @PathVariable Long itemId) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        atendimentoService.removerItem(id, itemId, usuario);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/finalizar")
@@ -80,5 +93,23 @@ public class AtendimentoController {
 
         Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(atendimentoService.finalizarAtendimento(id, usuario));
+    }
+
+    @PatchMapping("/{id}/odontograma-revisado")
+    public ResponseEntity<AtendimentoResponseDTO> marcarOdontogramaRevisado(
+            @PathVariable Long id,
+            @RequestParam boolean revisado) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(atendimentoService.marcarOdontogramaRevisado(id, revisado, usuario));
+    }
+
+    @PostMapping("/{id}/baixa-plano-manual")
+    public ResponseEntity<AtendimentoResponseDTO> baixaPlanoManual(
+            @PathVariable Long id,
+            @RequestBody @Valid BaixaPlanoManualRequestDTO dto) {
+
+        Usuario usuario = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(atendimentoService.baixaPlanoManual(id, dto, usuario));
     }
 }

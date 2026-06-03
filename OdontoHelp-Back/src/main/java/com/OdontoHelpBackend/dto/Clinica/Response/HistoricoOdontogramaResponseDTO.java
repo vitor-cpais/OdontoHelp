@@ -11,7 +11,7 @@ public record HistoricoOdontogramaResponseDTO(
         SituacaoDente situacaoNova,
         Long dentistaId,
         String dentistaNome,
-        Long atendimentoId,
+        Long atendimentoId,       // null quando atualização direta (sem atendimento formal)
         String observacao,
         LocalDateTime registradoEm
 ) {}

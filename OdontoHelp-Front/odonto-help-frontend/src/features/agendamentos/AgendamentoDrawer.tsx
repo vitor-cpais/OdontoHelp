@@ -8,6 +8,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../shared/store/authStore';
 import { useAgendamentoDrawerStore } from './agendamentoStore';
 import { getApiErrorMessage } from '../../shared/lib/axios';
 import {
@@ -46,6 +48,9 @@ interface Props {
 }
 
 export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
+  const navigate = useNavigate();
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const podeIniciarClinico = perfil === 'ADMIN' || perfil === 'DENTISTA';
   const { open, mode, editingId, draft, hasChanges, clearDraft, setEditMode, setViewMode, setHasChanges } = useAgendamentoDrawerStore();
   const isNew = mode === 'new';
   const isView = mode === 'view';
@@ -179,13 +184,13 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const handleIniciarAtendimento = async () => {
     if (!editingId) return;
     try {
-      await iniciarAtendimento.mutateAsync({
+      const atendimento = await iniciarAtendimento.mutateAsync({
         agendamentoId: editingId,
         observacoesGerais: draft.observacoes,
       });
-      onSuccess('Atendimento iniciado! Clique no agendamento para abrir o formulário de atendimento.');
       clearDraft();
-    } catch (e: any) {
+      navigate(`/atendimentos/${atendimento.id}`);
+    } catch (e: unknown) {
       onError(getApiErrorMessage(e, 'Erro ao iniciar atendimento'));
     }
   };
@@ -329,7 +334,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
           <Stack direction="row" spacing={1.5} alignItems="center">
             {loading && <CircularProgress size={16} />}
 
-            {isView && draft.status === 'CONFIRMADO' && (
+            {isView && podeIniciarClinico && draft.status === 'CONFIRMADO' && (
               <Button variant="contained" color="success" onClick={handleIniciarAtendimento}
                 disabled={loading}>
                 Iniciar Atendimento

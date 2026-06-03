@@ -59,11 +59,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
   // ── avatar: iniciais do nome ──
   const initials = usuario?.nome
     ? usuario.nome
-        .split(' ')
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
+      .split(' ')
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
     : '?';
 
   return (
@@ -190,13 +190,23 @@ export default function Header({ onMenuClick }: HeaderProps) {
             slotProps={{ paper: { sx: { minWidth: 180, mt: 0.5 } } }}
           >
             {/* Info do usuário */}
-            <MenuItem disabled sx={{ opacity: '1 !important' }}>
-              <Box>
+            <MenuItem
+              component="div"
+              sx={{
+                cursor: 'default',
+                backgroundColor: 'transparent !important',
+                '&:hover': { backgroundColor: 'transparent !important' }
+              }}
+            >
+              <Box display="flex" flexDirection="column">
                 <Typography variant="body2" fontWeight={600}>
-                  {usuario?.nome ?? '—'}
+                  Nome: {usuario?.nome ?? '—'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {usuario?.email ?? ''}
+                  Email: {usuario?.email ?? '—'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Cargo: {usuario?.perfil ?? ''}
                 </Typography>
               </Box>
             </MenuItem>

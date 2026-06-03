@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { atendimentoService } from './atendimentoService';
 import { AGENDAMENTOS_KEY } from '../agendamentos/useAgendamentos';
 import { ODONTOGRAMA_KEY } from '../odontograma/useOdontograma';
+import { PLANO_KEY } from '../planoTratamento/usePlanoTratamento';
 import type { AtendimentoUpdateData, AtendimentoFiltros } from './types';
 
 export const ATENDIMENTOS_KEY = 'atendimentos';
@@ -57,8 +58,39 @@ export function useUpdateAtendimento(id: number) {
   return useMutation({
     mutationFn: (data: AtendimentoUpdateData) => atendimentoService.atualizar(id, data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY, id] });
       qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY] });
-      // Invalida odontograma pois itens podem ter sido alterados
+      qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY] });
+      qc.invalidateQueries({ queryKey: [PLANO_KEY] });
+    },
+  });
+}
+
+export function useMarcarOdontogramaRevisado(atendimentoId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (revisado: boolean) => atendimentoService.marcarOdontogramaRevisado(atendimentoId, revisado),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY, atendimentoId] }),
+  });
+}
+
+export function useBaixaPlanoManual(atendimentoId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => atendimentoService.baixaPlanoManual(atendimentoId, ids),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY, atendimentoId] });
+      qc.invalidateQueries({ queryKey: [PLANO_KEY] });
+    },
+  });
+}
+
+export function useRemoverItemAtendimento(atendimentoId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: number) => atendimentoService.removerItem(atendimentoId, itemId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY, atendimentoId] });
       qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY] });
     },
   });
@@ -70,8 +102,9 @@ export function useFinalizarAtendimento() {
     mutationFn: (id: number) => atendimentoService.finalizar(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [ATENDIMENTOS_KEY] });
-      // Invalida odontograma pois o atendimento finalizado pode ter alterado dados
       qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY] });
+      qc.invalidateQueries({ queryKey: [PLANO_KEY] });
+      qc.invalidateQueries({ queryKey: [AGENDAMENTOS_KEY] });
     },
   });
 }

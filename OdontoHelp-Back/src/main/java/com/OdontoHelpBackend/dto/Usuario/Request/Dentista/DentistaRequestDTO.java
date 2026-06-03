@@ -1,10 +1,7 @@
 package com.OdontoHelpBackend.dto.Usuario.Request.Dentista;
 
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
@@ -32,9 +29,10 @@ public record DentistaRequestDTO(
         PerfilUsuario perfil,
 
         @NotBlank(message = "CRO é obrigatório")
-        @Pattern(regexp = "^[A-Z]{2}-\\d{4,6}$", message = "CRO inválido. Formato esperado: SP-12345")
+        @Pattern(regexp = "^[A-Z]{2}-\\d{4,6}$", message = "CRO inválido. Formato esperado: UF-12345")
         String cro,
 
+        @Past(message = "A data de nascimento deve ser no passado")
         @NotNull(message = "Data de nascimento é obrigatória")
         LocalDate dataNascimento,
 

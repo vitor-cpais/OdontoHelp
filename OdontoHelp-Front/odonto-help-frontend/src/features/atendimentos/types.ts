@@ -1,10 +1,5 @@
 // src/features/atendimentos/types.ts
-//
-// FONTE ÚNICA de verdade para o domínio de Atendimentos.
 
-/* ── Status ──────────────────────────────────────────────────────────────── */
-
-/** Ciclo de vida: EM_ANDAMENTO → FINALIZADO */
 export type StatusAtendimento = 'EM_ANDAMENTO' | 'FINALIZADO';
 
 export const STATUS_ATENDIMENTO_LABELS: Record<StatusAtendimento, string> = {
@@ -20,14 +15,9 @@ export const STATUS_ATENDIMENTO_COLORS: Record<
   FINALIZADO:   { bg: '#E1F5EE', text: '#0F6E56', border: '#9FE1CB' },
 };
 
-/* ── Enums clínicos ──────────────────────────────────────────────────────── */
-
 export type SituacaoDente =
   | 'SAUDAVEL' | 'CARIADO' | 'RESTAURADO' | 'EXTRAIDO'
   | 'IMPLANTE' | 'TRATAMENTO_CANAL' | 'COROA' | 'AUSENTE';
-
-export type FaceDente =
-  | 'OCLUSAL' | 'MESIAL' | 'DISTAL' | 'VESTIBULAR' | 'LINGUAL' | 'PALATINA';
 
 export const SITUACAO_DENTE_LABELS: Record<SituacaoDente, string> = {
   SAUDAVEL:         'Saudável',
@@ -51,24 +41,12 @@ export const SITUACAO_DENTE_COLORS: Record<SituacaoDente, string> = {
   AUSENTE:          '#B4B2A9',
 };
 
-export const FACE_DENTE_LABELS: Record<FaceDente, string> = {
-  OCLUSAL:    'Oclusal',
-  MESIAL:     'Mesial',
-  DISTAL:     'Distal',
-  VESTIBULAR: 'Vestibular',
-  LINGUAL:    'Lingual',
-  PALATINA:   'Palatina',
-};
-
-/* ── Interfaces de domínio ───────────────────────────────────────────────── */
-
 export interface ItemAtendimento {
   id: number;
   procedimentoId: number;
   procedimentoNome: string;
   numeroDente: number;
-  face: FaceDente | null;
-  situacaoIdentificada: SituacaoDente;
+  situacaoNova: SituacaoDente;
   observacao: string | null;
 }
 
@@ -83,36 +61,33 @@ export interface Atendimento {
   horaFim: string | null;
   observacoesGerais: string | null;
   status: StatusAtendimento;
+  odontogramaRevisado: boolean;
   itens: ItemAtendimento[];
   criadoEm: string;
   atualizadoEm: string;
 }
 
-/* ── Interfaces de formulário e payloads ─────────────────────────────────── */
-
 export interface ItemAtendimentoFormData {
   procedimentoId: number | '';
   numeroDente: number | '';
-  dentes?: string;
-  face: FaceDente | '';
-  situacaoIdentificada: SituacaoDente | '';
+  situacaoNova: SituacaoDente | '';
   observacao: string;
 }
 
-/** Payload para PUT /atendimentos/{id} */
 export interface AtendimentoUpdateData {
-  horaInicio?: string;
   observacoesGerais?: string;
   itens?: ItemAtendimentoFormData[];
 }
 
-/* ── Filtros e Paginação ─────────────────────────────────────────────────── */
+export interface AtendimentoUpdateResult {
+  atendimento: Atendimento;
+  itensPlanoBaixaManual: import('../planoTratamento/types').ItemPlano[];
+}
 
-/** Filtros para a tela de listagem de Atendimentos */
 export interface AtendimentoFiltros {
   nomePaciente?: string;
   status?: StatusAtendimento;
-  dataInicio?: string; // ISO: "2025-01-01T00:00:00"
+  dataInicio?: string;
   dataFim?: string;
 }
 

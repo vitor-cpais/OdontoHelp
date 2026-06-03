@@ -64,12 +64,6 @@ function parseDentesInput(value: string): number[] {
   return Array.from(dentes).sort((a, b) => a - b);
 }
 
-/*
- * O schema Zod é usado APENAS para validação em runtime (zodResolver).
- * O tipo do formulário vem das interfaces do types.ts para evitar o conflito
- * entre `string` (inferido pelo Zod) e os union literals `FaceDente | ''` /
- * `SituacaoDente | ''` definidos nas interfaces.
- */
 const itemSchema = z.object({
   procedimentoId: z.union([z.number().positive(), z.literal('')])
     .refine((v) => v !== '', { message: 'Procedimento obrigatório' }),

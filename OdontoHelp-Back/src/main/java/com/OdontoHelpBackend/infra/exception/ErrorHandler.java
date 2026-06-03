@@ -14,9 +14,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class ErrorHandler {
 
-    // CORREÇÃO: sem este handler, BadCredentialsException é interceptada pelo Spring Security
-    // antes do @RestControllerAdvice e vira 403 silencioso sem nenhum log Java.
-    // Com ele, o nosso AuthService lança BadCredentialsException → chega aqui → 401 limpo.
+
     @ExceptionHandler(BadCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Map<String, String> handleBadCredentials(BadCredentialsException ex) {

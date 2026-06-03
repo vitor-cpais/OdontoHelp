@@ -40,7 +40,7 @@ public class ItemPlanoDeTratamento {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    // Atendimento que realizou este item (preenchido quando status = REALIZADO)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atendimento_realizacao_id")
     private Atendimento atendimentoRealizacao;

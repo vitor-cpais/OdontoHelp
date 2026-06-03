@@ -6,11 +6,7 @@ import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Response completo do Atendimento.
- * - agendamentoStatus: permite o frontend atualizar a visualização do Agendamento sem novo request.
- * - itens: lista com objetos completos (id + nome do procedimento).
- */
+
 public record AtendimentoResponseDTO(
         Long id,
         Long agendamentoId,
@@ -23,6 +19,7 @@ public record AtendimentoResponseDTO(
         LocalDateTime horaFim,
         String observacoesGerais,
         StatusAtendimento status,
+        boolean odontogramaRevisado,
         List<ItemAtendimentoResponseDTO> itens,
         LocalDateTime criadoEm,
         LocalDateTime atualizadoEm

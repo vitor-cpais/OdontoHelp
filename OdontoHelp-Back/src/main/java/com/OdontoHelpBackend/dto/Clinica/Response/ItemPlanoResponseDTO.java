@@ -1,4 +1,3 @@
-// ─── ItemPlanoResponseDTO.java ────────────────────────────────────────────────
 package com.OdontoHelpBackend.dto.Clinica.Response;
 
 

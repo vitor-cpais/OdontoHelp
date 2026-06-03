@@ -35,4 +35,19 @@ public interface ItemPlanoDeTratamentoRepository extends JpaRepository<ItemPlano
             @Param("pacienteId") Long pacienteId,
             @Param("status") StatusItemPlano status
     );
+
+    @Query("""
+        SELECT i FROM ItemPlanoDeTratamento i
+        JOIN i.plano p
+        WHERE p.paciente.id = :pacienteId
+        AND i.numeroDente = :numeroDente
+        AND i.procedimento.id = :procedimentoId
+        AND i.status = :status
+    """)
+    List<ItemPlanoDeTratamento> findByPacienteIdAndNumeroDenteAndProcedimentoIdAndStatus(
+            @Param("pacienteId") Long pacienteId,
+            @Param("numeroDente") Integer numeroDente,
+            @Param("procedimentoId") Long procedimentoId,
+            @Param("status") StatusItemPlano status
+    );
 }

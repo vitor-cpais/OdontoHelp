@@ -1,73 +1,35 @@
-# React + TypeScript + Vite
+# OdontoHelp Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend da plataforma OdontoHelp, construido com React, TypeScript, Vite, MUI v5, TanStack Query, React Hook Form, Zustand, Recharts e FullCalendar.
 
-Currently, two official plugins are available:
+## Como Rodar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `npm run dev`: inicia o Vite em modo desenvolvimento.
+- `npm run build`: executa TypeScript e gera build de producao.
+- `npm run preview`: serve o build localmente.
+- `npm run lint`: executa ESLint em `src`.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Estrutura Atual
+
+- `src/app`: bootstrap, router e query client.
+- `src/shared`: componentes compartilhados, tema atual, store de auth, lib Axios e utils.
+- `src/features`: telas, hooks, services, stores e tipos por modulo.
+
+## Evolucao Planejada
+
+A migracao arquitetural deve seguir o guia de Sprint 0 em `../../docs/OdontoHelp_Frontend_Sprint0.md`.
+
+Diretrizes principais:
+
+- evoluir sem big bang;
+- criar `design-system` e `domains` ao lado da estrutura atual;
+- migrar uma tela ou fluxo por vez;
+- manter React Query como cache de API;
+- limitar Zustand a sessao, UI cross-feature, drafts e preferencias.

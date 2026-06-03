@@ -15,6 +15,7 @@ import { STATUS_COLORS, STATUS_LABELS } from '../../agendamentos/types';
 import type { StatusConsulta } from '../../agendamentos/types';
 import { useAgendamentoDrawerStore } from '../../agendamentos/agendamentoStore';
 import AgendamentoStatusChip from '../../agendamentos/AgendamentoStatusChip';
+import { useAuthStore } from '../../../shared/store/authStore';
 
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -67,6 +68,8 @@ export default function DashboardPage() {
   const { data: porStatus, isLoading: loadingStatus } = useAgendamentosPorStatus(dataInicio, dataFim);
   const { data: proximos, isLoading: loadingProximos } = useProximosHoje();
   const { openView } = useAgendamentoDrawerStore();
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const isDentista = perfil === 'DENTISTA';
 
   const pieData = (porStatus ?? [])
     .filter((d) => d.total > 0)
@@ -81,28 +84,28 @@ export default function DashboardPage() {
 
   const cards = [
     {
-      label: 'Agendamentos hoje',
+      label: isDentista ? 'Meus agendamentos hoje' : 'Agendamentos hoje',
       value: resumo?.agendamentosHoje,
       icon: <CalendarMonthOutlined sx={{ fontSize: 22 }} />,
       color: '#854F0B',
       bgColor: '#FAEEDA',
     },
     {
-      label: 'Agendamentos no mês',
+      label: isDentista ? 'Meus agendamentos no mês' : 'Agendamentos no mês',
       value: resumo?.agendamentosMes,
       icon: <EventNoteOutlined sx={{ fontSize: 22 }} />,
       color: '#185FA5',
       bgColor: '#E6F1FB',
     },
     {
-      label: 'Pacientes ativos',
+      label: isDentista ? 'Meus pacientes' : 'Pacientes ativos',
       value: resumo?.pacientesAtivos,
       icon: <PeopleOutlined sx={{ fontSize: 22 }} />,
       color: '#0F6E56',
       bgColor: '#E1F5EE',
     },
     {
-      label: 'Dentistas ativos',
+      label: isDentista ? 'Meu perfil clínico' : 'Dentistas ativos',
       value: resumo?.dentistasAtivos,
       icon: <MedicalServicesOutlined sx={{ fontSize: 22 }} />,
       color: '#5F5E5A',

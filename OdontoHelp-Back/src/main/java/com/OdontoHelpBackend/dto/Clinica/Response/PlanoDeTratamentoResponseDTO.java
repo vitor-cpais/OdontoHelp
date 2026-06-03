@@ -1,4 +1,3 @@
-// ─── PlanoDeTratamentoResponseDTO.java ───────────────────────────────────────
 package com.OdontoHelpBackend.dto.Clinica.Response;
 
 import java.time.LocalDateTime;

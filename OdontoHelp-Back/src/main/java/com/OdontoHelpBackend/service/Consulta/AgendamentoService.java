@@ -35,15 +35,14 @@ public class AgendamentoService {
     private final DentistaService dentistaService;
     private final AgendamentoMapper agendamentoMapper;
 
-    /**
-     * Transições manuais permitidas.
-     * ATENDIDO NÃO está aqui — só pode ser definido pelo AtendimentoService ao iniciar atendimento.
-     */
+
     private static final Set<StatusConsulta> STATUS_TRANSICAO_MANUAL_PERMITIDOS =
         EnumSet.of(StatusConsulta.AGENDADO, StatusConsulta.CONFIRMADO, StatusConsulta.FALTA, StatusConsulta.CANCELADO);
 
-    public AgendamentoResponseDTO buscarPorId(Long id) {
-        return agendamentoMapper.toResponse(buscarEntidadePorId(id));
+    public AgendamentoResponseDTO buscarPorId(Long id, Usuario usuarioLogado) {
+        Agendamento agendamento = buscarEntidadePorId(id);
+        validarPropriedade(agendamento, usuarioLogado);
+        return agendamentoMapper.toResponse(agendamento);
     }
 
     public Slice<AgendamentoResponseDTO> listarPorPaciente(Long pacienteId, Pageable pageable) {
@@ -51,7 +50,13 @@ public class AgendamentoService {
                 .map(agendamentoMapper::toResponse);
     }
 
-    public Slice<AgendamentoResponseDTO> listarPorDentista(Long dentistaId, Pageable pageable) {
+    public Slice<AgendamentoResponseDTO> listarPorDentista(Long dentistaId, Pageable pageable, Usuario usuarioLogado) {
+        if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA) {
+            Dentista dentistaLogado = dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
+            if (!dentistaLogado.getId().equals(dentistaId))
+                throw new AcessoNegadoException("Você não tem permissão para ver agenda de outro dentista");
+        }
+
         return agendamentoRepository.findByDentistaId(dentistaId, pageable)
                 .map(agendamentoMapper::toResponse);
     }
@@ -96,10 +101,7 @@ public class AgendamentoService {
         }
     }
 
-    /**
-     * Transições manuais de status.
-     * ATENDIDO é bloqueado aqui — deve ser feito via POST /{id}/iniciar-atendimento.
-     */
+
     public AgendamentoResponseDTO atualizarStatus(Long id, StatusConsulta novoStatus, Usuario usuarioLogado) {
         Agendamento agendamento = buscarEntidadePorId(id);
         validarPropriedade(agendamento, usuarioLogado);
@@ -146,13 +148,12 @@ public class AgendamentoService {
                 .map(agendamentoMapper::toResponse);
     }
 
-    /** Público — usado por AtendimentoService */
+
     public Agendamento buscarEntidadePorId(Long id) {
         return agendamentoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Agendamento não encontrado"));
     }
 
-    // ─── Privados ─────────────────────────────────────────────────────────────
 
     private void validarConflitoHorario(Agendamento agendamento) {
         boolean conflito = agendamentoRepository

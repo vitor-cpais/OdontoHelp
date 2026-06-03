@@ -1,4 +1,3 @@
-// src/features/pacientes/PacienteDrawer.tsx
 import {
   Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
@@ -12,12 +11,12 @@ import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { usePacienteDrawerStore } from './pacienteStore';
 import { useCreatePaciente, useUpdatePaciente } from './usePacientes';
-import { maskCpf, maskTelefone } from '../../shared/utils/masks';
+import { maskCpf, maskTelefone, maskData, formatDataToISO, formatDataFromISO, isValidBirthDate } from '../../shared/utils/masks';
 import { getApiErrorMessage } from '../../shared/lib/axios';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { PacienteFormData } from './types';
 
-const schema = z.object({
+const baseSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
   cpf: z.string().min(14, 'CPF incompleto — use 000.000.000-00'),
@@ -25,11 +24,20 @@ const schema = z.object({
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
-  dataNascimento: z.string().min(1, 'Data de nascimento obrigatória').refine(
-    (val) => new Date(val) < new Date(),
-    'Data não pode ser futura'
-  ),
+  dataNascimento: z.string()
+    .min(10, 'Data de nascimento obrigatória')
+    .refine(
+      (val) => /^\d{2}\/\d{2}\/\d{4}$/.test(val),
+      'Use o formato DD/MM/YYYY'
+    )
+    .refine(
+      (val) => isValidBirthDate(val),
+      'Data deve estar entre 1900 e hoje'
+    ),
   observacoesMedicas: z.string().max(500, 'Máximo 500 caracteres').optional().default(''),
+});
+
+const createSchema = baseSchema.extend({
   senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
 }).superRefine((data, ctx) => {
   const hasEmail = !!data.email?.trim();
@@ -51,6 +59,10 @@ const schema = z.object({
   }
 });
 
+const editSchema = baseSchema.extend({
+  senha: z.string().min(6, 'Senha deve ter ao menos 6 caracteres').or(z.literal('')),
+});
+
 interface Props {
   onSuccess: (msg: string) => void;
   onError: (msg: string) => void;
@@ -62,10 +74,14 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [acessoExpanded, setAcessoExpanded] = useState(false);
 
-  const isAdmin = useAuthStore((s) => s.usuario?.perfil === 'ADMIN');
+  const canEditAccess = useAuthStore((s) =>
+    s.usuario?.perfil === 'ADMIN' || s.usuario?.perfil === 'RECEPCAO'
+  );
 
   const create = useCreatePaciente();
   const update = useUpdatePaciente(editingId ?? 0);
+
+  const schema = isEditing ? editSchema : createSchema;
 
   const { control, handleSubmit, reset, watch, formState: { errors, isDirty } } = useForm<PacienteFormData>({
     resolver: zodResolver(schema),
@@ -83,7 +99,7 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
         telefone: draft.telefone ?? '',
         cpf: draft.cpf ?? '',
         genero: draft.genero ?? 'NAO_INFORMADO',
-        dataNascimento: draft.dataNascimento ?? '',
+        dataNascimento: draft.dataNascimento ? formatDataFromISO(draft.dataNascimento) : '',
         observacoesMedicas: draft.observacoesMedicas ?? '',
         senha: '',
       });
@@ -103,11 +119,15 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
 
   const onSubmit = async (data: PacienteFormData) => {
     try {
+      const dataToSend = {
+        ...data,
+        dataNascimento: formatDataToISO(data.dataNascimento),
+      };
       if (isEditing) {
-        await update.mutateAsync(data);
+        await update.mutateAsync(dataToSend as PacienteFormData);
         onSuccess('Paciente atualizado com sucesso!');
       } else {
-        await create.mutateAsync(data);
+        await create.mutateAsync(dataToSend as PacienteFormData);
         onSuccess('Paciente cadastrado com sucesso!');
       }
       clearDraft();
@@ -166,10 +186,10 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
                   onChange={(e) => field.onChange(maskCpf(e.target.value))} />
               )} />
               <Controller name="dataNascimento" control={control} render={({ field }) => (
-                <TextField {...field} label="Nascimento *" type="date"
-                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message}
-                  fullWidth InputLabelProps={{ shrink: true }}
-                  inputProps={{ max: new Date().toISOString().split('T')[0] }} />
+                <TextField {...field} label="Nascimento *" type="text" placeholder="DD/MM/AAAA"
+                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message} fullWidth
+                  InputLabelProps={{ shrink: true }} inputProps={{ maxLength: 10 }}
+                  onChange={(e) => field.onChange(maskData(e.target.value))} />
               )} />
             </Stack>
 
@@ -201,8 +221,7 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
                 fullWidth inputProps={{ maxLength: 500 }} />
             )} />
 
-            {/* ── Acesso — só para ADMIN ── */}
-            {isAdmin && (
+            {canEditAccess && (
               <>
                 <Divider />
                 <Box

@@ -13,10 +13,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useUsuarioDrawerStore } from './usuarioStore';
 import { useCreateUsuario, useUpdateUsuario } from './useUsuarios';
 import { getApiErrorMessage } from '../../shared/lib/axios';
-import { maskCpf, maskTelefone } from '../../shared/utils/masks';
+import { maskCpf, maskTelefone, maskData, formatDataToISO, formatDataFromISO, isValidBirthDate } from '../../shared/utils/masks';
 import type { UsuarioFormData } from './types';
 
 const baseSchema = z.object({
@@ -27,10 +28,16 @@ const baseSchema = z.object({
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
-  dataNascimento: z.string().min(1, 'Data de nascimento obrigatória').refine(
-    (val) => new Date(val) < new Date(),
-    'Data não pode ser futura'
-  ),
+  dataNascimento: z.string()
+    .min(10, 'Data de nascimento obrigatória')
+    .refine(
+      (val: string) => /^\d{2}\/\d{2}\/\d{4}$/.test(val),
+      'Use o formato DD/MM/YYYY'
+    )
+    .refine(
+      (val: string) => isValidBirthDate(val),
+      'Data deve estar entre 1900 e hoje'
+    ),
   perfil: z.enum(['ADMIN', 'DENTISTA', 'RECEPCAO'], {
     errorMap: () => ({ message: 'Selecione um perfil' }),
   }),
@@ -81,13 +88,13 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
         cpf: draft.cpf ?? '',
         telefone: draft.telefone ?? '',
         genero: draft.genero ?? 'NAO_INFORMADO',
-        dataNascimento: draft.dataNascimento ?? '',
+        dataNascimento: draft.dataNascimento ? formatDataFromISO(draft.dataNascimento) : '',
         perfil: (draft.perfil as any) ?? 'RECEPCAO',
         senha: '',
       });
       setSenhaExpanded(false);
     }
-  }, [open]);
+  }, [open, reset]);
 
   const values = watch();
   useEffect(() => {
@@ -101,11 +108,15 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
 
   const onSubmit = async (data: UsuarioFormData) => {
     try {
+      const dataToSend = {
+        ...data,
+        dataNascimento: formatDataToISO(data.dataNascimento),
+      };
       if (isEditing) {
-        await update.mutateAsync(data);
+        await update.mutateAsync(dataToSend as UsuarioFormData);
         onSuccess('Usuário atualizado com sucesso!');
       } else {
-        await create.mutateAsync(data);
+        await create.mutateAsync(dataToSend as UsuarioFormData);
         onSuccess('Usuário cadastrado com sucesso!');
       }
       clearDraft();
@@ -170,14 +181,23 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
                 <TextField {...field} label="CPF *" placeholder="000.000.000-00"
                   error={!!errors.cpf} helperText={errors.cpf?.message} fullWidth
                   inputProps={{ maxLength: 14 }}
-                  onChange={(e) => field.onChange(maskCpf(e.target.value))} />
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => field.onChange(maskCpf(e.target.value))} />
               )} />
-              <Controller name="dataNascimento" control={control} render={({ field }) => (
-                <TextField {...field} label="Nascimento *" type="date"
-                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message}
-                  fullWidth InputLabelProps={{ shrink: true }}
-                  inputProps={{ max: new Date().toISOString().split('T')[0] }} />
-              )} />
+                <Controller name="dataNascimento" control={control} render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Nascimento *"
+                    placeholder="DD/MM/YYYY"
+                    fullWidth
+                    error={!!errors.dataNascimento}
+                    helperText={errors.dataNascimento?.message}
+                    inputProps={{ maxLength: 10 }}
+                    onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                      field.onChange(maskData(e.target.value));
+                    }}
+                    value={field.value ?? ''}
+                  />
+                )} />
             </Stack>
 
             <Stack direction="row" spacing={1.5}>
@@ -185,7 +205,7 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
                 <TextField {...field} label="Telefone *" placeholder="(00) 00000-0000"
                   error={!!errors.telefone} helperText={errors.telefone?.message} fullWidth
                   inputProps={{ maxLength: 15 }}
-                  onChange={(e) => field.onChange(maskTelefone(e.target.value))} />
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => field.onChange(maskTelefone(e.target.value))} />
               )} />
               <Controller name="genero" control={control} render={({ field }) => (
                 <TextField {...field} select label="Gênero *"
@@ -230,7 +250,7 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
             {isEditing && (
               <>
                 <Box
-                  onClick={() => setSenhaExpanded((v) => !v)}
+                  onClick={() => setSenhaExpanded((v: boolean) => !v)}
                   sx={{
                     display: 'flex', alignItems: 'center',
                     justifyContent: 'space-between',

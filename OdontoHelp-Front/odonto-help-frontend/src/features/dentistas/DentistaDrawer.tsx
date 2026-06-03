@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { useEffect, useMemo, useState } from 'react';
 import { useDentistaDrawerStore } from './dentistaStore';
 import { useCreateDentista, useUpdateDentista } from './useDentistas';
-import { maskCpf, maskCro, maskTelefone } from '../../shared/utils/masks';
+import { maskCpf, maskCro, maskTelefone, maskData, formatDataToISO, formatDataFromISO, isValidBirthDate } from '../../shared/utils/masks';
 import { getApiErrorMessage } from '../../shared/lib/axios';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { DentistaFormData } from './types';
@@ -25,10 +25,16 @@ const baseSchema = z.object({
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
-  dataNascimento: z.string().min(1, 'Data de nascimento obrigatória').refine(
-    (val) => new Date(val) < new Date(),
-    'Data não pode ser futura'
-  ),
+  dataNascimento: z.string()
+    .min(10, 'Data de nascimento obrigatória')
+    .refine(
+      (val) => /^\d{2}\/\d{2}\/\d{4}$/.test(val),
+      'Use o formato DD/MM/YYYY'
+    )
+    .refine(
+      (val) => isValidBirthDate(val),
+      'Data deve estar entre 1900 e hoje'
+    ),
   cro: z.string().min(4, 'CRO inválido — ex: SP-12345'),
 });
 
@@ -51,7 +57,9 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [acessoExpanded, setAcessoExpanded] = useState(false);
 
-  const isAdmin = useAuthStore((s) => s.usuario?.perfil === 'ADMIN');
+  const canEditAccess = useAuthStore((s) =>
+    s.usuario?.perfil === 'ADMIN' || s.usuario?.perfil === 'RECEPCAO'
+  );
 
   const create = useCreateDentista();
   const update = useUpdateDentista(editingId ?? 0);
@@ -78,7 +86,7 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
         telefone: draft.telefone ?? '',
         cpf: draft.cpf ?? '',
         genero: draft.genero ?? 'NAO_INFORMADO',
-        dataNascimento: draft.dataNascimento ?? '',
+        dataNascimento: draft.dataNascimento ? formatDataFromISO(draft.dataNascimento) : '',
         cro: draft.cro ?? '',
         senha: '',
       });
@@ -99,11 +107,15 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
 
   const onSubmit = async (data: DentistaFormData) => {
     try {
+      const dataToSend = {
+        ...data,
+        dataNascimento: formatDataToISO(data.dataNascimento),
+      };
       if (isEditing) {
-        await update.mutateAsync(data);
+        await update.mutateAsync(dataToSend as DentistaFormData);
         onSuccess('Dentista atualizado com sucesso!');
       } else {
-        await create.mutateAsync(data);
+        await create.mutateAsync(dataToSend as DentistaFormData);
         onSuccess('Dentista cadastrado com sucesso!');
       }
       clearDraft();
@@ -162,12 +174,19 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
                   inputProps={{ maxLength: 14 }}
                   onChange={(e) => field.onChange(maskCpf(e.target.value))} />
               )} />
-              <Controller name="dataNascimento" control={control} render={({ field }) => (
-                <TextField {...field} label="Nascimento *" type="date"
-                  error={!!errors.dataNascimento} helperText={errors.dataNascimento?.message}
-                  fullWidth InputLabelProps={{ shrink: true }}
-                  inputProps={{ max: new Date().toISOString().split('T')[0] }} />
-              )} />
+                <Controller name="dataNascimento" control={control} render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Nascimento *"
+                    placeholder="DD/MM/YYYY"
+                    fullWidth
+                    error={!!errors.dataNascimento}
+                    helperText={errors.dataNascimento?.message}
+                    inputProps={{ maxLength: 10 }}
+                    onChange={(e) => field.onChange(maskData(e.target.value))}
+                    value={field.value ?? ''}
+                  />
+                )} />
             </Stack>
 
             <Stack direction="row" spacing={1.5}>
@@ -198,8 +217,8 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
                 onChange={(e) => field.onChange(maskCro(e.target.value))} />
             )} />
 
-            {/* ── Acesso — só para ADMIN ── */}
-            {isAdmin && (
+            {/* ── Acesso — ADMIN / RECEPCAO ── */}
+            {canEditAccess && (
               <>
                 <Divider />
                 <Box

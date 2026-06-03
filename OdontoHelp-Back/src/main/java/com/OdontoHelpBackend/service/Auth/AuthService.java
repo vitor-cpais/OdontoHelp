@@ -10,6 +10,8 @@ import com.OdontoHelpBackend.dto.auth.AuthResponse;
 import com.OdontoHelpBackend.dto.auth.LoginRequest;
 import com.OdontoHelpBackend.dto.auth.RefreshRequest;
 import com.OdontoHelpBackend.dto.auth.UsuarioResumoResponse;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
+import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
 import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final DentistaRepository dentistaRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
@@ -32,7 +35,6 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas"));
 
-        // Mesma mensagem para usuário inativo e senha errada — não revela o motivo
         if (!usuario.getIsAtivo())
             throw new BadCredentialsException("Credenciais inválidas");
 
@@ -59,17 +61,15 @@ public class AuthService {
 
     @Transactional
     public void logout(Long usuarioId, String accessToken) {
-        // Revoga todos os refresh tokens do usuário
         refreshTokenRepository.revogarTodosPorUsuario(usuarioId);
-
-        // Invalida o access token na blacklist até ele expirar naturalmente
-        if (accessToken != null) {
+                if (accessToken != null) {
             tokenBlacklist.invalidar(accessToken, jwtService.extrairExpiracao(accessToken));
         }
     }
 
     private AuthResponse gerarAuthResponse(Usuario usuario) {
         String accessToken = jwtService.gerarAccessToken(usuario);
+        Long dentistaId = resolverDentistaId(usuario);
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setToken(jwtService.gerarRefreshToken());
@@ -84,11 +84,16 @@ public class AuthService {
                         usuario.getId(),
                         usuario.getNome(),
                         usuario.getEmail(),
-                        usuario.getPerfil().name()
-
-
-
+                        usuario.getPerfil().name(),
+                        dentistaId
                 )
         );
+    }
+
+    private Long resolverDentistaId(Usuario usuario) {
+        if (usuario.getPerfil() != PerfilUsuario.DENTISTA) return null;
+        return dentistaRepository.findByUsuarioId(usuario.getId())
+                .map(Usuario::getId)
+                .orElse(null);
     }
 }

@@ -8,14 +8,18 @@ import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.PlanoDeTratamentoRequestDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.ItemPlanoResponseDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.PlanoDeTratamentoResponseDTO;
 import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
 import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
+import com.OdontoHelpBackend.repository.Clinico.ItemPlanoDeTratamentoRepository;
 import com.OdontoHelpBackend.repository.Clinico.PlanoDeTratamentoRepository;
+import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
 import com.OdontoHelpBackend.service.Usuario.DentistaService;
 import com.OdontoHelpBackend.service.Usuario.PacienteService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -35,6 +39,8 @@ public class PlanoDeTratamentoService {
     private final PacienteService pacienteService;
     private final AtendimentoService atendimentoService;
     private final ProcedimentoService procedimentoService;
+    private final ItemPlanoDeTratamentoRepository itemPlanoRepository;
+    private final DentistaRepository dentistaRepository;
 
     public Slice<PlanoDeTratamentoResponseDTO> listarPorPaciente(Long pacienteId, Pageable pageable) {
         return planoRepository.findByPacienteId(pacienteId, pageable)
@@ -45,22 +51,42 @@ public class PlanoDeTratamentoService {
         return planoMapper.toResponse(buscarEntidadePorId(id));
     }
 
+    public List<ItemPlanoResponseDTO> listarItensPendentes(Long pacienteId) {
+        return itemPlanoRepository
+                .findByPacienteIdAndStatus(pacienteId, StatusItemPlano.PENDENTE)
+                .stream()
+                .map(item -> new ItemPlanoResponseDTO(
+                        item.getId(),
+                        item.getProcedimento().getId(),
+                        item.getProcedimento().getNome(),
+                        item.getNumeroDente(),
+                        item.getPrioridade(),
+                        item.getStatus(),
+                        item.getObservacao(),
+                        item.getAtendimentoRealizacao() != null ? item.getAtendimentoRealizacao().getId() : null
+                ))
+                .toList();
+    }
+
     @Transactional
     public PlanoDeTratamentoResponseDTO criar(PlanoDeTratamentoRequestDTO dto, Usuario usuarioLogado) {
         if (usuarioLogado.getPerfil() == PerfilUsuario.RECEPCAO)
             throw new AcessoNegadoException("Recepcionista não pode criar planos de tratamento");
 
-        PlanoDeTratamento plano = planoMapper.toEntity(dto);
-        plano.setPaciente(pacienteService.buscarEntidadePorId(dto.pacienteId()));
+        PlanoDeTratamento plano = planoRepository.findFirstByPacienteIdOrderByCriadoEmAsc(dto.pacienteId())
+                .orElseGet(() -> {
+                    PlanoDeTratamento novo = planoMapper.toEntity(dto);
+                    novo.setPaciente(pacienteService.buscarEntidadePorId(dto.pacienteId()));
+                    novo.setDentista(resolverDentista(usuarioLogado, dto.dentistaId()));
+                    if (dto.atendimentoId() != null)
+                        novo.setAtendimento(atendimentoService.buscarEntidadePorId(dto.atendimentoId()));
+                    return planoRepository.save(novo);
+                });
 
-        // CORRIGIDO: DENTISTA usa o próprio id, ADMIN usa o dentistaId do DTO
-        plano.setDentista(resolverDentista(usuarioLogado, dto.dentistaId()));
-
-        if (dto.atendimentoId() != null)
-            plano.setAtendimento(atendimentoService.buscarEntidadePorId(dto.atendimentoId()));
+        if (dto.observacoes() != null)
+            plano.setObservacoes(dto.observacoes());
 
         if (dto.itens() != null && !dto.itens().isEmpty()) {
-            // CORRIGIDO: usando ArrayList mutável em vez de toList() imutável
             List<ItemPlanoDeTratamento> itens = new ArrayList<>();
             for (var itemDto : dto.itens()) {
                 ItemPlanoDeTratamento item = planoMapper.itemToEntity(itemDto);
@@ -107,6 +133,26 @@ public class PlanoDeTratamentoService {
         return planoMapper.toResponse(planoRepository.save(plano));
     }
 
+    public PlanoDeTratamentoResponseDTO buscarPlanoUnicoPorPaciente(Long pacienteId, Usuario usuarioLogado) {
+        if (usuarioLogado.getPerfil() == PerfilUsuario.RECEPCAO)
+            throw new AcessoNegadoException("Recepcionista não pode acessar plano de tratamento");
+
+        return planoRepository.findFirstByPacienteIdOrderByCriadoEmAsc(pacienteId)
+                .map(planoMapper::toResponse)
+                .orElseGet(() -> criarPlanoVazio(pacienteId, usuarioLogado));
+    }
+
+    @Transactional
+    public PlanoDeTratamentoResponseDTO criarPlanoVazio(Long pacienteId, Usuario usuarioLogado) {
+        if (usuarioLogado.getPerfil() == PerfilUsuario.RECEPCAO)
+            throw new AcessoNegadoException("Recepcionista não pode criar planos de tratamento");
+
+        PlanoDeTratamento plano = new PlanoDeTratamento();
+        plano.setPaciente(pacienteService.buscarEntidadePorId(pacienteId));
+        plano.setDentista(resolverDentista(usuarioLogado, null));
+        return planoMapper.toResponse(planoRepository.save(plano));
+    }
+
     public PlanoDeTratamento buscarEntidadePorId(Long id) {
         return planoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Plano de tratamento não encontrado"));
@@ -119,10 +165,15 @@ public class PlanoDeTratamentoService {
             throw new AcessoNegadoException("Você não tem permissão para alterar este plano de tratamento");
     }
 
-    // CORRIGIDO: DENTISTA usa o próprio id, ADMIN usa o dentistaId explícito do DTO
     private Dentista resolverDentista(Usuario usuarioLogado, Long dentistaId) {
         if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA)
             return dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
-        return dentistaService.buscarEntidadePorId(dentistaId);
+        if (dentistaId != null)
+            return dentistaService.buscarEntidadePorId(dentistaId);
+        return dentistaRepository.findByIsAtivo(true, PageRequest.of(0, 1))
+                .getContent()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Nenhum dentista ativo disponível"));
     }
 }

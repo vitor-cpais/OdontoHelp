@@ -7,6 +7,7 @@ import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.PacienteRepository;
+import com.OdontoHelpBackend.service.Clinico.OdontogramaService;
 import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ public class PacienteService {
     private final UsuarioService usuarioService;
     private final PacienteMapper pacienteMapper;
     private final ValidacoesService validacoesService;
+    private final OdontogramaService odontogramaService;
 
     public PacienteResponseDTO buscarPorId(Long id) {
         Paciente paciente = buscarEntidadePorId(id);
@@ -50,7 +52,9 @@ public class PacienteService {
             paciente.getEndereco().setUsuario(paciente);
         }
 
-        return pacienteMapper.toResponse(pacienteRepository.save(paciente));
+        Paciente salvo = pacienteRepository.save(paciente);
+        odontogramaService.garantirSnapshotInicialSeNecessario(salvo.getId());
+        return pacienteMapper.toResponse(salvo);
     }
 
     @Transactional

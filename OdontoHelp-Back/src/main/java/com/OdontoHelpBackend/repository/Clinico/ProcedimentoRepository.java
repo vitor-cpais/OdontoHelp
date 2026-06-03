@@ -1,4 +1,3 @@
-// ─── ProcedimentoRepository.java ─────────────────────────────────────────────
 package com.OdontoHelpBackend.repository.Clinico;
 
 import com.OdontoHelpBackend.domain.Clinico.Procedimento;

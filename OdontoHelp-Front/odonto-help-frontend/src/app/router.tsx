@@ -27,21 +27,16 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
 
-          // ADMIN + RECEPCAO (administrativo + gestão)
-          {
-            element: <RoleRoute allowed={['ADMIN', 'RECEPCAO']} />,
-            children: [
-              { path: 'dashboard', element: <DashboardPage /> },
-              { path: 'dentistas', element: <DentistasPage /> },
-            ],
-          },
-
+  
           // ADMIN + RECEPCAO + DENTISTA (agenda de consultas)
           {
             element: <RoleRoute allowed={['ADMIN', 'RECEPCAO', 'DENTISTA']} />,
             children: [
               { path: 'agendamentos', element: <AgendamentosPage /> },
               { path: 'pacientes',    element: <PacientesPage /> },
+              { path: 'pacientes/:id',    element: <PacientesPage /> },
+              { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'dentistas', element: <DentistasPage /> },
             ],
           },
 
@@ -51,6 +46,7 @@ const router = createBrowserRouter([
             children: [
               { path: 'atendimentos', element: <AtendimentosPage /> },
               { path: 'atendimentos/:id', element: <AtendimentoDetailPage /> },
+              { path: 'dashboard', element: <DashboardPage /> },
             ],
           },
 
@@ -60,6 +56,8 @@ const router = createBrowserRouter([
             children: [
               { path: 'usuarios',     element: <UsuariosPage /> },
               { path: 'procedimentos', element: <ProcedimentosPage /> },
+              { path: 'dentistas', element: <DentistasPage /> },
+              { path: 'dentistas/:id', element: <DentistasPage /> },
             ],
           },
         ],

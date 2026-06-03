@@ -2,6 +2,7 @@ package com.OdontoHelpBackend.dto.Usuario.Request.Dentista;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ public record DentistaUpdateDTO(
         @Pattern(regexp = "^[A-Z]{2}-\\d{4,6}$", message = "CRO inválido. Formato esperado: SP-12345")
         String cro,
 
+        @Past(message = "A data de nascimento deve ser no passado")
         @NotNull(message = "Data de nascimento é obrigatória")
         LocalDate dataNascimento,
 

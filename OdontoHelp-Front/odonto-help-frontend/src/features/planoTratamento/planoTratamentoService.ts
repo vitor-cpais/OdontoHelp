@@ -1,11 +1,15 @@
-
 import api from '../../shared/lib/axios';
-import type { PlanoDeTratamento, PlanoFormData, StatusItemPlano } from './types';
+import type { PlanoDeTratamento, PlanoFormData, StatusItemPlano, ItemPlano } from './types';
 import type { SliceResponse } from '../dentistas/types';
 
 const BASE = '/planos-tratamento';
 
 export const planoTratamentoService = {
+  buscarPlanoUnico: async (pacienteId: number): Promise<PlanoDeTratamento> => {
+    const { data } = await api.get(`${BASE}/paciente/${pacienteId}/unico`);
+    return data;
+  },
+
   listarPorPaciente: async (
     pacienteId: number,
     page = 0,
@@ -37,17 +41,11 @@ export const planoTratamentoService = {
     return data;
   },
 
-  // CORREÇÃO: backend usa @RequestParam, não @RequestBody
-  // PATCH /planos-tratamento/{id}/observacoes?observacoes=texto
   atualizarObservacoes: async (id: number, observacoes: string): Promise<PlanoDeTratamento> => {
-    const { data } = await api.patch(`${BASE}/${id}/observacoes`, null, {
-      params: { observacoes },
-    });
+    const { data } = await api.patch(`${BASE}/${id}/observacoes`, null, { params: { observacoes } });
     return data;
   },
 
-  // CORREÇÃO: backend usa @RequestParam para status e atendimentoRealizacaoId
-  // PATCH /planos-tratamento/{planoId}/itens/{itemId}/status?status=REALIZADO
   atualizarStatusItem: async (
     planoId: number,
     itemId: number,
@@ -57,12 +55,12 @@ export const planoTratamentoService = {
     const params: Record<string, string> = { status };
     if (atendimentoRealizacaoId != null)
       params.atendimentoRealizacaoId = String(atendimentoRealizacaoId);
+    const { data } = await api.patch(`${BASE}/${planoId}/itens/${itemId}/status`, null, { params });
+    return data;
+  },
 
-    const { data } = await api.patch(
-      `${BASE}/${planoId}/itens/${itemId}/status`,
-      null,
-      { params },
-    );
+  buscarItensPendentes: async (pacienteId: number): Promise<ItemPlano[]> => {
+    const { data } = await api.get(`/pacientes/${pacienteId}/planos/itens-pendentes`);
     return data;
   },
 };

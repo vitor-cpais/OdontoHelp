@@ -4,6 +4,7 @@ import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
@@ -30,6 +31,7 @@ public record PacienteRequestDTO(
         @NotNull(message = "Perfil é obrigatório")
         PerfilUsuario perfil,
 
+        @Past(message = "A data de nascimento deve ser no passado")
         @NotNull(message = "Data de nascimento é obrigatória")
         LocalDate dataNascimento,
 

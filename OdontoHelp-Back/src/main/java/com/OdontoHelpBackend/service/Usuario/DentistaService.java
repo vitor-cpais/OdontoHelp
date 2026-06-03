@@ -11,6 +11,7 @@ import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class DentistaService {
     private final UsuarioService usuarioService;
     private final DentistaMapper dentistaMapper;
     private final ValidacoesService validacoesService;
+    private final PasswordEncoder passwordEncoder;
 
     public DentistaResponseDTO buscarPorId(Long id) {
         return dentistaMapper.toResponse(buscarEntidadePorId(id));
@@ -44,6 +46,7 @@ public class DentistaService {
         usuarioService.validarCpfDuplicado(dto.cpf());
         usuarioService.validarEmailDuplicado(dto.email());
         Dentista dentista = dentistaMapper.toEntity(dto);
+        dentista.setSenha(passwordEncoder.encode(dto.senha()));
         dentista.setIsAtivo(true);
         if (dentista.getEndereco() != null) {
             dentista.getEndereco().setUsuario(dentista);
@@ -51,22 +54,12 @@ public class DentistaService {
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }
 
-    @Transactional
-    public DentistaResponseDTO atualizar(Long id, DentistaUpdateDTO dto) {
-        Dentista dentista = buscarEntidadePorId(id);
-        dentistaMapper.updateEntity(dto, dentista);
-        if (dentista.getEndereco() != null) {
-            dentista.getEndereco().setUsuario(dentista);
-        }
-        return dentistaMapper.toResponse(dentistaRepository.save(dentista));
-    }
 
     public Dentista buscarEntidadePorId(Long id) {
         return dentistaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Dentista não encontrado"));
     }
 
-    // NOVO: busca pelo usuarioId — necessário para o controle de propriedade do AgendamentoService
     public Dentista buscarEntidadePorUsuarioId(Long usuarioId) {
         return dentistaRepository.findByUsuarioId(usuarioId)
                 .orElseThrow(() -> new NotFoundException("Dentista não encontrado para este usuário"));

@@ -39,7 +39,6 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Se a lista estiver vazia no properties, garante que o localhost e vercel funcionem
         if (allowedOrigins == null || allowedOrigins.isEmpty()) {
             config.setAllowedOrigins(List.of("http://localhost:5173", "https://odonto-help.vercel.app"));
         } else {
@@ -61,7 +60,6 @@ public class SecurityConfig {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // Ativa o CORS utilizando o bean definido acima
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
@@ -80,15 +78,22 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.PUT,   "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
                             .requestMatchers(HttpMethod.PATCH, "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
 
-                            // Pacientes
+                            // Odontograma clínico
+                            .requestMatchers(HttpMethod.GET, "/pacientes/*/odontograma/**").hasAnyRole("ADMIN", "DENTISTA")
+                            .requestMatchers(HttpMethod.PATCH, "/pacientes/*/odontograma/**").hasAnyRole("ADMIN", "DENTISTA")
+
+                            // Itens pendentes do plano — DENTISTA precisa ver como referência
+                            .requestMatchers(HttpMethod.GET, "/pacientes/*/planos/itens-pendentes").hasAnyRole("ADMIN", "DENTISTA")
+
+                            // Pacientes — regra genérica (PATCH de odontograma já foi tratado acima)
                             .requestMatchers(HttpMethod.GET,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
                             .requestMatchers(HttpMethod.POST,  "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
                             .requestMatchers(HttpMethod.PUT,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
                             .requestMatchers(HttpMethod.PATCH, "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
 
-                            // Agendamentos e Dashboard (Corrigido para evitar 403 na rota raiz)
+                            // Agendamentos e Dashboard
                             .requestMatchers("/agendamentos", "/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers("/dashboard", "/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers("/dashboard", "/dashboard/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
 
                             // Procedimentos
                             .requestMatchers(HttpMethod.GET,   "/procedimentos", "/procedimentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")

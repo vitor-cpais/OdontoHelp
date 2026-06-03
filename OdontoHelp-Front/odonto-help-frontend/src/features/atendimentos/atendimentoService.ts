@@ -1,6 +1,10 @@
-// src/features/atendimentos/atendimentoService.ts
 import api from '../../shared/lib/axios';
-import type { Atendimento, AtendimentoUpdateData, AtendimentoFiltros } from './types';
+import type {
+  Atendimento,
+  AtendimentoUpdateData,
+  AtendimentoUpdateResult,
+  AtendimentoFiltros,
+} from './types';
 import type { SliceResponse } from '../dentistas/types';
 
 const BASE_ATENDIMENTOS = '/atendimentos';
@@ -22,9 +26,6 @@ export const atendimentoService = {
     return data;
   },
 
-  // CORREÇÃO: aceita filtros opcionais de nomePaciente, status, dataInicio, dataFim.
-  // Quando dentistaId é null (ADMIN), usa GET /atendimentos sem filtro de dentista.
-  // O backend precisa ter esses params — ver AtendimentoController e AtendimentoRepository.
   listarPorDentista: async (
     dentistaId: number | null,
     page = 0,
@@ -53,22 +54,39 @@ export const atendimentoService = {
     return data;
   },
 
-  atualizar: async (id: number, payload: AtendimentoUpdateData): Promise<Atendimento> => {
+  atualizar: async (id: number, payload: AtendimentoUpdateData): Promise<AtendimentoUpdateResult> => {
     const { data } = await api.put(`${BASE_ATENDIMENTOS}/${id}`, {
       observacoesGerais: payload.observacoesGerais ?? null,
       itens: payload.itens?.map((item) => ({
-        procedimentoId:       item.procedimentoId,
-        numeroDente:          item.numeroDente,
-        face:                 item.face || null,
-        situacaoIdentificada: item.situacaoIdentificada,
-        observacao:           item.observacao || null,
+        procedimentoId: item.procedimentoId,
+        numeroDente:    item.numeroDente,
+        situacaoNova:   item.situacaoNova,
+        observacao:     item.observacao || null,
       })),
     });
     return data;
   },
 
+  removerItem: async (atendimentoId: number, itemId: number): Promise<void> => {
+    await api.delete(`${BASE_ATENDIMENTOS}/${atendimentoId}/itens/${itemId}`);
+  },
+
   finalizar: async (id: number): Promise<Atendimento> => {
     const { data } = await api.post(`${BASE_ATENDIMENTOS}/${id}/finalizar`);
+    return data;
+  },
+
+  marcarOdontogramaRevisado: async (id: number, revisado: boolean): Promise<Atendimento> => {
+    const { data } = await api.patch(
+      `${BASE_ATENDIMENTOS}/${id}/odontograma-revisado?revisado=${revisado}`,
+    );
+    return data;
+  },
+
+  baixaPlanoManual: async (id: number, itensPlanoIds: number[]): Promise<Atendimento> => {
+    const { data } = await api.post(`${BASE_ATENDIMENTOS}/${id}/baixa-plano-manual`, {
+      itemPlanoIds: itensPlanoIds,
+    });
     return data;
   },
 };

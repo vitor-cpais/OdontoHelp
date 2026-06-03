@@ -7,14 +7,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Blacklist em memória para access tokens revogados (logout).
- *
- * Alternativa mais robusta: Redis (recomendado se o sistema escalar para múltiplas instâncias).
- * Para MVP com instância única, ConcurrentHashMap é suficiente.
- *
- * Limpeza automática a cada 30 minutos para evitar acúmulo de tokens expirados.
- */
+
 @Component
 public class TokenBlacklist {
 

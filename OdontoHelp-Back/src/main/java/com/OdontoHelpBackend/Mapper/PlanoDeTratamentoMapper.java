@@ -1,4 +1,3 @@
-// ─── PlanoDeTratamentoMapper.java ────────────────────────────────────────────
 package com.OdontoHelpBackend.Mapper;
 
 import com.OdontoHelpBackend.domain.Clinico.ItemPlanoDeTratamento;

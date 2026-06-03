@@ -1,21 +1,21 @@
 package com.OdontoHelpBackend.service.Clinico;
 
-import com.OdontoHelpBackend.domain.Clinico.Atendimento;
-import com.OdontoHelpBackend.domain.Clinico.HistoricoOdontograma;
-import com.OdontoHelpBackend.domain.Clinico.ItemAtendimento;
-import com.OdontoHelpBackend.domain.Clinico.Odontograma;
+import com.OdontoHelpBackend.domain.Clinico.*;
+import com.OdontoHelpBackend.domain.Clinico.Enums.SituacaoDente;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtualizarDenteRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.HistoricoOdontogramaResponseDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaResponseDTO;
 import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Clinico.AtendimentoRepository;
-import com.OdontoHelpBackend.repository.Clinico.HistoricoOdontogramaRepository;
-import com.OdontoHelpBackend.repository.Clinico.OdontogramaRepository;
+import com.OdontoHelpBackend.repository.Clinico.OdontogramaSnapshotRepository;
 import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
 import com.OdontoHelpBackend.repository.Usuario.PacienteRepository;
+import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,90 +23,135 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class OdontogramaService {
 
-    private final OdontogramaRepository odontogramaRepository;
-    private final HistoricoOdontogramaRepository historicoRepository;
+    private final OdontogramaSnapshotRepository snapshotRepository;
     private final PacienteRepository pacienteRepository;
     private final AtendimentoRepository atendimentoRepository;
     private final DentistaRepository dentistaRepository;
+    private final UsuarioRepository usuarioRepository;
 
     public List<OdontogramaResponseDTO> buscarPorPaciente(Long pacienteId) {
-        return odontogramaRepository.findByPacienteId(pacienteId)
-                .stream()
-                .map(this::toResponse)
+        garantirSnapshotInicialSeNecessario(pacienteId);
+        return reconstruirEstado(pacienteId).values().stream()
+                .filter(e -> e.situacao() != SituacaoDente.SAUDAVEL || e.observacao() != null)
+                .map(e -> new OdontogramaResponseDTO(
+                        e.snapshotDenteId(),
+                        e.numeroDente(),
+                        e.situacao(),
+                        e.observacao(),
+                        e.atualizadoEm()
+                ))
+                .sorted(Comparator.comparing(OdontogramaResponseDTO::numeroDente))
                 .toList();
     }
 
     public Slice<HistoricoOdontogramaResponseDTO> buscarHistorico(Long pacienteId, Pageable pageable) {
-        return historicoRepository
-                .findByPacienteIdOrderByRegistradoEmDesc(pacienteId, pageable)
-                .map(this::toHistoricoResponse);
+        garantirSnapshotInicialSeNecessario(pacienteId);
+        return flattenHistorico(pacienteId, null, pageable);
     }
 
     public Slice<HistoricoOdontogramaResponseDTO> buscarHistoricoPorDente(
             Long pacienteId, Integer numeroDente, Pageable pageable) {
-        return historicoRepository
-                .findByPacienteIdAndNumeroDenteOrderByRegistradoEmDesc(pacienteId, numeroDente, pageable)
-                .map(this::toHistoricoResponse);
+        garantirSnapshotInicialSeNecessario(pacienteId);
+        return flattenHistorico(pacienteId, numeroDente, pageable);
     }
 
-    /**
-     * Atualização direta — chamada pelo controller sem necessidade de atendimento formal.
-     * Gera histórico com atendimentoId null.
-     * O dentista é resolvido externamente (pelo controller) conforme o perfil do usuário logado.
-     */
     @Transactional
     public OdontogramaResponseDTO atualizarDiretamente(Long pacienteId, Integer numeroDente,
                                                         AtualizarDenteRequestDTO dto,
-                                                        Dentista dentista) {
+                                                        Dentista dentista, Usuario usuario) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+                .orElseThrow(() -> new NotFoundException("Paciente não encontrado"));
+        garantirSnapshotInicialSeNecessario(pacienteId);
+
+        Map<Integer, EstadoDente> antes = reconstruirEstado(pacienteId);
+        SituacaoDente anterior = situacaoDe(antes, numeroDente);
+
+        registrarAlteracoes(paciente, null, usuario, List.of(
+                new AlteracaoDente(numeroDente, dto.situacaoAtual(), dto.observacao(), anterior)
+        ));
+
+        EstadoDente depois = reconstruirEstado(pacienteId).get(numeroDente);
+        return new OdontogramaResponseDTO(
+                depois.snapshotDenteId(),
+                depois.numeroDente(),
+                depois.situacao(),
+                depois.observacao(),
+                depois.atualizadoEm()
+        );
+    }
+
+    @Transactional
+    public void registrarPorItemAtendimento(Paciente paciente, ItemAtendimento item,
+                                            Atendimento atendimento, Usuario usuario) {
+        garantirSnapshotInicialSeNecessario(paciente.getId());
+        Map<Integer, EstadoDente> antes = reconstruirEstado(paciente.getId());
+        SituacaoDente anterior = situacaoDe(antes, item.getNumeroDente());
+
+        registrarAlteracoes(paciente, atendimento, usuario, List.of(
+                new AlteracaoDente(item.getNumeroDente(), item.getSituacaoNova(), item.getObservacao(), anterior)
+        ));
+    }
+
+    @Transactional
+    public void garantirSnapshotInicialSeNecessario(Long pacienteId) {
+        if (snapshotRepository.existsByPacienteId(pacienteId)) return;
+
         Paciente paciente = pacienteRepository.findById(pacienteId)
                 .orElseThrow(() -> new NotFoundException("Paciente não encontrado"));
 
-        Odontograma odontograma = odontogramaRepository
-                .findByPacienteIdAndNumeroDente(pacienteId, numeroDente)
-                .orElseGet(() -> {
-                    Odontograma novo = new Odontograma();
-                    novo.setPaciente(paciente);
-                    novo.setNumeroDente(numeroDente);
-                    return novo;
-                });
+        Usuario editor = usuarioRepository.findByPerfil(PerfilUsuario.ADMIN, PageRequest.of(0, 1))
+                .getContent()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Nenhum usuário admin para criar odontograma inicial"));
 
-        HistoricoOdontograma historico = new HistoricoOdontograma();
-        historico.setPaciente(paciente);
-        historico.setNumeroDente(numeroDente);
-        historico.setSituacaoAnterior(odontograma.getSituacaoAtual());
-        historico.setSituacaoNova(dto.situacaoAtual());
-        historico.setDentista(dentista);
-        historico.setAtendimento(null);
-        historico.setObservacao(dto.observacao());
-        historicoRepository.save(historico);
+        OdontogramaSnapshot snapshot = new OdontogramaSnapshot();
+        snapshot.setPaciente(paciente);
+        snapshot.setEditadoPor(editor);
 
-        odontograma.setSituacaoAtual(dto.situacaoAtual());
-        odontograma.setObservacao(dto.observacao());
-        return toResponse(odontogramaRepository.save(odontograma));
+        for (Integer numero : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+            OdontogramaDente dente = new OdontogramaDente();
+            dente.setNumeroDente(numero);
+            dente.setSituacao(SituacaoDente.SAUDAVEL);
+            dente.vincularSnapshot(snapshot);
+            snapshot.getDentes().add(dente);
+        }
+
+        snapshotRepository.save(snapshot);
     }
 
-    /**
-     * Resolve o dentista responsável para uso pelo ADMIN.
-     * Estratégia: último dentista que atendeu o paciente.
-     * Fallback: primeiro dentista ativo do sistema.
-     */
-    public Dentista resolverDentistaResponsavel(Long pacienteId) {
-        // Busca o último atendimento do paciente para pegar o dentista
-        Slice<Atendimento> atendimentos = atendimentoRepository
-                .findByPacienteId(pacienteId, PageRequest.of(0, 1));
+    @Transactional
+    public void garantirSnapshotInicialParaNovoPaciente(Paciente paciente, Usuario criadoPor) {
+        if (snapshotRepository.existsByPacienteId(paciente.getId())) return;
 
+        OdontogramaSnapshot snapshot = new OdontogramaSnapshot();
+        snapshot.setPaciente(paciente);
+        snapshot.setEditadoPor(criadoPor);
+
+        for (Integer numero : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+            OdontogramaDente dente = new OdontogramaDente();
+            dente.setNumeroDente(numero);
+            dente.setSituacao(SituacaoDente.SAUDAVEL);
+            dente.vincularSnapshot(snapshot);
+            snapshot.getDentes().add(dente);
+        }
+
+        snapshotRepository.save(snapshot);
+    }
+
+    public Dentista resolverDentistaResponsavel(Long pacienteId) {
+        var atendimentos = atendimentoRepository.findByPacienteId(pacienteId, PageRequest.of(0, 1));
         if (atendimentos.hasContent()) {
             return atendimentos.getContent().get(0).getDentista();
         }
-
-        // Fallback: primeiro dentista ativo
         return dentistaRepository.findByIsAtivo(true, PageRequest.of(0, 1))
                 .getContent()
                 .stream()
@@ -115,50 +160,127 @@ public class OdontogramaService {
                         "Nenhum dentista ativo encontrado para registrar a alteração"));
     }
 
-    /**
-     * Chamado pelo AtendimentoService ao FINALIZAR — nunca chamar diretamente do controller.
-     */
-    @Transactional
-    public void atualizarPorAtendimento(Paciente paciente, ItemAtendimento item,
-                                        Dentista dentista, Atendimento atendimento) {
-        Odontograma odontograma = odontogramaRepository
-                .findByPacienteIdAndNumeroDente(paciente.getId(), item.getNumeroDente())
-                .orElseGet(() -> {
-                    Odontograma novo = new Odontograma();
-                    novo.setPaciente(paciente);
-                    novo.setNumeroDente(item.getNumeroDente());
-                    return novo;
-                });
+    private void registrarAlteracoes(Paciente paciente, Atendimento atendimento, Usuario usuario,
+                                     List<AlteracaoDente> alteracoes) {
+        List<AlteracaoDente> relevantes = alteracoes.stream()
+                .filter(a -> a.novaSituacao() != a.situacaoAnterior())
+                .toList();
+        if (relevantes.isEmpty()) return;
 
-        HistoricoOdontograma historico = new HistoricoOdontograma();
-        historico.setPaciente(paciente);
-        historico.setNumeroDente(item.getNumeroDente());
-        historico.setSituacaoAnterior(odontograma.getSituacaoAtual());
-        historico.setSituacaoNova(item.getSituacaoIdentificada());
-        historico.setDentista(dentista);
-        historico.setAtendimento(atendimento);
-        historico.setObservacao(item.getObservacao());
-        historicoRepository.save(historico);
+        OdontogramaSnapshot snapshot = new OdontogramaSnapshot();
+        snapshot.setPaciente(paciente);
+        snapshot.setAtendimento(atendimento);
+        snapshot.setEditadoPor(usuario);
 
-        odontograma.setSituacaoAtual(item.getSituacaoIdentificada());
-        odontograma.setObservacao(item.getObservacao());
-        odontogramaRepository.save(odontograma);
+        for (AlteracaoDente alt : relevantes) {
+            OdontogramaDente dente = new OdontogramaDente();
+            dente.setNumeroDente(alt.numeroDente());
+            dente.setSituacao(alt.novaSituacao());
+            dente.setObservacao(alt.observacao());
+            dente.vincularSnapshot(snapshot);
+            snapshot.getDentes().add(dente);
+        }
+
+        snapshotRepository.save(snapshot);
     }
 
-    private OdontogramaResponseDTO toResponse(Odontograma o) {
-        return new OdontogramaResponseDTO(
-                o.getId(), o.getNumeroDente(), o.getSituacaoAtual(),
-                o.getObservacao(), o.getAtualizadoEm()
-        );
+    private Map<Integer, EstadoDente> reconstruirEstado(Long pacienteId) {
+        Map<Integer, EstadoDente> mapa = new LinkedHashMap<>();
+        for (Integer n : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+            mapa.put(n, new EstadoDente(n, SituacaoDente.SAUDAVEL, null, null, null, false));
+        }
+
+        for (OdontogramaSnapshot snap : snapshotRepository.findByPacienteIdOrderByCriadoEmAsc(pacienteId)) {
+            for (OdontogramaDente d : snap.getDentes()) {
+                boolean alterado = !SituacaoDente.SAUDAVEL.equals(d.getSituacao())
+                        || snap.getDentes().size() == 1 && snap.getDentes().get(0).equals(d)
+                        || snap.getDentes().size() > 1;
+                mapa.put(d.getNumeroDente(), new EstadoDente(
+                        d.getNumeroDente(),
+                        d.getSituacao(),
+                        d.getObservacao(),
+                        snap.getCriadoEm(),
+                        d.getId(),
+                        true
+                ));
+            }
+        }
+        return mapa;
     }
 
-    private HistoricoOdontogramaResponseDTO toHistoricoResponse(HistoricoOdontograma h) {
-        return new HistoricoOdontogramaResponseDTO(
-                h.getId(), h.getNumeroDente(),
-                h.getSituacaoAnterior(), h.getSituacaoNova(),
-                h.getDentista().getId(), h.getDentista().getNome(),
-                h.getAtendimento() != null ? h.getAtendimento().getId() : null,
-                h.getObservacao(), h.getRegistradoEm()
-        );
+    private Slice<HistoricoOdontogramaResponseDTO> flattenHistorico(
+            Long pacienteId, Integer filtroDente, Pageable pageable) {
+
+        List<HistoricoOdontogramaResponseDTO> linhas = new ArrayList<>();
+        Map<Integer, EstadoDente> estado = new LinkedHashMap<>();
+        for (Integer n : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
+            estado.put(n, new EstadoDente(n, SituacaoDente.SAUDAVEL, null, null, null, false));
+        }
+
+        for (OdontogramaSnapshot snap : snapshotRepository.findByPacienteIdOrderByCriadoEmAsc(pacienteId)) {
+            if (snap.getDentes().size() == OdontogramaFdi.TODOS_DENTES_ADULTOS.size()
+                    && snap.getAtendimento() == null
+                    && snap.getDentes().stream().allMatch(d -> d.getSituacao() == SituacaoDente.SAUDAVEL)) {
+                for (OdontogramaDente d : snap.getDentes()) {
+                    estado.put(d.getNumeroDente(), new EstadoDente(
+                            d.getNumeroDente(), d.getSituacao(), null, snap.getCriadoEm(), d.getId(), false));
+                }
+                continue;
+            }
+
+            for (OdontogramaDente d : snap.getDentes()) {
+                SituacaoDente anterior = situacaoDe(estado, d.getNumeroDente());
+                if (filtroDente != null && !filtroDente.equals(d.getNumeroDente())) {
+                    estado.put(d.getNumeroDente(), new EstadoDente(
+                            d.getNumeroDente(), d.getSituacao(), d.getObservacao(),
+                            snap.getCriadoEm(), d.getId(), true));
+                    continue;
+                }
+
+                Long dentistaId = null;
+                String dentistaNome = snap.getEditadoPor().getNome();
+                Long atendimentoId = null;
+                if (snap.getAtendimento() != null) {
+                    dentistaId = snap.getAtendimento().getDentista().getId();
+                    dentistaNome = snap.getAtendimento().getDentista().getNome();
+                    atendimentoId = snap.getAtendimento().getId();
+                }
+
+                linhas.add(new HistoricoOdontogramaResponseDTO(
+                        d.getId(),
+                        d.getNumeroDente(),
+                        anterior,
+                        d.getSituacao(),
+                        dentistaId,
+                        dentistaNome,
+                        atendimentoId,
+                        d.getObservacao(),
+                        snap.getCriadoEm()
+                ));
+
+                estado.put(d.getNumeroDente(), new EstadoDente(
+                        d.getNumeroDente(), d.getSituacao(), d.getObservacao(),
+                        snap.getCriadoEm(), d.getId(), true));
+            }
+        }
+
+        Collections.reverse(linhas);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), linhas.size());
+        List<HistoricoOdontogramaResponseDTO> page = start >= linhas.size()
+                ? List.of()
+                : linhas.subList(start, end);
+        return new org.springframework.data.domain.SliceImpl<>(page, pageable, end < linhas.size());
     }
+
+    private static SituacaoDente situacaoDe(Map<Integer, EstadoDente> mapa, Integer numero) {
+        EstadoDente e = mapa.get(numero);
+        return e != null ? e.situacao() : SituacaoDente.SAUDAVEL;
+    }
+
+    private record AlteracaoDente(Integer numeroDente, SituacaoDente novaSituacao, String observacao,
+                                SituacaoDente situacaoAnterior) {}
+
+    private record EstadoDente(Integer numeroDente, SituacaoDente situacao, String observacao,
+                               LocalDateTime atualizadoEm, Long snapshotDenteId, boolean alterado) {}
 }

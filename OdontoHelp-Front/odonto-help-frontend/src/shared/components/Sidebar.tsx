@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
     label: 'Dashboard',
     icon: <DashboardOutlined sx={{ fontSize: 18 }} />,
     path: '/dashboard',
-    allowed: ['ADMIN', 'RECEPCAO'],
+    allowed: ['ADMIN', 'RECEPCAO', 'DENTISTA'],
   },
   {
     label: 'Agendamentos',

@@ -1,4 +1,3 @@
-// ─── ProcedimentoResponseDTO.java ────────────────────────────────────────────
 package com.OdontoHelpBackend.dto.Clinica.Response;
 
 import java.math.BigDecimal;

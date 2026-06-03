@@ -62,6 +62,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     @Query("""
+                SELECT COUNT(a) FROM Agendamento a
+                WHERE a.dentista.id = :dentistaId
+                AND a.dataInicio >= :inicio AND a.dataInicio <= :fim
+            """)
+    Long countByPeriodoAndDentista(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("dentistaId") Long dentistaId
+    );
+
+    @Query("""
+                SELECT COUNT(DISTINCT a.paciente.id) FROM Agendamento a
+                WHERE a.dentista.id = :dentistaId
+            """)
+    Long countPacientesByDentista(@Param("dentistaId") Long dentistaId);
+
+    @Query("""
                 SELECT a.status, COUNT(a) FROM Agendamento a
                 WHERE a.dataInicio >= :inicio AND a.dataInicio <= :fim
                 GROUP BY a.status
@@ -69,5 +86,17 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Object[]> countByStatusNoPeriodo(
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
+    );
+
+    @Query("""
+                SELECT a.status, COUNT(a) FROM Agendamento a
+                WHERE a.dentista.id = :dentistaId
+                AND a.dataInicio >= :inicio AND a.dataInicio <= :fim
+                GROUP BY a.status
+            """)
+    List<Object[]> countByStatusNoPeriodoAndDentista(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("dentistaId") Long dentistaId
     );
 }

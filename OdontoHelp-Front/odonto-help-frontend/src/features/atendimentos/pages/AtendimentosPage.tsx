@@ -118,12 +118,6 @@ export default function AtendimentosPage() {
         </Typography>
       </Box>
 
-      {/* Aviso se DENTISTA sem dentistaId no store */}
-      {!isAdmin && dentistaId === null && (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-          Sessão desatualizada — faça logout e login novamente para carregar seus atendimentos.
-        </Alert>
-      )}
 
       <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
         <TableContainer>

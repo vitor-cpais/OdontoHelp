@@ -1,0 +1,11 @@
+# Build (nunca versionar)
+target/
+**/target/
+
+# IDE
+.idea/
+*.iml
+
+# Front
+OdontoHelp-Front/odonto-help-frontend/node_modules/
+OdontoHelp-Front/odonto-help-frontend/dist/

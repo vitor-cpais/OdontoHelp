@@ -1,19 +1,19 @@
 // src/features/planoTratamento/types.ts
 
-export type StatusItemPlano = 'PENDENTE' | 'AGENDADO' | 'REALIZADO' | 'CANCELADO';
+export type StatusItemPlano = 'PENDENTE' | 'EM_ANDAMENTO' | 'REALIZADO' | 'CANCELADO';
 
 export const STATUS_ITEM_PLANO_LABELS: Record<StatusItemPlano, string> = {
-  PENDENTE:  'Pendente',
-  AGENDADO:  'Agendado',
-  REALIZADO: 'Realizado',
-  CANCELADO: 'Cancelado',
+  PENDENTE:     'Pendente',
+  EM_ANDAMENTO: 'Em andamento',
+  REALIZADO:    'Realizado',
+  CANCELADO:    'Cancelado',
 };
 
 export const STATUS_ITEM_PLANO_COLORS: Record<StatusItemPlano, { bg: string; text: string; border: string }> = {
-  PENDENTE:  { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' },
-  AGENDADO:  { bg: '#E6F1FB', text: '#185FA5', border: '#B5D4F4' },
-  REALIZADO: { bg: '#E1F5EE', text: '#0F6E56', border: '#9FE1CB' },
-  CANCELADO: { bg: '#FCEBEB', text: '#A32D2D', border: '#F7C1C1' },
+  PENDENTE:     { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' },
+  EM_ANDAMENTO: { bg: '#E6F1FB', text: '#185FA5', border: '#B5D4F4' },
+  REALIZADO:    { bg: '#E1F5EE', text: '#0F6E56', border: '#9FE1CB' },
+  CANCELADO:    { bg: '#FCEBEB', text: '#A32D2D', border: '#F7C1C1' },
 };
 
 export interface ItemPlano {

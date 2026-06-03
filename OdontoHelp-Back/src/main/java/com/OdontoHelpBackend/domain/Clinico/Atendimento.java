@@ -15,11 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Representa a EXECUÇÃO CLÍNICA de um agendamento.
- * Criado exclusivamente via Agendamento#iniciarAtendimento().
- * Procedimentos só podem ser adicionados/removidos enquanto EM_ANDAMENTO.
- */
+
 @Entity
 @Table(name = "TB_ATENDIMENTO")
 @Getter
@@ -30,7 +26,7 @@ public class Atendimento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Relação 1:1 obrigatória — Atendimento nunca existe sem Agendamento. */
+
     @OneToOne
     @JoinColumn(name = "agendamento_id", nullable = false, unique = true)
     private Agendamento agendamento;
@@ -55,6 +51,9 @@ public class Atendimento {
     @Column(nullable = false)
     private StatusAtendimento status;
 
+    @Column(nullable = false)
+    private boolean odontogramaRevisado = false;
+
     @OneToMany(mappedBy = "atendimento", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemAtendimento> itens = new ArrayList<>();
 
@@ -65,12 +64,9 @@ public class Atendimento {
     @UpdateTimestamp
     private LocalDateTime atualizadoEm;
 
-    // ─── Métodos de domínio ──────────────────────────────────────────────────
 
-    /**
-     * Construtor de domínio — chamado apenas por Agendamento#iniciarAtendimento().
-     * Garante que o estado inicial é sempre EM_ANDAMENTO.
-     */
+
+
     public static Atendimento iniciar(Agendamento agendamento, Dentista dentista, String observacoesGerais) {
         Atendimento a = new Atendimento();
         a.agendamento  = agendamento;
@@ -82,19 +78,14 @@ public class Atendimento {
         return a;
     }
 
-    /**
-     * Adiciona um procedimento ao atendimento.
-     * Só é permitido enquanto EM_ANDAMENTO.
-     */
+
     public void adicionarItem(ItemAtendimento item) {
         validarEdicaoPermitida();
         item.vincularAtendimento(this);
         this.itens.add(item);
     }
 
-    /**
-     * Remove todos os itens e adiciona os novos (usado na atualização completa).
-     */
+
     public void substituirItens(List<ItemAtendimento> novosItens) {
         validarEdicaoPermitida();
         this.itens.clear();
@@ -104,9 +95,6 @@ public class Atendimento {
         });
     }
 
-    /**
-     * Finaliza o atendimento. Registra horaFim. Após isso nenhuma edição é permitida.
-     */
     public void finalizar() {
         if (this.status == StatusAtendimento.FINALIZADO)
             throw new BusinessException("Atendimento já está finalizado");
@@ -114,13 +102,16 @@ public class Atendimento {
         this.horaFim = LocalDateTime.now();
     }
 
-    /** Permite atualizar apenas observações (sem alterar itens). */
+
     public void atualizarObservacoes(String observacoes) {
         validarEdicaoPermitida();
         this.observacoesGerais = observacoes;
     }
 
-    // ─── Invariantes ─────────────────────────────────────────────────────────
+    public void marcarOdontogramaRevisado(boolean revisado) {
+        validarEdicaoPermitida();
+        this.odontogramaRevisado = revisado;
+    }
 
     private void validarEdicaoPermitida() {
         if (this.status == StatusAtendimento.FINALIZADO)

@@ -40,13 +40,6 @@ public class DentistaController {
         return ResponseEntity.created(URI.create("/dentistas/" + criado.id())).body(criado);
     }
 
-    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
-    @PutMapping("/{id}")
-    public ResponseEntity<DentistaResponseDTO> atualizar(
-            @PathVariable Long id,
-            @RequestBody @Valid DentistaUpdateDTO dto) {
-        return ResponseEntity.ok(dentistaService.atualizar(id, dto));
-    }
 
     // ADMIN e RECEPCAO — protegido pelo SecurityConfig
     @PatchMapping("/{id}/status")

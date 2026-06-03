@@ -12,14 +12,18 @@ import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtendimentoUpdateDTO;
+import com.OdontoHelpBackend.dto.Clinica.Request.BaixaPlanoManualRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Request.IniciarAtendimentoRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Request.ItemAtendimentoRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.AtendimentoResponseDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.AtendimentoUpdateResultDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.ItemPlanoResponseDTO;
 import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
 import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Clinico.AtendimentoRepository;
+import com.OdontoHelpBackend.repository.Clinico.ItemAtendimentoRepository;
 import com.OdontoHelpBackend.repository.Clinico.ItemPlanoDeTratamentoRepository;
 import com.OdontoHelpBackend.repository.Consulta.AgendamentoRepository;
 import com.OdontoHelpBackend.service.Consulta.AgendamentoService;
@@ -32,7 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -47,9 +53,12 @@ public class AtendimentoService {
     private final ProcedimentoService procedimentoService;
     private final OdontogramaService odontogramaService;
     private final ItemPlanoDeTratamentoRepository itemPlanoRepository;
+    private final ItemAtendimentoRepository itemAtendimentoRepository;
 
-    public AtendimentoResponseDTO buscarPorId(Long id) {
-        return atendimentoMapper.toResponse(buscarEntidadePorId(id));
+    public AtendimentoResponseDTO buscarPorId(Long id, Usuario usuarioLogado) {
+        Atendimento atendimento = buscarEntidadePorId(id);
+        validarPropriedadeAtendimento(atendimento, usuarioLogado);
+        return atendimentoMapper.toResponse(atendimento);
     }
 
     public Slice<AtendimentoResponseDTO> listarPorPaciente(Long pacienteId, Pageable pageable, Usuario usuarioLogado) {
@@ -75,7 +84,14 @@ public class AtendimentoService {
 
     public Slice<AtendimentoResponseDTO> listarTodos(
             String nomePaciente, LocalDateTime dataInicio,
-            LocalDateTime dataFim, StatusAtendimento status, Pageable pageable) {
+            LocalDateTime dataFim, StatusAtendimento status, Pageable pageable, Usuario usuarioLogado) {
+        if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA) {
+            Dentista dentistaLogado = dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
+            return atendimentoRepository
+                    .filtrarPorDentista(dentistaLogado.getId(), nomePaciente, dataInicio, dataFim, status, pageable)
+                    .map(atendimentoMapper::toResponse);
+        }
+
         return atendimentoRepository
                 .filtrarTodos(nomePaciente, dataInicio, dataFim, status, pageable)
                 .map(atendimentoMapper::toResponse);
@@ -107,45 +123,106 @@ public class AtendimentoService {
         agendamento.setStatus(StatusConsulta.ATENDIDO);
         agendamentoRepository.save(agendamento);
 
+        odontogramaService.garantirSnapshotInicialSeNecessario(agendamento.getPaciente().getId());
+
         return atendimentoMapper.toResponse(atendimentoRepository.save(atendimento));
     }
 
     @Transactional
-    public AtendimentoResponseDTO atualizar(Long id, AtendimentoUpdateDTO dto, Usuario usuarioLogado) {
+    public AtendimentoUpdateResultDTO atualizar(Long id, AtendimentoUpdateDTO dto, Usuario usuarioLogado) {
         Atendimento atendimento = buscarEntidadePorId(id);
         validarPropriedadeAtendimento(atendimento, usuarioLogado);
 
         if (dto.observacoesGerais() != null)
             atendimento.atualizarObservacoes(dto.observacoesGerais());
 
-        if (dto.itens() != null) {
-            List<ItemAtendimento> novosItens = montarItens(dto.itens(), atendimento);
-            atendimento.substituirItens(novosItens);
+        List<ItemPlanoResponseDTO> baixaManual = new ArrayList<>();
+
+        if (dto.itens() != null && !dto.itens().isEmpty()) {
+            Set<String> existentes = new HashSet<>();
+            atendimento.getItens().forEach(i ->
+                    existentes.add(chave(i.getNumeroDente(), i.getProcedimento().getId())));
+
+            for (ItemAtendimentoRequestDTO itemDto : dto.itens()) {
+                String key = chave(itemDto.numeroDente(), itemDto.procedimentoId());
+                if (existentes.contains(key)) continue;
+
+                ItemAtendimento item = atendimentoMapper.itemToEntity(itemDto);
+                item.setProcedimento(procedimentoService.buscarEntidadePorId(itemDto.procedimentoId()));
+                atendimento.adicionarItem(item);
+
+                odontogramaService.registrarPorItemAtendimento(
+                        atendimento.getPaciente(), item, atendimento, usuarioLogado);
+
+                baixaAutomatica(atendimento, item);
+                baixaManual.addAll(buscarItensBaixaManual(
+                        atendimento.getPaciente().getId(),
+                        item.getNumeroDente(),
+                        item.getProcedimento().getId()
+                ));
+
+                existentes.add(key);
+            }
         }
 
-        return atendimentoMapper.toResponse(atendimentoRepository.save(atendimento));
+        Atendimento salvo = atendimentoRepository.save(atendimento);
+        return new AtendimentoUpdateResultDTO(
+                atendimentoMapper.toResponse(salvo),
+                baixaManual.stream().distinct().toList()
+        );
     }
 
     @Transactional
     public AtendimentoResponseDTO finalizarAtendimento(Long id, Usuario usuarioLogado) {
         Atendimento atendimento = buscarEntidadePorId(id);
         validarPropriedadeAtendimento(atendimento, usuarioLogado);
-
         atendimento.finalizar();
-
-        Long pacienteId = atendimento.getPaciente().getId();
-
-        atendimento.getItens().forEach(item -> {
-            odontogramaService.atualizarPorAtendimento(
-                atendimento.getPaciente(),
-                item,
-                atendimento.getDentista(),
-                atendimento
-            );
-            marcarItensPlanoComoRealizados(pacienteId, item.getNumeroDente(), atendimento);
-        });
-
         return atendimentoMapper.toResponse(atendimentoRepository.save(atendimento));
+    }
+
+    @Transactional
+    public void removerItem(Long atendimentoId, Long itemId, Usuario usuarioLogado) {
+        Atendimento atendimento = buscarEntidadePorId(atendimentoId);
+        validarPropriedadeAtendimento(atendimento, usuarioLogado);
+
+        ItemAtendimento item = itemAtendimentoRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Item de atendimento não encontrado"));
+
+        if (!item.getAtendimento().getId().equals(atendimentoId))
+            throw new BusinessException("Item não pertence a este atendimento");
+
+        atendimento.getItens().remove(item);
+        itemAtendimentoRepository.delete(item);
+        atendimentoRepository.save(atendimento);
+    }
+
+    @Transactional
+    public AtendimentoResponseDTO marcarOdontogramaRevisado(Long id, boolean revisado, Usuario usuarioLogado) {
+        Atendimento atendimento = buscarEntidadePorId(id);
+        validarPropriedadeAtendimento(atendimento, usuarioLogado);
+        atendimento.marcarOdontogramaRevisado(revisado);
+        return atendimentoMapper.toResponse(atendimentoRepository.save(atendimento));
+    }
+
+    @Transactional
+    public AtendimentoResponseDTO baixaPlanoManual(Long atendimentoId, BaixaPlanoManualRequestDTO dto,
+                                                    Usuario usuarioLogado) {
+        Atendimento atendimento = buscarEntidadePorId(atendimentoId);
+        validarPropriedadeAtendimento(atendimento, usuarioLogado);
+
+        for (Long itemPlanoId : dto.itemPlanoIds()) {
+            ItemPlanoDeTratamento item = itemPlanoRepository.findById(itemPlanoId)
+                    .orElseThrow(() -> new NotFoundException("Item do plano não encontrado"));
+
+            if (item.getStatus() == StatusItemPlano.REALIZADO)
+                throw new BusinessException("Item do plano já foi realizado");
+
+            item.setStatus(StatusItemPlano.REALIZADO);
+            item.setAtendimentoRealizacao(atendimento);
+            itemPlanoRepository.save(item);
+        }
+
+        return atendimentoMapper.toResponse(atendimento);
     }
 
     public Atendimento buscarEntidadePorId(Long id) {
@@ -153,28 +230,41 @@ public class AtendimentoService {
                 .orElseThrow(() -> new NotFoundException("Atendimento não encontrado"));
     }
 
-    private void marcarItensPlanoComoRealizados(Long pacienteId, Integer numeroDente, Atendimento atendimento) {
-        List<ItemPlanoDeTratamento> itensPendentes = itemPlanoRepository
-                .findByPacienteIdAndNumeroDenteAndStatus(pacienteId, numeroDente, StatusItemPlano.PENDENTE);
-
-        itensPendentes.forEach(item -> {
-            item.setStatus(StatusItemPlano.REALIZADO);
-            item.setAtendimentoRealizacao(atendimento);
-        });
-
-        if (!itensPendentes.isEmpty()) {
-            itemPlanoRepository.saveAll(itensPendentes);
-        }
+    private void baixaAutomatica(Atendimento atendimento, ItemAtendimento item) {
+        itemPlanoRepository
+                .findByPacienteIdAndNumeroDenteAndProcedimentoIdAndStatus(
+                        atendimento.getPaciente().getId(),
+                        item.getNumeroDente(),
+                        item.getProcedimento().getId(),
+                        StatusItemPlano.PENDENTE
+                )
+                .forEach(planoItem -> {
+                    planoItem.setStatus(StatusItemPlano.REALIZADO);
+                    planoItem.setAtendimentoRealizacao(atendimento);
+                    itemPlanoRepository.save(planoItem);
+                });
     }
 
-    private List<ItemAtendimento> montarItens(List<ItemAtendimentoRequestDTO> dtos, Atendimento atendimento) {
-        List<ItemAtendimento> itens = new ArrayList<>();
-        for (ItemAtendimentoRequestDTO dto : dtos) {
-            ItemAtendimento item = atendimentoMapper.itemToEntity(dto);
-            item.setProcedimento(procedimentoService.buscarEntidadePorId(dto.procedimentoId()));
-            itens.add(item);
-        }
-        return itens;
+    private List<ItemPlanoResponseDTO> buscarItensBaixaManual(Long pacienteId, Integer numeroDente, Long procedimentoId) {
+        return itemPlanoRepository
+                .findByPacienteIdAndNumeroDenteAndStatus(pacienteId, numeroDente, StatusItemPlano.PENDENTE)
+                .stream()
+                .filter(i -> !i.getProcedimento().getId().equals(procedimentoId))
+                .map(i -> new ItemPlanoResponseDTO(
+                        i.getId(),
+                        i.getProcedimento().getId(),
+                        i.getProcedimento().getNome(),
+                        i.getNumeroDente(),
+                        i.getPrioridade(),
+                        i.getStatus(),
+                        i.getObservacao(),
+                        i.getAtendimentoRealizacao() != null ? i.getAtendimentoRealizacao().getId() : null
+                ))
+                .toList();
+    }
+
+    private static String chave(Integer dente, Long procedimentoId) {
+        return dente + ":" + procedimentoId;
     }
 
     private void validarPropriedadeAtendimento(Atendimento atendimento, Usuario usuarioLogado) {

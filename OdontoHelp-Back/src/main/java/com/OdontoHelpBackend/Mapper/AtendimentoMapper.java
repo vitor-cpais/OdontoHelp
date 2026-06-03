@@ -1,4 +1,3 @@
-// ─── AtendimentoMapper.java ───────────────────────────────────────────────────
 package com.OdontoHelpBackend.Mapper;
 
 import com.OdontoHelpBackend.domain.Clinico.Atendimento;
@@ -23,7 +22,8 @@ public interface AtendimentoMapper {
     @Mapping(target = "itens", ignore = true)
     @Mapping(target = "criadoEm", ignore = true)
     @Mapping(target = "atualizadoEm", ignore = true)
-    @Mapping(target = "horaFim", ignore = true) // horaFim não existe no RequestDTO — só no UpdateDTO
+    @Mapping(target = "horaFim", ignore = true)
+    @Mapping(target = "odontogramaRevisado", ignore = true)
     Atendimento toEntity(AtendimentoRequestDTO dto);
 
     @Mapping(target = "agendamentoStatus", source = "agendamento.status")
@@ -32,6 +32,7 @@ public interface AtendimentoMapper {
     @Mapping(target = "dentistaNome", source = "dentista.nome")
     @Mapping(target = "pacienteId", source = "paciente.id")
     @Mapping(target = "pacienteNome", source = "paciente.nome")
+    @Mapping(target = "odontogramaRevisado", source = "odontogramaRevisado")
     AtendimentoResponseDTO toResponse(Atendimento atendimento);
 
     @Mapping(target = "id", ignore = true)
@@ -49,6 +50,7 @@ public interface AtendimentoMapper {
     @Mapping(target = "paciente", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "itens", ignore = true)
+    @Mapping(target = "odontogramaRevisado", ignore = true)
     @Mapping(target = "criadoEm", ignore = true)
     @Mapping(target = "atualizadoEm", ignore = true)
     void updateEntity(AtendimentoUpdateDTO dto, @MappingTarget Atendimento atendimento);

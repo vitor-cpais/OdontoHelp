@@ -1,7 +1,7 @@
 package com.OdontoHelpBackend.repository.Usuario;
 
-import com.OdontoHelpBackend.domain.usuario.Paciente;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +26,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
 
     Slice<Usuario> findByIsAtivo(Boolean isAtivo, Pageable pageable);
+
+    Slice<Usuario> findByPerfil(PerfilUsuario perfil, Pageable pageable);
 
     Long countByIsAtivo(Boolean isAtivo);
 

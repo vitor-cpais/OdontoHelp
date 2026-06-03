@@ -47,12 +47,7 @@ public class OdontogramaController {
         return ResponseEntity.ok(odontogramaService.buscarHistoricoPorDente(pacienteId, numeroDente, pageable));
     }
 
-    /**
-     * Atualização direta de um dente — sem necessidade de atendimento formal.
-     * DENTISTA: usa o próprio dentista do usuário logado.
-     * ADMIN: resolve o dentista responsável pelo paciente (último que atendeu ou primeiro ativo).
-     * RECEPCAO: acesso negado.
-     */
+
     @PatchMapping("/{numeroDente}")
     public ResponseEntity<OdontogramaResponseDTO> atualizarDente(
             @PathVariable Long pacienteId,
@@ -72,7 +67,7 @@ public class OdontogramaController {
         }
 
         return ResponseEntity.ok(
-                odontogramaService.atualizarDiretamente(pacienteId, numeroDente, dto, dentista)
+                odontogramaService.atualizarDiretamente(pacienteId, numeroDente, dto, dentista, usuarioLogado)
         );
     }
 }

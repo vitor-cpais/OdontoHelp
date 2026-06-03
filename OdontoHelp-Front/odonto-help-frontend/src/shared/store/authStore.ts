@@ -1,6 +1,6 @@
 // src/shared/store/authStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type PerfilUsuario = 'ADMIN' | 'DENTISTA' | 'RECEPCAO' | 'PACIENTE';
 
@@ -9,8 +9,6 @@ export interface AuthUsuario {
   nome: string;
   email: string;
   perfil: PerfilUsuario;
-  // CORREÇÃO: dentistaId retornado pelo backend ao fazer login com perfil DENTISTA.
-  // null para ADMIN e RECEPCAO. Necessário para chamar /atendimentos/dentista/{dentistaId}.
   dentistaId: number | null;
 }
 
@@ -41,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'odonto-auth',
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

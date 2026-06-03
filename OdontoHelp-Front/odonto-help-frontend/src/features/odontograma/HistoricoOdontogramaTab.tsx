@@ -1,5 +1,3 @@
-// src/features/odontograma/HistoricoOdontogramaTab.tsx
-// CORREÇÃO: page reseta para 0 ao trocar denteFiltro — evita query vazia em página inexistente
 import {
   Box, Typography, Skeleton, Chip, Button,
   Table, TableBody, TableCell, TableContainer,
@@ -19,13 +17,9 @@ function SituacaoTag({ situacao }: { situacao: SituacaoDente | null }) {
       label={SITUACAO_DENTE_LABELS[situacao]}
       size="small"
       sx={{
-        fontSize: '0.68rem',
-        height: 20,
-        borderRadius: '5px',
-        backgroundColor: `${cor}22`,
-        color: cor,
-        border: `1px solid ${cor}55`,
-        fontWeight: 500,
+        fontSize: '0.68rem', height: 20, borderRadius: '5px',
+        backgroundColor: `${cor}22`, color: cor,
+        border: `1px solid ${cor}55`, fontWeight: 500,
       }}
     />
   );
@@ -48,20 +42,19 @@ interface Props {
 export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onClearFiltro, onCriarPlano }: Props) {
   const [page, setPage] = useState(0);
 
-
-  useEffect(() => {
-    setPage(0);
-  }, [denteFiltro]);
+  useEffect(() => { setPage(0); }, [denteFiltro]);
 
   const queryGeral = useHistoricoOdontograma(denteFiltro ? null : pacienteId, page);
   const queryDente = useHistoricoPorDente(denteFiltro ? pacienteId : null, denteFiltro ?? null, page);
-
   const query = denteFiltro ? queryDente : queryGeral;
+
   const registros = query.data?.content ?? [];
+  const isBlocked = query.isLoading || query.isFetching;
+
   const paginationCount = query.data
     ? (query.data.last
-      ? (page * 20) + query.data.numberOfElements
-      : (page * 20) + query.data.numberOfElements + 20)
+        ? (page * 20) + query.data.numberOfElements
+        : (page * 20) + query.data.numberOfElements + 20)
     : 0;
 
   return (
@@ -69,9 +62,7 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
       {denteFiltro && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary">
-              Filtrando por dente:
-            </Typography>
+            <Typography variant="body2" color="text.secondary">Filtrando por dente:</Typography>
             <Chip
               label={`Dente ${denteFiltro}`}
               size="small"
@@ -81,11 +72,7 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
             />
           </Box>
           {onCriarPlano && (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={onCriarPlano}
-            >
+            <Button size="small" variant="outlined" onClick={onCriarPlano}>
               Criar plano para dente {denteFiltro}
             </Button>
           )}
@@ -94,19 +81,15 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
 
       {query.isLoading ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={48} />
-          ))}
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} variant="rounded" height={48} />)}
         </Box>
       ) : registros.length === 0 ? (
         <Box sx={{ py: 6, textAlign: 'center' }}>
           <Typography variant="body2" color="text.disabled">
-            {denteFiltro
-              ? `Nenhum registro para o dente ${denteFiltro}`
-              : 'Nenhum histórico encontrado'}
+            {denteFiltro ? `Nenhum registro para o dente ${denteFiltro}` : 'Nenhum histórico encontrado'}
           </Typography>
           <Typography variant="caption" color="text.disabled">
-            O histórico é gerado automaticamente ao finalizar um atendimento.
+            O histórico é gerado automaticamente ao finalizar um atendimento ou ao atualizar um dente direto.
           </Typography>
         </Box>
       ) : (
@@ -137,13 +120,9 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
                       <ArrowForwardOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
                     </TableCell>
                     <TableCell><SituacaoTag situacao={r.situacaoNova} /></TableCell>
+                    <TableCell><Typography variant="body2">{r.dentistaNome}</Typography></TableCell>
                     <TableCell>
-                      <Typography variant="body2">{r.dentistaNome}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDT(r.registradoEm)}
-                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{formatDT(r.registradoEm)}</Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>
@@ -161,10 +140,10 @@ export default function HistoricoOdontogramaTab({ pacienteId, denteFiltro, onCle
             page={page}
             rowsPerPage={20}
             rowsPerPageOptions={[20]}
-            onPageChange={(_, p) => setPage(p)}
+            onPageChange={(_, p) => setPage(Math.max(0, p))}
             labelDisplayedRows={({ from, to }) => `${from}–${to}`}
-            backIconButtonProps={{ disabled: query.isLoading }}
-            nextIconButtonProps={{ disabled: (query.data?.last ?? true) || query.isLoading }}
+            backIconButtonProps={{ disabled: isBlocked || page === 0 }}
+            nextIconButtonProps={{ disabled: isBlocked || (query.data?.last ?? true) }}
             sx={{ borderTop: '0.5px solid', borderColor: 'divider', fontSize: '0.8rem' }}
           />
         </Paper>

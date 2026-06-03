@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { authService, type LoginPayload } from './authService';
 import { useAuthStore, type PerfilUsuario } from '../../shared/store/authStore';
+import queryClient from '../../app/queryClient';
 
 /** Rota home por perfil */
 export function homeByPerfil(perfil: PerfilUsuario): string {
@@ -29,9 +30,15 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: () => authService.logout(),
-    onSettled: () => {
-      // limpa mesmo se a chamada falhar (ex.: token já expirado)
+    onSettled: async () => {
+      // Limpa o cache de queries para evitar vazamento de dados
+      await queryClient.cancelQueries();
+      queryClient.clear();
+
+      // Limpa autenticação
       clearAuth();
+
+      // Redireciona para login
       navigate('/login', { replace: true });
     },
   });
