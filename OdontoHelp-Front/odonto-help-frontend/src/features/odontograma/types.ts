@@ -21,5 +21,15 @@ export interface HistoricoOdontograma {
   registradoEm: string;
 }
 
+export interface OdontogramaVersao {
+  id: number;
+  versao: number;
+  atendimentoId: number | null;
+  editadoPorNome: string;
+  totalDentesAlterados: number;
+  inicial: boolean;
+  criadoEm: string;
+}
+
 /** Mapa completo: numeroDente → entry (só dentes com registro) */
 export type OdontogramaMap = Record<number, OdontogramaEntry>;

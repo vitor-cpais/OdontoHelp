@@ -9,6 +9,7 @@ import {
   AddOutlined, EditOutlined, ToggleOnOutlined, ToggleOffOutlined, SearchOutlined, InfoOutlined,
 } from '@mui/icons-material';
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePacientes, useToggleAtivoPaciente } from '../usePacientes';
 import { usePacienteDrawerStore } from '../pacienteStore';
 import StatusChip from '../../../shared/components/StatusChip';
@@ -21,6 +22,7 @@ import { maskTelefone } from '../../../shared/utils/masks';
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
 export default function PacientesPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [busca, setBusca] = useState('');
@@ -51,8 +53,10 @@ export default function PacientesPage() {
   }, []);
 
   const [detalhePaciente, setDetalhePaciente] = useState<Paciente | null>(null);
-  const openDetalhes = (p: Paciente) => setDetalhePaciente(p);
-  const closeDetalhes = () => setDetalhePaciente(null);
+  const openDetalhes = (p: Paciente) => navigate(`/pacientes/${p.id}`);
+  const closeDetalhes = () => {
+    setDetalhePaciente(null);
+  };
 
   const handleToggleAtivo = async (paciente: Paciente) => {
     try {
@@ -68,7 +72,29 @@ export default function PacientesPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      <Paper
+        sx={{
+          p: { xs: 2.5, md: 3 },
+          mb: 2.5,
+          borderRadius: 4,
+          color: '#fff',
+          background: 'linear-gradient(135deg, #0B4F41 0%, #0F6E56 100%)',
+          boxShadow: '0 18px 50px rgba(8,80,65,0.18)',
+        }}
+      >
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          Hub clínico
+        </Typography>
+        <Typography variant="h1" sx={{ color: '#fff', mt: 0.5 }}>
+          Pacientes
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.78)', mt: 0.75 }}>
+          Acesse dados cadastrais, odontograma, plano de tratamento e histórico em um só lugar.
+        </Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           placeholder="Buscar por nome..."
           value={busca}
@@ -99,13 +125,14 @@ export default function PacientesPage() {
         <Badge color="warning" variant="dot" invisible={!hasDraft}
           sx={{ '& .MuiBadge-dot': { width: 8, height: 8, borderRadius: '50%' } }}>
           <Button variant="contained" startIcon={<AddOutlined sx={{ fontSize: 17 }} />}
-            onClick={openNew} size="small" sx={{ height: 36 }}>
+            onClick={openNew} size="small" sx={{ height: 36, px: 2 }}>
             Novo paciente
           </Button>
         </Badge>
       </Box>
+      </Paper>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -135,7 +162,7 @@ export default function PacientesPage() {
                 </TableRow>
               ) : (
                 pacientes.map((p) => (
-                  <TableRow key={p.id} hover sx={{ cursor: 'pointer' }} onClick={() => openEdit(p)}>
+                  <TableRow key={p.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/pacientes/${p.id}`)}>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
                         {p.nome}

@@ -1,6 +1,6 @@
-import { Chip } from '@mui/material';
-import { STATUS_COLORS, STATUS_LABELS } from './types';
-import type { StatusConsulta } from './types';
+import { StatusChip } from '../../design-system/components';
+import { STATUS_COLORS, STATUS_LABELS } from '../../domains/agendamentos';
+import type { StatusConsulta } from '../../domains/agendamentos';
 
 interface Props {
   status: StatusConsulta;
@@ -9,20 +9,13 @@ interface Props {
 
 export default function AgendamentoStatusChip({ status, size = 'small' }: Props) {
   const colors = STATUS_COLORS[status];
+  const label = STATUS_LABELS[status] ?? status;
   return (
-    <Chip
-      label={STATUS_LABELS[status]}
+    <StatusChip
+      label={label}
       size={size}
-      sx={{
-        fontWeight: 500,
-        fontSize: '0.72rem',
-        height: 22,
-        borderRadius: '6px',
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: '1px solid',
-        borderColor: colors.border,
-      }}
+      statusColor={colors}
+      tone="neutral"
     />
   );
 }

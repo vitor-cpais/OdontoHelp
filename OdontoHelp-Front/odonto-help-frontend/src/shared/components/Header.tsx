@@ -17,11 +17,14 @@ import {
   HelpOutlineOutlined,
   MenuOutlined,
   LogoutOutlined,
+  DarkModeOutlined,
+  LightModeOutlined,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { SIDEBAR_WIDTH } from './Sidebar';
 import { useAuthStore } from '../store/authStore';
+import { useUiPreferencesStore } from '../store/uiPreferencesStore';
 import { useLogout } from '../../features/auth/useAuth';
 
 const routeLabels: Record<string, string> = {
@@ -44,6 +47,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { pathname } = useLocation();
 
   const usuario = useAuthStore((s) => s.usuario);
+  const themeMode = useUiPreferencesStore((s) => s.themeMode);
+  const toggleThemeMode = useUiPreferencesStore((s) => s.toggleThemeMode);
   const logout = useLogout();
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
 
@@ -73,9 +78,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
       sx={{
         left: { xs: 0, lg: SIDEBAR_WIDTH },
         width: { xs: '100%', lg: `calc(100% - ${SIDEBAR_WIDTH}px)` },
-        backgroundColor: 'background.default',
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(7,20,17,0.86)' : 'rgba(247,246,242,0.86)',
+        backdropFilter: 'blur(14px)',
         borderBottom: '1px solid',
-        borderColor: 'divider',
+        borderColor: 'rgba(15,110,86,0.08)',
         zIndex: 99,
       }}
     >
@@ -104,7 +110,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
               sx={{
                 color: 'text.primary',
                 lineHeight: 1.2,
-                fontSize: { xs: '1.1rem', sm: '1.5rem' },
+                fontSize: { xs: '1.1rem', sm: '1.35rem' },
+                fontWeight: 700,
+                letterSpacing: '-0.03em',
               }}
             >
               {pageTitle}
@@ -151,6 +159,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <IconButton
             size="small"
+            onClick={toggleThemeMode}
+            sx={{ color: 'text.secondary' }}
+          >
+            {themeMode === 'dark'
+              ? <LightModeOutlined sx={{ fontSize: 19 }} />
+              : <DarkModeOutlined sx={{ fontSize: 19 }} />}
+          </IconButton>
+
+          <IconButton
+            size="small"
             sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'inline-flex' } }}
           >
             <HelpOutlineOutlined sx={{ fontSize: 19 }} />
@@ -169,6 +187,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               height: 30,
               borderRadius: '50%',
               backgroundColor: 'primary.main',
+              boxShadow: '0 8px 18px rgba(15,110,86,0.22)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

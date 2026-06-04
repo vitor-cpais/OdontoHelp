@@ -12,6 +12,7 @@ import {
 import { useState, useCallback } from 'react';
 import { useDentistas, useToggleAtivoDentista } from '../useDentistas';
 import { useDentistaDrawerStore } from '../dentistaStore';
+import { useAuthStore } from '../../../shared/store/authStore';
 import StatusChip from '../../../shared/components/StatusChip';
 import DentistaDrawer from '../DentistaDrawer'; // 🌟 Corrigido aqui!
 import type { Dentista } from '../types';
@@ -29,6 +30,8 @@ export default function DentistasPage() {
   });
 
   const nomeBusca = useDebounce(busca, 400);
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const podeCadastrarDentista = perfil === 'ADMIN';
   const { openNew, openEdit, hasDraft } = useDentistaDrawerStore();
   const toggleAtivo = useToggleAtivoDentista();
 
@@ -63,8 +66,14 @@ export default function DentistasPage() {
 
   return (
     <Box>
-      {/* Toolbar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      <Paper sx={{ p: { xs: 2.5, md: 3 }, mb: 2.5, borderRadius: 4, color: '#fff', background: 'linear-gradient(135deg, #123B35 0%, #0F6E56 100%)', boxShadow: '0 18px 50px rgba(8,80,65,0.18)' }}>
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)' }}>Equipe clínica</Typography>
+        <Typography variant="h1" sx={{ color: '#fff', mt: 0.5 }}>Dentistas</Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.78)', mt: 0.75 }}>Gerencie profissionais, CRO e disponibilidade operacional.</Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           placeholder="Buscar por nome..."
           value={busca}
@@ -94,26 +103,29 @@ export default function DentistasPage() {
 
         <Box sx={{ flex: 1 }} />
 
-        <Badge
-          color="warning"
-          variant="dot"
-          invisible={!hasDraft}
-          sx={{ '& .MuiBadge-dot': { width: 8, height: 8, borderRadius: '50%' } }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<AddOutlined sx={{ fontSize: 17 }} />}
-            onClick={openNew}
-            size="small"
-            sx={{ height: 36 }}
+        {podeCadastrarDentista && (
+          <Badge
+            color="warning"
+            variant="dot"
+            invisible={!hasDraft}
+            sx={{ '& .MuiBadge-dot': { width: 8, height: 8, borderRadius: '50%' } }}
           >
-            Novo dentista
-          </Button>
-        </Badge>
+            <Button
+              variant="contained"
+              startIcon={<AddOutlined sx={{ fontSize: 17 }} />}
+              onClick={openNew}
+              size="small"
+              sx={{ height: 36, px: 2 }}
+            >
+              Novo dentista
+            </Button>
+          </Badge>
+        )}
       </Box>
+      </Paper>
 
       {/* Table */}
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -144,7 +156,12 @@ export default function DentistasPage() {
                 </TableRow>
               ) : (
                 dentistas.map((d) => (
-                  <TableRow key={d.id} hover sx={{ cursor: 'pointer' }} onClick={() => openEdit(d)}>
+                  <TableRow
+                    key={d.id}
+                    hover
+                    sx={{ cursor: podeCadastrarDentista ? 'pointer' : 'default' }}
+                    onClick={podeCadastrarDentista ? () => openEdit(d) : undefined}
+                  >
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
                         {d.nome}
@@ -163,23 +180,27 @@ export default function DentistasPage() {
                       <StatusChip isAtivo={d.isAtivo} />
                     </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(d)}>
-                          <EditOutlined sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={d.isAtivo ? 'Desativar' : 'Ativar'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleAtivo(d)}
-                          sx={{ color: d.isAtivo ? 'error.main' : 'success.main' }}
-                        >
-                          {d.isAtivo
-                            ? <ToggleOffOutlined sx={{ fontSize: 16 }} />
-                            : <ToggleOnOutlined sx={{ fontSize: 16 }} />
-                          }
-                        </IconButton>
-                      </Tooltip>
+                      {podeCadastrarDentista && (
+                        <>
+                          <Tooltip title="Editar">
+                            <IconButton size="small" onClick={() => openEdit(d)}>
+                              <EditOutlined sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={d.isAtivo ? 'Desativar' : 'Ativar'}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleToggleAtivo(d)}
+                              sx={{ color: d.isAtivo ? 'error.main' : 'success.main' }}
+                            >
+                              {d.isAtivo
+                                ? <ToggleOffOutlined sx={{ fontSize: 16 }} />
+                                : <ToggleOnOutlined sx={{ fontSize: 16 }} />
+                              }
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

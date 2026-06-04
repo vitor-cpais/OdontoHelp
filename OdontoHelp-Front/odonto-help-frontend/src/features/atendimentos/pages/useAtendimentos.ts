@@ -1,7 +1,7 @@
 // src/features/atendimentos/useAtendimentos.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AtendimentoUpdateData } from '../types';
-import { AGENDAMENTOS_KEY } from '../../agendamentos/useAgendamentos';
+import { AGENDAMENTOS_KEY } from '../../../domains/agendamentos';
 import { atendimentoService } from '../atendimentoService';
 
 export const ATENDIMENTOS_KEY = 'atendimentos';

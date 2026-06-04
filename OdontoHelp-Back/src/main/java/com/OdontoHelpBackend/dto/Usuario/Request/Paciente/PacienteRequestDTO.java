@@ -1,7 +1,6 @@
 package com.OdontoHelpBackend.dto.Usuario.Request.Paciente;
 
 import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -18,7 +17,7 @@ public record PacienteRequestDTO(
         String telefone,
 
 
-        @Email(message = "E-mail inválido")
+        /** Opcional — paciente não precisa de login no momento. */
         String email,
 
 

@@ -1,6 +1,7 @@
 // src/shared/store/authStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { normalizePerfil } from '../../permissions/roles';
 
 export type PerfilUsuario = 'ADMIN' | 'DENTISTA' | 'RECEPCAO' | 'PACIENTE';
 
@@ -32,7 +33,14 @@ export const useAuthStore = create<AuthState>()(
       usuario: null,
 
       setAuth: ({ accessToken, refreshToken, usuario }) =>
-        set({ accessToken, refreshToken, usuario }),
+        set({
+          accessToken,
+          refreshToken,
+          usuario: {
+            ...usuario,
+            perfil: normalizePerfil(usuario.perfil) ?? usuario.perfil,
+          },
+        }),
 
       clearAuth: () =>
         set({ accessToken: null, refreshToken: null, usuario: null }),

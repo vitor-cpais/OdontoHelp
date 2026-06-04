@@ -171,7 +171,7 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
                 <TextField label="Gênero" value={paciente.genero ?? '—'} disabled fullWidth size="small" />
               </Box>
               {paciente.observacoesMedicas && (
-                <TextField label="Observações médicas" value={paciente.observacoesMedicas} disabled fullWidth size="small" multiline minRows={2} />
+                <TextField label="Anamnese" value={paciente.observacoesMedicas} disabled fullWidth size="small" multiline minRows={2} />
               )}
             </Stack>
           </TabPanel>

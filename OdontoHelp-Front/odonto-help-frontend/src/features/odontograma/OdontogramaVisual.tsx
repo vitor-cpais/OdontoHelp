@@ -190,7 +190,7 @@ export default function OdontogramaVisual({
   const { data: mapa, isLoading } = useOdontograma(pacienteId);
   const [filtro, setFiltro] = useState<SituacaoDente | null>(null);
 
-  if (isLoading) {
+  if (isLoading && !mapaOverride) {
     return <Box><Skeleton variant="rounded" height={140} sx={{ borderRadius: 2 }} /></Box>;
   }
 

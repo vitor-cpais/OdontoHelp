@@ -57,9 +57,9 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [acessoExpanded, setAcessoExpanded] = useState(false);
 
-  const canEditAccess = useAuthStore((s) =>
-    s.usuario?.perfil === 'ADMIN' || s.usuario?.perfil === 'RECEPCAO'
-  );
+  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const canManageDentista = perfil === 'ADMIN';
+  const canEditAccess = perfil === 'ADMIN';
 
   const create = useCreateDentista();
   const update = useUpdateDentista(editingId ?? 0);
@@ -106,6 +106,10 @@ export default function DentistaDrawer({ onSuccess, onError }: Props) {
   };
 
   const onSubmit = async (data: DentistaFormData) => {
+    if (!canManageDentista) {
+      onError('Apenas administradores podem cadastrar ou editar dentistas.');
+      return;
+    }
     try {
       const dataToSend = {
         ...data,

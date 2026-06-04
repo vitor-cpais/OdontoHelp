@@ -2,15 +2,17 @@ package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.UsuarioMapper;
 import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
+import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
+import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,13 +40,13 @@ public class UsuarioService {
 
 
 
-    public Slice<UsuarioResponseDTO> listar(String nome, Pageable pageable) {
-        Slice<Usuario> usuarios;
-        if (nome != null && !nome.isBlank())
-            usuarios = usuarioRepository.findByNomeContainingIgnoreCase(nome, pageable);
-        else
-            usuarios = usuarioRepository.findAllBy(pageable);
-        return usuarios.map(usuarioMapper::toResponse);
+    public Slice<UsuarioResponseDTO> listar(String nome, PerfilUsuario perfil, Boolean isAtivo, Pageable pageable) {
+        String nomePattern = null;
+        if (nome != null && !nome.isBlank()) {
+            nomePattern = "%" + nome.trim().toLowerCase() + "%";
+        }
+        return usuarioRepository.filtrar(nomePattern, perfil, isAtivo, pageable)
+                .map(usuarioMapper::toResponse);
     }
 
 
@@ -83,7 +85,23 @@ public class UsuarioService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    public UsuarioResponseDTO alterarPerfil(Long id, PerfilUsuario novoPerfil, Usuario usuarioLogado) {
+        if (usuarioLogado.getPerfil() != PerfilUsuario.ADMIN)
+            throw new AcessoNegadoException("Apenas administradores podem alterar perfil de usuário");
+        if (usuarioLogado.getId().equals(id))
+            throw new BusinessException("Administrador não pode alterar o próprio perfil");
+        if (novoPerfil == PerfilUsuario.DENTISTA || novoPerfil == PerfilUsuario.PACIENTE)
+            throw new BusinessException("Perfis clínicos devem ser gerenciados pelos módulos específicos");
+
+        Usuario usuario = buscarEntidadePorId(id);
+        if (usuario.getPerfil() == PerfilUsuario.DENTISTA || usuario.getPerfil() == PerfilUsuario.PACIENTE)
+            throw new BusinessException("Perfis clínicos devem ser gerenciados pelos módulos específicos");
+
+        usuario.setPerfil(novoPerfil);
+        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+    }
+
+    @Transactional
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
         validarCpfDuplicado(dto.cpf());
         validarEmailDuplicado(dto.email());
@@ -127,7 +145,20 @@ public class UsuarioService {
     }
 
     protected void validarEmailDuplicado(String email) {
-        if (usuarioRepository.existsByEmail(email))
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        if (usuarioRepository.existsByEmail(email.trim())) {
             throw new ConflictException("E-mail já cadastrado");
+        }
+    }
+
+    protected void validarEmailDuplicadoExcluindoId(String email, Long id) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        if (usuarioRepository.existsByEmailAndIdNot(email.trim(), id)) {
+            throw new ConflictException("E-mail já cadastrado");
+        }
     }
 }

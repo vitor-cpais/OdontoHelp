@@ -26,18 +26,20 @@ public class DashboardService {
     private final DentistaRepository dentistaRepository;
     private final DentistaService dentistaService;
 
-    public DashboardResumoDTO resumo(Usuario usuarioLogado) {
+    public DashboardResumoDTO resumo(Usuario usuarioLogado, Long dentistaId) {
         LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
         LocalDateTime fimDia = LocalDate.now().atTime(23, 59, 59);
         LocalDateTime inicioMes = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime fimMes = LocalDate.now().atTime(23, 59, 59);
 
-        if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA) {
-            Dentista dentista = dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
-            Long agendamentosHoje = agendamentoRepository.countByPeriodoAndDentista(inicioDia, fimDia, dentista.getId());
-            Long agendamentosMes = agendamentoRepository.countByPeriodoAndDentista(inicioMes, fimMes, dentista.getId());
-            Long pacientes = agendamentoRepository.countPacientesByDentista(dentista.getId());
-            return new DashboardResumoDTO(agendamentosHoje, pacientes, 1L, agendamentosMes);
+        Long dentistaFiltroId = resolverDentistaFiltro(usuarioLogado, dentistaId);
+        if (dentistaFiltroId != null) {
+            Dentista dentista = dentistaService.buscarEntidadePorId(dentistaFiltroId);
+            Long agendamentosHoje = agendamentoRepository.countByPeriodoAndDentista(inicioDia, fimDia, dentistaFiltroId);
+            Long agendamentosMes = agendamentoRepository.countByPeriodoAndDentista(inicioMes, fimMes, dentistaFiltroId);
+            Long pacientes = agendamentoRepository.countPacientesByDentista(dentistaFiltroId);
+            Long dentistasAtivos = Boolean.TRUE.equals(dentista.getIsAtivo()) ? 1L : 0L;
+            return new DashboardResumoDTO(agendamentosHoje, pacientes, dentistasAtivos, agendamentosMes);
         }
 
         Long agendamentosHoje = agendamentoRepository.countByPeriodo(inicioDia, fimDia);
@@ -48,14 +50,18 @@ public class DashboardService {
         return new DashboardResumoDTO(agendamentosHoje, pacientesAtivos, dentistasAtivos, agendamentosMes);
     }
 
-    public List<AgendamentoStatusDTO> agendamentosPorStatus(LocalDate dataInicio, LocalDate dataFim, Usuario usuarioLogado) {
+    public List<AgendamentoStatusDTO> agendamentosPorStatus(
+            LocalDate dataInicio,
+            LocalDate dataFim,
+            Long dentistaId,
+            Usuario usuarioLogado) {
         LocalDateTime inicio = dataInicio.atStartOfDay();
         LocalDateTime fim = dataFim.atTime(23, 59, 59);
 
         List<Object[]> rows;
-        if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA) {
-            Dentista dentista = dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId());
-            rows = agendamentoRepository.countByStatusNoPeriodoAndDentista(inicio, fim, dentista.getId());
+        Long dentistaFiltroId = resolverDentistaFiltro(usuarioLogado, dentistaId);
+        if (dentistaFiltroId != null) {
+            rows = agendamentoRepository.countByStatusNoPeriodoAndDentista(inicio, fim, dentistaFiltroId);
         } else {
             rows = agendamentoRepository.countByStatusNoPeriodo(inicio, fim);
         }
@@ -67,5 +73,12 @@ public class DashboardService {
                         (Long) row[1]
                 ))
                 .toList();
+    }
+
+    private Long resolverDentistaFiltro(Usuario usuarioLogado, Long dentistaId) {
+        if (usuarioLogado.getPerfil() == PerfilUsuario.DENTISTA) {
+            return dentistaService.buscarEntidadePorUsuarioId(usuarioLogado.getId()).getId();
+        }
+        return dentistaId;
     }
 }

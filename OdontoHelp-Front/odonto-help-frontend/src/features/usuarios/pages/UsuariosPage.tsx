@@ -20,7 +20,7 @@ import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { maskTelefone } from '../../../shared/utils/masks';
 
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
-type PerfilFiltro = '' | 'ADMIN' | 'DENTISTA' | 'RECEPCAO';
+type PerfilFiltro = '' | 'ADMIN' | 'DENTISTA' | 'PACIENTE' | 'RECEPCAO';
 
 const PERFIL_LABEL: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -82,8 +82,14 @@ export default function UsuariosPage() {
 
   return (
     <Box>
-      {/* Toolbar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      <Paper sx={{ p: { xs: 2.5, md: 3 }, mb: 2.5, borderRadius: 4, color: '#fff', background: 'linear-gradient(135deg, #1F3D38 0%, #0F6E56 100%)', boxShadow: '0 18px 50px rgba(8,80,65,0.18)' }}>
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)' }}>Sistema</Typography>
+        <Typography variant="h1" sx={{ color: '#fff', mt: 0.5 }}>Usuários</Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.78)', mt: 0.75 }}>Controle perfis, acessos e status da equipe.</Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           placeholder="Buscar por nome..."
           value={busca}
@@ -108,6 +114,7 @@ export default function UsuariosPage() {
           <MenuItem value="ADMIN">Administrador</MenuItem>
           <MenuItem value="RECEPCAO">Recepção</MenuItem>
           <MenuItem value="DENTISTA">Dentista</MenuItem>
+          <MenuItem value="PACIENTE">Paciente</MenuItem>
         </TextField>
 
         <TextField
@@ -131,15 +138,16 @@ export default function UsuariosPage() {
             startIcon={<AddOutlined sx={{ fontSize: 17 }} />}
             onClick={openNew}
             size="small"
-            sx={{ height: 36 }}
+            sx={{ height: 36, px: 2 }}
           >
             Novo usuário
           </Button>
         </Badge>
       </Box>
+      </Paper>
 
       {/* Table */}
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
           <Table size="small">
             <TableHead>

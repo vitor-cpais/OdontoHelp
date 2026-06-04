@@ -14,7 +14,16 @@ export default function AppShell() {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        background: (theme) =>
+          theme.palette.mode === 'dark'
+            ? 'radial-gradient(circle at top left, rgba(29,158,117,0.12), transparent 30%), linear-gradient(180deg, #071411 0%, #0A1714 100%)'
+            : 'radial-gradient(circle at top left, rgba(15,110,86,0.08), transparent 30%), linear-gradient(180deg, #F7F6F2 0%, #F2F0E9 100%)',
+      }}
+    >
       
       {/* 4. Passar as props para a Sidebar (senão ela vai dar erro logo em seguida) */}
       <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
@@ -34,7 +43,7 @@ export default function AppShell() {
         {/* 6. AQUI RESOLVE O ERRO DA FOTO: Passar a prop onMenuClick */}
         <Header onMenuClick={handleDrawerToggle} />
         
-        <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ flex: 1, p: { xs: 2, sm: 3 }, maxWidth: 1440, width: '100%', mx: 'auto' }}>
           <Outlet />
         </Box>
       </Box>

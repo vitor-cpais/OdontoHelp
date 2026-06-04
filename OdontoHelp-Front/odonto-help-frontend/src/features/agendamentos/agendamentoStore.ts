@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Agendamento, AgendamentoFormData } from './types';
+import type { Agendamento, AgendamentoFormData } from '../../domains/agendamentos';
 
 type DrawerMode = 'view' | 'edit' | 'new';
 
@@ -10,7 +10,7 @@ interface AgendamentoDrawerState {
   draft: Partial<AgendamentoFormData>;
   hasChanges: boolean;
 
-  openNew: (dataInicio?: string, dataFim?: string) => void;
+  openNew: (dataInicio?: string, dataFim?: string, dentistaId?: number) => void;
   openView: (agendamento: Agendamento) => void;
   setEditMode: () => void;
   setViewMode: () => void;
@@ -26,17 +26,26 @@ export const useAgendamentoDrawerStore = create<AgendamentoDrawerState>((set) =>
   draft: {},
   hasChanges: false,
 
-  openNew: (dataInicio, dataFim) =>
+  openNew: (dataInicio, dataFim, dentistaId) => {
+    const toLocalDatetime = (iso?: string) => {
+      if (!iso) return undefined;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
     set({
       open: true,
       mode: 'new',
       editingId: null,
       hasChanges: false,
       draft: {
-        dataInicio: dataInicio ? dataInicio.slice(0, 16) : undefined,
-        dataFim: dataFim ? dataFim.slice(0, 16) : undefined,
+        dataInicio: toLocalDatetime(dataInicio),
+        dataFim: toLocalDatetime(dataFim),
+        ...(dentistaId != null ? { dentistaId } : {}),
       },
-    }),
+    });
+  },
 
   openView: (agendamento) =>
     set({

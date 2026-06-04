@@ -38,6 +38,15 @@ export function useUpdateUsuario(id: number) {
   });
 }
 
+export function useAlterarPerfilUsuario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, perfil }: { id: number; perfil: UsuarioFormData['perfil'] }) =>
+      usuarioService.alterarPerfil(id, perfil),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [USUARIOS_KEY] }),
+  });
+}
+
 export function useToggleAtivoUsuario() {
   const qc = useQueryClient();
   return useMutation({

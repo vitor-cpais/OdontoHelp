@@ -8,6 +8,7 @@ import AgendamentosPage  from '../features/agendamentos/pages/AgendamentosPage';
 import DashboardPage     from '../features/dashboard/pages/DashboardPage';
 import DentistasPage     from '../features/dentistas/pages/DentistasPage';
 import PacientesPage     from '../features/pacientes/pages/PacientesPage';
+import PacienteHubPage   from '../features/pacientes/pages/PacienteHubPage';
 import UsuariosPage      from '../features/usuarios/pages/UsuariosPage';
 import ProcedimentosPage from '../features/procedimentos/pages/ProcedimentosPage';
 import AtendimentosPage  from '../features/atendimentos/pages/AtendimentosPage';
@@ -34,7 +35,7 @@ const router = createBrowserRouter([
             children: [
               { path: 'agendamentos', element: <AgendamentosPage /> },
               { path: 'pacientes',    element: <PacientesPage /> },
-              { path: 'pacientes/:id',    element: <PacientesPage /> },
+              { path: 'pacientes/:id',    element: <PacienteHubPage /> },
               { path: 'dashboard', element: <DashboardPage /> },
               { path: 'dentistas', element: <DentistasPage /> },
             ],
@@ -46,7 +47,6 @@ const router = createBrowserRouter([
             children: [
               { path: 'atendimentos', element: <AtendimentosPage /> },
               { path: 'atendimentos/:id', element: <AtendimentoDetailPage /> },
-              { path: 'dashboard', element: <DashboardPage /> },
             ],
           },
 

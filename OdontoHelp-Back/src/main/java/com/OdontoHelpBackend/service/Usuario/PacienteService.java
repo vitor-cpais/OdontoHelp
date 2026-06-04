@@ -2,6 +2,7 @@ package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.PacienteMapper;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
+import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteAnamneseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
@@ -45,8 +46,10 @@ public class PacienteService {
     @Transactional
     public PacienteResponseDTO criar(PacienteRequestDTO dto) {
         usuarioService.validarCpfDuplicado(dto.cpf());
-        usuarioService.validarEmailDuplicado(dto.email());
+        String email = normalizarEmail(dto.email());
+        usuarioService.validarEmailDuplicado(email);
         Paciente paciente = pacienteMapper.toEntity(dto);
+        paciente.setEmail(email);
         paciente.setIsAtivo(true);
         if (paciente.getEndereco() != null) {
             paciente.getEndereco().setUsuario(paciente);
@@ -60,16 +63,33 @@ public class PacienteService {
     @Transactional
     public PacienteResponseDTO atualizar(Long id, PacienteUpdateDTO dto) {
         Paciente paciente = buscarEntidadePorId(id);
+        usuarioService.validarEmailDuplicadoExcluindoId(normalizarEmail(dto.email()), paciente.getId());
         pacienteMapper.updateEntity(dto, paciente);
+        paciente.setEmail(normalizarEmail(dto.email()));
         if (paciente.getEndereco() != null) {
             paciente.getEndereco().setUsuario(paciente);
         }
         return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 
+    private static String normalizarEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.trim();
+    }
+
     public Paciente buscarEntidadePorId(Long id) {
         return pacienteRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Paciente não encontrado"));
+    }
+
+    @Transactional
+    public PacienteResponseDTO atualizarAnamnese(Long id, PacienteAnamneseDTO dto) {
+        Paciente paciente = buscarEntidadePorId(id);
+        String texto = dto.anamnese();
+        paciente.setObservacoesMedicas(texto == null || texto.isBlank() ? null : texto.trim());
+        return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 
     @Transactional

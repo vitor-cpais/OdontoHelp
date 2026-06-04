@@ -1,14 +1,20 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
+import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteAnamneseDTO;
+import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteObservacaoRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteObservacaoResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
+import com.OdontoHelpBackend.service.Usuario.PacienteObservacaoService;
 import com.OdontoHelpBackend.service.Usuario.PacienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -19,6 +25,7 @@ import java.net.URI;
 public class PacienteController {
 
     private final PacienteService pacienteService;
+    private final PacienteObservacaoService pacienteObservacaoService;
 
     @GetMapping("/{id}")
     public ResponseEntity<PacienteResponseDTO> buscarPorId(@PathVariable Long id) {
@@ -48,7 +55,29 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.atualizar(id, dto));
     }
 
-    // ADMIN e RECEPCAO — protegido pelo SecurityConfig
+    @PatchMapping("/{id}/anamnese")
+    public ResponseEntity<PacienteResponseDTO> atualizarAnamnese(
+            @PathVariable Long id,
+            @RequestBody @Valid PacienteAnamneseDTO dto) {
+        return ResponseEntity.ok(pacienteService.atualizarAnamnese(id, dto));
+    }
+
+    @GetMapping("/{id}/observacoes")
+    public ResponseEntity<Slice<PacienteObservacaoResponseDTO>> listarObservacoes(
+            @PathVariable Long id,
+            Pageable pageable) {
+        return ResponseEntity.ok(pacienteObservacaoService.listar(id, pageable));
+    }
+
+    @PostMapping("/{id}/observacoes")
+    public ResponseEntity<PacienteObservacaoResponseDTO> criarObservacao(
+            @PathVariable Long id,
+            @RequestBody @Valid PacienteObservacaoRequestDTO dto,
+            @AuthenticationPrincipal Usuario autor) {
+        PacienteObservacaoResponseDTO criada = pacienteObservacaoService.criar(id, dto, autor);
+        return ResponseEntity.created(URI.create("/pacientes/" + id + "/observacoes/" + criada.id())).body(criada);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<PacienteResponseDTO> toggleStatus(
             @PathVariable Long id,

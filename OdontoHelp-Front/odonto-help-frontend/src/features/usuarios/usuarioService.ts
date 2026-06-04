@@ -33,13 +33,17 @@ export const usuarioService = {
 
   atualizar: async (id: number, payload: Partial<UsuarioFormData>): Promise<Usuario> => {
     const body: Record<string, unknown> = {
-      ...payload,
-      cpf: payload.cpf?.replace(/\D/g, ''),
+      nome: payload.nome,
       telefone: payload.telefone?.replace(/\D/g, ''),
+      genero: payload.genero,
+      dataNascimento: payload.dataNascimento,
     };
-    // novaSenha vem em payload.senha — só envia se preenchida
-    if (!payload.senha) delete body.senha;
     const { data } = await api.put(`${BASE}/${id}`, body);
+    return data;
+  },
+
+  alterarPerfil: async (id: number, perfil: UsuarioFormData['perfil']): Promise<Usuario> => {
+    const { data } = await api.patch(`${BASE}/${id}/perfil`, null, { params: { perfil } });
     return data;
   },
 

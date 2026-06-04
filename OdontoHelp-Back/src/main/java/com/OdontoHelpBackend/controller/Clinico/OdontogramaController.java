@@ -6,6 +6,7 @@ import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtualizarDenteRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.HistoricoOdontogramaResponseDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaResponseDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaVersaoResponseDTO;
 import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
 import com.OdontoHelpBackend.service.Clinico.OdontogramaService;
 import com.OdontoHelpBackend.service.Usuario.DentistaService;
@@ -30,6 +31,20 @@ public class OdontogramaController {
     @GetMapping
     public ResponseEntity<List<OdontogramaResponseDTO>> buscar(@PathVariable Long pacienteId) {
         return ResponseEntity.ok(odontogramaService.buscarPorPaciente(pacienteId));
+    }
+
+    @GetMapping("/versoes")
+    public ResponseEntity<Slice<OdontogramaVersaoResponseDTO>> versoes(
+            @PathVariable Long pacienteId,
+            Pageable pageable) {
+        return ResponseEntity.ok(odontogramaService.buscarVersoes(pacienteId, pageable));
+    }
+
+    @GetMapping("/versoes/{snapshotId}")
+    public ResponseEntity<List<OdontogramaResponseDTO>> buscarVersao(
+            @PathVariable Long pacienteId,
+            @PathVariable Long snapshotId) {
+        return ResponseEntity.ok(odontogramaService.buscarVersao(pacienteId, snapshotId));
     }
 
     @GetMapping("/historico")

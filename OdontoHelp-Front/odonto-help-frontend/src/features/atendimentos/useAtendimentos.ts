@@ -1,7 +1,7 @@
 // src/features/atendimentos/useAtendimentos.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { atendimentoService } from './atendimentoService';
-import { AGENDAMENTOS_KEY } from '../agendamentos/useAgendamentos';
+import { AGENDAMENTOS_KEY } from '../../domains/agendamentos';
 import { ODONTOGRAMA_KEY } from '../odontograma/useOdontograma';
 import { PLANO_KEY } from '../planoTratamento/usePlanoTratamento';
 import type { AtendimentoUpdateData, AtendimentoFiltros } from './types';

@@ -1,12 +1,17 @@
 import api from '../../shared/lib/axios';
-import type { Agendamento, AgendamentoFormData, AgendamentoPageParams, StatusConsulta } from './types';
-import type { SliceResponse } from '../dentistas/types';
+import type { SliceResponse } from '../../shared/types/api';
+import type {
+  Agendamento,
+  AgendamentoFormData,
+  AgendamentoPageParams,
+  StatusConsulta,
+} from './agendamentos.types';
 
 const BASE = '/agendamentos';
 
-const formatDT = (dt: string) => dt.length === 16 ? `${dt}:00` : dt;
+const formatDateTime = (dateTime: string) => (dateTime.length === 16 ? `${dateTime}:00` : dateTime);
 
-export const agendamentoService = {
+export const agendamentosClient = {
   listar: async (params: AgendamentoPageParams): Promise<SliceResponse<Agendamento>> => {
     const query = new URLSearchParams();
     query.set('page', String(params.page));
@@ -17,6 +22,7 @@ export const agendamentoService = {
     if (params.dentistaId) query.set('dentistaId', String(params.dentistaId));
     if (params.pacienteId) query.set('pacienteId', String(params.pacienteId));
     if (params.nome) query.set('nome', params.nome);
+
     const { data } = await api.get(`${BASE}?${query.toString()}`);
     return data;
   },
@@ -30,8 +36,8 @@ export const agendamentoService = {
     const { data } = await api.post(BASE, {
       pacienteId: payload.pacienteId,
       dentistaId: payload.dentistaId,
-      dataInicio: formatDT(payload.dataInicio),
-      dataFim: formatDT(payload.dataFim),
+      dataInicio: formatDateTime(payload.dataInicio),
+      dataFim: formatDateTime(payload.dataFim),
       observacoes: payload.observacoes,
     });
     return data;
@@ -39,8 +45,8 @@ export const agendamentoService = {
 
   atualizar: async (id: number, payload: Partial<AgendamentoFormData>): Promise<Agendamento> => {
     const { data } = await api.put(`${BASE}/${id}`, {
-      dataInicio: payload.dataInicio ? formatDT(payload.dataInicio) : undefined,
-      dataFim: payload.dataFim ? formatDT(payload.dataFim) : undefined,
+      dataInicio: payload.dataInicio ? formatDateTime(payload.dataInicio) : undefined,
+      dataFim: payload.dataFim ? formatDateTime(payload.dataFim) : undefined,
       observacoes: payload.observacoes,
     });
     return data;

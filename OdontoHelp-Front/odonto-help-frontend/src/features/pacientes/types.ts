@@ -9,7 +9,7 @@ export interface Paciente {
   cpf: string;
   genero: Genero;
   dataNascimento: string;
-  observacoesMedicas: string;
+  observacoesMedicas?: string | null;
   isAtivo: boolean;
 }
 
@@ -29,4 +29,13 @@ export interface PacientePageParams {
   size: number;
   nome?: string;
   isAtivo?: boolean;
+}
+
+export interface PacienteObservacao {
+  id: number;
+  pacienteId: number;
+  texto: string;
+  autorId: number;
+  autorNome: string;
+  criadoEm: string;
 }

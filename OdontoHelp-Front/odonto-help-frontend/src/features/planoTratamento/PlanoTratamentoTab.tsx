@@ -19,6 +19,14 @@ const PRIORIDADE_LABELS: Record<number, { label: string; color: string }> = {
   3: { label: 'Baixa', color: '#185FA5' },
 };
 
+/** Ordem do dropdown — inclui Concluído fora do atendimento (baixa manual). */
+const STATUS_SELECT_ORDER: StatusItemPlano[] = [
+  'PENDENTE',
+  'EM_ANDAMENTO',
+  'REALIZADO',
+  'CANCELADO',
+];
+
 function ItemStatusSelect({
   planoId, item, onSuccess, onError,
 }: {
@@ -34,7 +42,11 @@ function ItemStatusSelect({
   const handleChange = async (novoStatus: StatusItemPlano) => {
     try {
       await atualizar.mutateAsync({ planoId, itemId: item.id, status: novoStatus });
-      onSuccess('Status do item atualizado!');
+      onSuccess(
+        novoStatus === 'REALIZADO'
+          ? 'Procedimento marcado como concluído!'
+          : 'Status do item atualizado!',
+      );
     } catch (e: any) {
       onError(getApiErrorMessage(e, 'Erro ao atualizar status'));
     }
@@ -68,9 +80,7 @@ function ItemStatusSelect({
         },
       }}
     >
-      {(Object.keys(STATUS_ITEM_PLANO_LABELS) as StatusItemPlano[])
-        .filter((s) => s !== 'REALIZADO')
-        .map((s) => (
+      {STATUS_SELECT_ORDER.map((s) => (
           <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>
             {STATUS_ITEM_PLANO_LABELS[s]}
           </MenuItem>

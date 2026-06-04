@@ -20,7 +20,7 @@ const baseSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   telefone: z.string().min(14, 'Telefone incompleto — use (00) 00000-0000'),
   cpf: z.string().min(14, 'CPF incompleto — use 000.000.000-00'),
-  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  email: z.union([z.literal(''), z.string().email('E-mail inválido')]).optional().default(''),
   genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO', 'NAO_INFORMADO'], {
     errorMap: () => ({ message: 'Selecione um gênero' }),
   }),
@@ -212,13 +212,22 @@ export default function PacienteDrawer({ onSuccess, onError }: Props) {
             </Stack>
 
             <Divider />
-            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Informações médicas</Typography>
+            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Anamnese</Typography>
 
             <Controller name="observacoesMedicas" control={control} render={({ field }) => (
-              <TextField {...field} label="Observações médicas" multiline rows={3}
+              <TextField
+                {...field}
+                label="Anamnese"
+                multiline
+                rows={3}
                 error={!!errors.observacoesMedicas}
-                helperText={errors.observacoesMedicas?.message ?? `${obsValue.length}/500`}
-                fullWidth inputProps={{ maxLength: 500 }} />
+                helperText={
+                  errors.observacoesMedicas?.message
+                  ?? `Histórico clínico fixo: alergias, medicamentos (${obsValue.length}/500)`
+                }
+                fullWidth
+                inputProps={{ maxLength: 500 }}
+              />
             )} />
 
             {canEditAccess && (

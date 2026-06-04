@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -21,7 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @Configuration
@@ -30,7 +29,6 @@ import java.util.List;
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
-    private final Environment environment;
 
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
@@ -56,27 +54,44 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        boolean isTestProfile = Arrays.asList(environment.getActiveProfiles()).contains("test");
-
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .anonymous(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> {
-
-                    if (isTestProfile) {
-                        auth.requestMatchers("/h2-console/**").permitAll();
-                    }
-
-                    auth
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Não autenticado\"}"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Você não tem permissão para esta ação\"}"
+                            );
+                        })
+                )
+                .authorizeHttpRequests(auth -> auth
                             .requestMatchers("/auth/**").permitAll()
+                            .requestMatchers(
+                                    "/swagger-ui.html",
+                                    "/swagger-ui/**",
+                                    "/v3/api-docs",
+                                    "/v3/api-docs/**",
+                                    "/swagger-resources/**",
+                                    "/webjars/**"
+                            ).permitAll()
                             .requestMatchers("/usuarios", "/usuarios/**").hasRole("ADMIN")
 
                             // Dentistas
                             .requestMatchers(HttpMethod.GET,   "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers(HttpMethod.POST,  "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PUT,   "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PATCH, "/dentistas", "/dentistas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.POST,  "/dentistas", "/dentistas/**").hasRole("ADMIN")
+                            .requestMatchers(HttpMethod.PUT,   "/dentistas", "/dentistas/**").hasRole("ADMIN")
+                            .requestMatchers(HttpMethod.PATCH, "/dentistas", "/dentistas/**").hasRole("ADMIN")
 
                             // Odontograma clínico
                             .requestMatchers(HttpMethod.GET, "/pacientes/*/odontograma/**").hasAnyRole("ADMIN", "DENTISTA")
@@ -87,9 +102,9 @@ public class SecurityConfig {
 
                             // Pacientes — regra genérica (PATCH de odontograma já foi tratado acima)
                             .requestMatchers(HttpMethod.GET,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
-                            .requestMatchers(HttpMethod.POST,  "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PUT,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
-                            .requestMatchers(HttpMethod.PATCH, "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO")
+                            .requestMatchers(HttpMethod.POST,  "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.PUT,   "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
+                            .requestMatchers(HttpMethod.PATCH, "/pacientes", "/pacientes/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
 
                             // Agendamentos e Dashboard
                             .requestMatchers("/agendamentos", "/agendamentos/**").hasAnyRole("ADMIN", "RECEPCAO", "DENTISTA")
@@ -105,8 +120,8 @@ public class SecurityConfig {
                             .requestMatchers("/atendimentos", "/atendimentos/**").hasAnyRole("ADMIN", "DENTISTA")
                             .requestMatchers("/planos-tratamento", "/planos-tratamento/**").hasAnyRole("ADMIN", "DENTISTA")
 
-                            .anyRequest().authenticated();
-                })
+                            .anyRequest().authenticated()
+                )
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 

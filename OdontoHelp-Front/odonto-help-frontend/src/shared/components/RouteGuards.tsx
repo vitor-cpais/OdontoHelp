@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import type { PerfilUsuario } from '../store/authStore';
-import { homeByPerfil } from '../../features/auth/useAuth';
+import { hasAnyRole, roleHomePath } from '../../permissions';
 import { isTokenExpired } from '../lib/jwt';
 
 const TOKEN_EXPIRY_MARGIN_MS = 30 * 1000;
@@ -49,8 +49,8 @@ export function RoleRoute({ allowed }: RoleRouteProps) {
 
   if (!usuario || !accessToken || tokenExpired) return <Navigate to="/login" replace />;
 
-  if (!allowed.includes(usuario.perfil)) {
-    return <Navigate to={homeByPerfil(usuario.perfil)} replace />;
+  if (!hasAnyRole(usuario.perfil, allowed)) {
+    return <Navigate to={roleHomePath(usuario.perfil)} replace />;
   }
 
   return <Outlet />;

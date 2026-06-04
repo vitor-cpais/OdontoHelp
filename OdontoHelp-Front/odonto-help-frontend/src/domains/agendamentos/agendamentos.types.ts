@@ -37,7 +37,7 @@ export interface AgendamentoPageParams {
   size: number;
 }
 
-export const STATUS_LABELS: Record<StatusConsulta, string> = {
+export const STATUS_CONSULTA_LABELS: Record<StatusConsulta, string> = {
   AGENDADO: 'Agendado',
   CONFIRMADO: 'Confirmado',
   ATENDIDO: 'Atendido',
@@ -45,13 +45,14 @@ export const STATUS_LABELS: Record<StatusConsulta, string> = {
   FALTA: 'Falta',
 };
 
-export const STATUS_COLORS: Record<
-  StatusConsulta,
-  { bg: string; text: string; border: string }
-> = {
-  AGENDADO:   { bg: '#E6F1FB', text: '#185FA5', border: '#B5D4F4' },
+export const STATUS_CONSULTA_COLORS: Record<StatusConsulta, { bg: string; text: string; border: string }> = {
+  AGENDADO: { bg: '#E6F1FB', text: '#185FA5', border: '#B5D4F4' },
   CONFIRMADO: { bg: '#E1F5EE', text: '#0F6E56', border: '#9FE1CB' },
-  ATENDIDO:   { bg: '#E8F0FE', text: '#1A73E8', border: '#A8C7FA' },
-  CANCELADO:  { bg: '#FCEBEB', text: '#A32D2D', border: '#F7C1C1' },
-  FALTA:      { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' },
+  ATENDIDO: { bg: '#E8F0FE', text: '#1A73E8', border: '#A8C7FA' },
+  CANCELADO: { bg: '#FCEBEB', text: '#A32D2D', border: '#F7C1C1' },
+  FALTA: { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' },
 };
+
+export const STATUS_CONSULTA_EDITAVEIS: StatusConsulta[] = ['AGENDADO', 'CONFIRMADO'];
+export const STATUS_CONSULTA_PODE_INICIAR_ATENDIMENTO: StatusConsulta[] = ['AGENDADO', 'CONFIRMADO'];
+export const STATUS_CONSULTA_FINAIS: StatusConsulta[] = ['ATENDIDO', 'CANCELADO', 'FALTA'];

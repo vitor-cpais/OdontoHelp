@@ -18,9 +18,13 @@ export function getApiErrorMessage(error: unknown, fallback = 'Erro inesperado')
     const responseData = error.response?.data as any;
     if (responseData) {
       const backendMessage =
-        responseData.erro ?? responseData.error ?? responseData.message ??
+        responseData.message ?? responseData.erro ?? responseData.error ??
         responseData.detail ?? responseData.mensagem;
       if (typeof backendMessage === 'string' && backendMessage.trim()) return backendMessage;
+      if (responseData.fields && typeof responseData.fields === 'object') {
+        const firstField = Object.values(responseData.fields).find((v) => typeof v === 'string');
+        if (firstField) return String(firstField);
+      }
       if (Array.isArray(responseData.errors) && responseData.errors.length > 0) {
         const first = responseData.errors[0];
         if (typeof first === 'string') return first;

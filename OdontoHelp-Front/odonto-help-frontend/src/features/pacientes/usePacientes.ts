@@ -13,6 +13,14 @@ export function usePacientes(params: PacientePageParams, options?: { staleTime?:
   });
 }
 
+export function usePaciente(id: number | null) {
+  return useQuery({
+    queryKey: [PACIENTES_KEY, 'detail', id],
+    queryFn: () => pacienteService.buscarPorId(id!),
+    enabled: id !== null,
+  });
+}
+
 export function useCreatePaciente() {
   const qc = useQueryClient();
   return useMutation({
@@ -25,7 +33,42 @@ export function useUpdatePaciente(id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<PacienteFormData>) => pacienteService.atualizar(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [PACIENTES_KEY] }),
+    onSuccess: (paciente) => {
+      qc.invalidateQueries({ queryKey: [PACIENTES_KEY] });
+      qc.setQueryData([PACIENTES_KEY, 'detail', paciente.id], paciente);
+    },
+  });
+}
+
+export function useUpdateAnamnese(pacienteId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (anamnese: string) => pacienteService.atualizarAnamnese(pacienteId!, anamnese),
+    onSuccess: (paciente) => {
+      qc.invalidateQueries({ queryKey: [PACIENTES_KEY] });
+      qc.setQueryData([PACIENTES_KEY, 'detail', paciente.id], paciente);
+    },
+  });
+}
+
+const OBSERVACOES_KEY = 'paciente-observacoes';
+
+export function usePacienteObservacoes(pacienteId: number | null, page = 0, size = 5) {
+  return useQuery({
+    queryKey: [OBSERVACOES_KEY, pacienteId, page, size],
+    queryFn: () => pacienteService.listarObservacoes(pacienteId!, page, size),
+    enabled: pacienteId !== null,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCriarPacienteObservacao(pacienteId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (texto: string) => pacienteService.criarObservacao(pacienteId!, texto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [OBSERVACOES_KEY, pacienteId] });
+    },
   });
 }
 

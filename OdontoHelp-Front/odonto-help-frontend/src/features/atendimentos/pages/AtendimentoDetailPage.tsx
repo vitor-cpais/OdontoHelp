@@ -83,6 +83,7 @@ export default function AtendimentoDetailPage() {
   });
   const [baixaOpen, setBaixaOpen] = useState(false);
   const [baixaItens, setBaixaItens] = useState<ItemPlano[]>([]);
+  const [baixaContext, setBaixaContext] = useState<'salvar' | 'finalizar' | null>(null);
 
   useEffect(() => {
     if (atendimento) {
@@ -152,6 +153,12 @@ export default function AtendimentoDetailPage() {
         observacao: item.observacao ?? '',
       }));
 
+  const concluirFinalizacao = async () => {
+    await finalizar.mutateAsync(atendimentoId!);
+    setToast({ open: true, msg: 'Atendimento finalizado!', severity: 'success' });
+    navigate('/atendimentos');
+  };
+
   const handleSalvar = async () => {
     try {
       const novos = buildPayloadItens();
@@ -161,6 +168,7 @@ export default function AtendimentoDetailPage() {
       });
       setItems(result.atendimento.itens);
       if (result.itensPlanoBaixaManual?.length > 0) {
+        setBaixaContext('salvar');
         setBaixaItens(result.itensPlanoBaixaManual);
         setBaixaOpen(true);
       } else {
@@ -174,14 +182,24 @@ export default function AtendimentoDetailPage() {
   const handleFinalizar = async () => {
     try {
       const novos = buildPayloadItens();
+      let result = null;
       if (novos.length > 0) {
-        await update.mutateAsync({ observacoesGerais: observacoes, itens: novos });
+        result = await update.mutateAsync({ observacoesGerais: observacoes, itens: novos });
       } else if (observacoes !== (atendimento.observacoesGerais ?? '')) {
-        await update.mutateAsync({ observacoesGerais: observacoes });
+        result = await update.mutateAsync({ observacoesGerais: observacoes });
       }
-      await finalizar.mutateAsync(atendimentoId!);
-      setToast({ open: true, msg: 'Atendimento finalizado!', severity: 'success' });
-      navigate('/atendimentos');
+
+      if (result) {
+        setItems(result.atendimento.itens);
+        if (result.itensPlanoBaixaManual?.length > 0) {
+          setBaixaContext('finalizar');
+          setBaixaItens(result.itensPlanoBaixaManual);
+          setBaixaOpen(true);
+          return;
+        }
+      }
+
+      await concluirFinalizacao();
     } catch (e: unknown) {
       setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao finalizar'), severity: 'error' });
     }
@@ -189,11 +207,40 @@ export default function AtendimentoDetailPage() {
 
   const handleBaixaConfirm = async (ids: number[]) => {
     try {
+      const shouldFinalize = baixaContext === 'finalizar';
       await baixaManual.mutateAsync(ids);
       setBaixaOpen(false);
-      setToast({ open: true, msg: 'Baixa no plano registrada!', severity: 'success' });
+      setBaixaContext(null);
+      if (!shouldFinalize) {
+        setToast({ open: true, msg: 'Baixa no plano registrada!', severity: 'success' });
+        return;
+      }
     } catch (e: unknown) {
       setToast({ open: true, msg: getApiErrorMessage(e, 'Erro na baixa manual'), severity: 'error' });
+      return;
+    }
+
+    try {
+      await concluirFinalizacao();
+    } catch (e: unknown) {
+      setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao finalizar'), severity: 'error' });
+    }
+  };
+
+  const handleBaixaClose = async () => {
+    const shouldFinalize = baixaContext === 'finalizar';
+    setBaixaOpen(false);
+    setBaixaContext(null);
+
+    if (!shouldFinalize) {
+      setToast({ open: true, msg: 'Atendimento salvo!', severity: 'success' });
+      return;
+    }
+
+    try {
+      await concluirFinalizacao();
+    } catch (e: unknown) {
+      setToast({ open: true, msg: getApiErrorMessage(e, 'Erro ao finalizar'), severity: 'error' });
     }
   };
 
@@ -205,19 +252,29 @@ export default function AtendimentoDetailPage() {
 
   return (
     <Box>
-      <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
-        <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Paper sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 18px 50px rgba(22,43,35,0.10)' }}>
+        <Box
+          sx={{
+            px: 3,
+            py: 2.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            color: '#fff',
+            background: 'linear-gradient(135deg, #082F2A 0%, #0F6E56 100%)',
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{
-              width: 32, height: 32, borderRadius: '8px',
-              backgroundColor: '#E1F5EE',
+              width: 42, height: 42, borderRadius: '16px',
+              backgroundColor: 'rgba(255,255,255,0.16)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <MedicalServicesOutlined sx={{ fontSize: 17, color: '#0F6E56' }} />
+              <MedicalServicesOutlined sx={{ fontSize: 20, color: '#fff' }} />
             </Box>
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                <Typography variant="h2" sx={{ color: '#fff' }}>
                   Atendimento #{atendimento.id}
                 </Typography>
                 <AtendimentoStatusChip status={atendimento.status} />
@@ -243,17 +300,43 @@ export default function AtendimentoDetailPage() {
                   }
                 />
               )}
-              <Typography variant="caption" color="text.disabled">
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.78)' }}>
                 {atendimento.pacienteNome} • {atendimento.dentistaNome}
               </Typography>
             </Box>
           </Box>
-          <IconButton size="small" onClick={() => navigate('/atendimentos')}>
+          <IconButton size="small" onClick={() => navigate('/atendimentos')} sx={{ color: '#fff' }}>
             <Close sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
 
         <Divider />
+
+        <Box
+          sx={{
+            px: 3,
+            py: 2,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+            gap: 1.5,
+            backgroundColor: 'background.default',
+          }}
+        >
+          {[
+            { label: 'Paciente', value: atendimento.pacienteNome },
+            { label: 'Procedimentos', value: `${items.length} registrado${items.length === 1 ? '' : 's'}` },
+            { label: 'Odontograma', value: atendimento.odontogramaRevisado ? 'Revisado' : 'Pendente' },
+          ].map((item) => (
+            <Paper key={item.label} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Typography variant="overline" color="text.disabled">
+                {item.label}
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                {item.value}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
 
         <Tabs
           value={tab}
@@ -462,12 +545,9 @@ export default function AtendimentoDetailPage() {
       <BaixaPlanoDialog
         open={baixaOpen}
         itens={baixaItens}
-        onClose={() => {
-          setBaixaOpen(false);
-          setToast({ open: true, msg: 'Atendimento salvo!', severity: 'success' });
-        }}
+        onClose={handleBaixaClose}
         onConfirm={handleBaixaConfirm}
-        loading={baixaManual.isPending}
+        loading={baixaManual.isPending || finalizar.isPending}
       />
 
       <AtendimentoProcedimentoDrawer

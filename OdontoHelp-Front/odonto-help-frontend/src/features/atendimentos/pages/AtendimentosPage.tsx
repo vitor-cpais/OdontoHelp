@@ -60,7 +60,29 @@ export default function AtendimentosPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      <Paper
+        sx={{
+          p: { xs: 2.5, md: 3 },
+          mb: 2.5,
+          borderRadius: 4,
+          color: '#fff',
+          background: 'linear-gradient(135deg, #143B34 0%, #0F6E56 100%)',
+          boxShadow: '0 18px 50px rgba(8,80,65,0.18)',
+        }}
+      >
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          Fluxo clínico
+        </Typography>
+        <Typography variant="h1" sx={{ color: '#fff', mt: 0.5 }}>
+          Atendimentos
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.78)', mt: 0.75 }}>
+          Acompanhe atendimentos em andamento, histórico clínico e procedimentos registrados.
+        </Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         {/* Busca por nome do paciente */}
         <TextField
           placeholder="Buscar paciente..."
@@ -117,9 +139,10 @@ export default function AtendimentosPage() {
           Para iniciar um atendimento, acesse Agendamentos.
         </Typography>
       </Box>
+      </Paper>
 
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
           <Table size="small">
             <TableHead>

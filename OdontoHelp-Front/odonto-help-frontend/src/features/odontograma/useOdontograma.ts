@@ -20,6 +20,28 @@ export function useOdontograma(pacienteId: number | null) {
   });
 }
 
+export function useOdontogramaVersoes(pacienteId: number | null, page = 0, size = 50) {
+  return useQuery({
+    queryKey: [ODONTOGRAMA_KEY, 'versoes', pacienteId, page, size],
+    queryFn: () => odontogramaService.versoes(pacienteId!, page, size),
+    enabled: pacienteId !== null,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useOdontogramaVersao(pacienteId: number | null, snapshotId: number | null) {
+  return useQuery({
+    queryKey: [ODONTOGRAMA_KEY, 'versao', pacienteId, snapshotId],
+    queryFn: async () => {
+      const lista = await odontogramaService.buscarVersao(pacienteId!, snapshotId!);
+      const mapa: OdontogramaMap = {};
+      lista.forEach((e) => { mapa[e.numeroDente] = e; });
+      return mapa;
+    },
+    enabled: pacienteId !== null && snapshotId !== null,
+  });
+}
+
 export function useHistoricoOdontograma(pacienteId: number | null, page = 0) {
   return useQuery({
     queryKey: [ODONTOGRAMA_KEY, 'historico', pacienteId, page],
@@ -53,6 +75,7 @@ export function useUpdateOdontograma(pacienteId: number | null) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY, pacienteId] });
       qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY, 'historico', pacienteId] });
+      qc.invalidateQueries({ queryKey: [ODONTOGRAMA_KEY, 'versoes', pacienteId] });
     },
   });
 }

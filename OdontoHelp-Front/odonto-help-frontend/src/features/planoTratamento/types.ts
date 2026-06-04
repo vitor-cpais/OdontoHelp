@@ -5,7 +5,7 @@ export type StatusItemPlano = 'PENDENTE' | 'EM_ANDAMENTO' | 'REALIZADO' | 'CANCE
 export const STATUS_ITEM_PLANO_LABELS: Record<StatusItemPlano, string> = {
   PENDENTE:     'Pendente',
   EM_ANDAMENTO: 'Em andamento',
-  REALIZADO:    'Realizado',
+  REALIZADO:    'Concluído',
   CANCELADO:    'Cancelado',
 };
 

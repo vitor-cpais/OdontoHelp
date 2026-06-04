@@ -1,21 +1,26 @@
 import { useState } from 'react';
 import {
-  Box, Grid, Typography, Paper, Skeleton, TextField,
-  Stack, Divider, Chip,
+  Box, Button, Grid, Typography, Paper, Skeleton, TextField,
+  Stack, Divider,
 } from '@mui/material';
 import {
   CalendarMonthOutlined, PeopleOutlined,
-  MedicalServicesOutlined, EventNoteOutlined,
+  MedicalServicesOutlined, EventNoteOutlined, AddOutlined, ArrowForwardOutlined,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { useDashboardResumo, useAgendamentosPorStatus,useProximosHoje } from '../useDashboard';
-import { STATUS_COLORS, STATUS_LABELS } from '../../agendamentos/types';
-import type { StatusConsulta } from '../../agendamentos/types';
+import { STATUS_COLORS, STATUS_LABELS } from '../../../domains/agendamentos';
+import type { StatusConsulta } from '../../../domains/agendamentos';
 import { useAgendamentoDrawerStore } from '../../agendamentos/agendamentoStore';
 import AgendamentoStatusChip from '../../agendamentos/AgendamentoStatusChip';
-import { useAuthStore } from '../../../shared/store/authStore';
+import { useCurrentPerfil } from '../../../shared/hooks/useCurrentPerfil';
+import { canFilterByDentista } from '../../../permissions/roles';
+import { EmptyState } from '../../../design-system/components';
+import { useDentistas } from '../../dentistas/useDentistas';
+import DentistaFiltroAutocomplete from '../../../shared/components/DentistaFiltroAutocomplete';
 
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -34,22 +39,35 @@ interface CardProps {
 
 function MetricCard({ label, value, icon, color, bgColor, loading }: CardProps) {
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, border: '0.5px solid', borderColor: 'divider' }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        minHeight: 132,
+        borderRadius: 3,
+        border: '1px solid rgba(15,110,86,0.08)',
+        boxShadow: '0 10px 30px rgba(22, 43, 35, 0.05)',
+        backgroundColor: 'background.paper',
+      }}
+    >
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
         <Box>
-          <Typography variant="overline" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+          <Typography variant="overline" sx={{ color: 'text.disabled', fontSize: '0.68rem' }}>
             {label}
           </Typography>
           {loading ? (
             <Skeleton width={60} height={36} />
           ) : (
-            <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: 'text.primary', lineHeight: 1.2, mt: 0.5 }}>
+            <Typography sx={{ fontSize: '2.35rem', fontWeight: 700, color: 'text.primary', lineHeight: 1.1, mt: 0.75 }}>
               {value ?? 0}
             </Typography>
           )}
+          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1 }}>
+            Atualizado em tempo real
+          </Typography>
         </Box>
         <Box sx={{
-          width: 44, height: 44, borderRadius: '10px',
+          width: 48, height: 48, borderRadius: '16px',
           backgroundColor: bgColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
@@ -61,15 +79,27 @@ function MetricCard({ label, value, icon, color, bgColor, loading }: CardProps) 
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [dataInicio, setDataInicio] = useState(fmt(ha30dias));
   const [dataFim, setDataFim] = useState(fmt(hoje));
+  const [dentistaFiltroId, setDentistaFiltroId] = useState<number | ''>('');
 
-  const { data: resumo, isLoading: loadingResumo } = useDashboardResumo();
-  const { data: porStatus, isLoading: loadingStatus } = useAgendamentosPorStatus(dataInicio, dataFim);
-  const { data: proximos, isLoading: loadingProximos } = useProximosHoje();
-  const { openView } = useAgendamentoDrawerStore();
-  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const { openNew, openView } = useAgendamentoDrawerStore();
+  const perfil = useCurrentPerfil();
   const isDentista = perfil === 'DENTISTA';
+  const canFiltrarDentista = canFilterByDentista(perfil);
+  const dentistaId = canFiltrarDentista && dentistaFiltroId ? dentistaFiltroId : undefined;
+  const { data: dentistasData } = useDentistas(
+    { page: 0, size: 100, isAtivo: true },
+    { staleTime: 1000 * 60, enabled: canFiltrarDentista }
+  );
+  const dentistas = dentistasData?.content ?? [];
+  const dentistaSelecionado = dentistas.find((d) => d.id === dentistaFiltroId) ?? null;
+
+  const { data: resumo, isLoading: loadingResumo } = useDashboardResumo(dentistaId);
+  const { data: porStatus, isLoading: loadingStatus } = useAgendamentosPorStatus(dataInicio, dataFim, dentistaId);
+  const { data: proximos, isLoading: loadingProximos } = useProximosHoje(dentistaId);
+  const saudacao = isDentista ? 'Sua agenda clínica do dia' : 'Cockpit operacional da clínica';
 
   const pieData = (porStatus ?? [])
     .filter((d) => d.total > 0)
@@ -115,8 +145,90 @@ export default function DashboardPage() {
 
   return (
     <Box>
+      <Paper
+        sx={{
+          p: { xs: 2.5, md: 4 },
+          mb: 3,
+          borderRadius: 4,
+          overflow: 'hidden',
+          position: 'relative',
+          color: '#fff',
+          background:
+            'radial-gradient(circle at top right, rgba(29,158,117,0.95), transparent 34%), linear-gradient(135deg, #063F35 0%, #0F6E56 58%, #0B4F41 100%)',
+          boxShadow: '0 22px 60px rgba(8, 80, 65, 0.22)',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            right: -70,
+            bottom: -90,
+            width: 240,
+            height: 240,
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          }}
+        />
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+          <Box sx={{ flex: 1, position: 'relative' }}>
+            <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.72)' }}>
+              Hoje, {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+            </Typography>
+            <Typography variant="h1" sx={{ mt: 0.5, color: '#fff', maxWidth: 660 }}>
+              {saudacao}
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1, color: 'rgba(255,255,255,0.78)', maxWidth: 620 }}>
+              Acompanhe volume, status e próximos horários sem sair do dashboard.
+            </Typography>
+          </Box>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ position: 'relative' }}>
+            <Button
+              variant="contained"
+              startIcon={<AddOutlined />}
+              onClick={() => {
+                openNew();
+                navigate('/agendamentos');
+              }}
+              sx={{ borderRadius: 999, px: 2.25, backgroundColor: '#fff', color: 'primary.main', '&:hover': { backgroundColor: '#F7F6F2' } }}
+            >
+              Novo agendamento
+            </Button>
+            <Button
+              variant="outlined"
+              endIcon={<ArrowForwardOutlined />}
+              onClick={() => navigate('/agendamentos')}
+              sx={{ borderRadius: 999, px: 2.25, color: '#fff', borderColor: 'rgba(255,255,255,0.55)', '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.1)' } }}
+            >
+              Ver agenda
+            </Button>
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {canFiltrarDentista && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="overline" sx={{ color: 'text.disabled' }}>
+                Escopo do dashboard
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Veja a clínica inteira ou filtre por um dentista específico.
+              </Typography>
+            </Box>
+            <DentistaFiltroAutocomplete
+              dentistas={dentistas}
+              value={dentistaSelecionado}
+              onChange={setDentistaFiltroId}
+              width={{ xs: '100%', sm: 280 }}
+            />
+          </Stack>
+        </Paper>
+      )}
+
       {/* Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid container spacing={2.25} sx={{ mb: 3 }}>
         {cards.map((c) => (
           <Grid item xs={12} sm={6} md={3} key={c.label}>
             <MetricCard {...c} loading={loadingResumo} />
@@ -124,10 +236,10 @@ export default function DashboardPage() {
         ))}
       </Grid>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2.25}>
         {/* Gráfico pizza */}
         <Grid item xs={12} md={6}>
-          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, border: '0.5px solid', borderColor: 'divider', height: '100%' }}>
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, border: '1px solid rgba(15,110,86,0.08)', boxShadow: '0 10px 30px rgba(22, 43, 35, 0.05)', height: '100%' }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
               <Typography variant="h6" sx={{ fontSize: '0.9rem', fontWeight: 500 }}>
                 Agendamentos por status
@@ -147,48 +259,63 @@ export default function DashboardPage() {
             {loadingStatus ? (
               <Skeleton variant="circular" width={200} height={200} sx={{ mx: 'auto', mt: 3 }} />
             ) : pieData.length === 0 ? (
-              <Box sx={{ py: 8, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.disabled">Nenhum dado no período</Typography>
-              </Box>
+              <EmptyState title="Nenhum dado no período" />
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} stroke={entry.stroke} strokeWidth={1} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [value, name]}
-                    contentStyle={{ borderRadius: 8, fontSize: '0.8rem', border: '0.5px solid #D3D1C7' }}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => (
-                      <span style={{ fontSize: '0.78rem', color: '#5F5E5A' }}>{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={96}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.fill} stroke={entry.stroke} strokeWidth={1} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [value, name]}
+                      contentStyle={{ borderRadius: 8, fontSize: '0.8rem', border: '0.5px solid #D3D1C7' }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value, entry) => {
+                        const total = pieData.find((item) => item.name === value)?.value ?? entry.payload?.value;
+                        return (
+                          <span style={{ fontSize: '0.78rem', color: '#5F5E5A' }}>
+                            {total} {value}
+                          </span>
+                        );
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </>
             )}
           </Paper>
         </Grid>
 
         {/* Próximos agendamentos hoje */}
         <Grid item xs={12} md={6}>
-          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, border: '0.5px solid', borderColor: 'divider', height: '100%' }}>
-            <Typography variant="h6" sx={{ fontSize: '0.9rem', fontWeight: 500, mb: 2 }}>
-              Próximos agendamentos — hoje
-            </Typography>
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, border: '1px solid rgba(15,110,86,0.08)', boxShadow: '0 10px 30px rgba(22, 43, 35, 0.05)', height: '100%' }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                  Próximos agendamentos
+                </Typography>
+                <Typography variant="caption" color="text.disabled">
+                  Hoje, em ordem de horário
+                </Typography>
+              </Box>
+              <Button size="small" onClick={() => navigate('/agendamentos')}>
+                Agenda
+              </Button>
+            </Stack>
 
             {loadingProximos ? (
               <Stack spacing={1.5}>
@@ -197,13 +324,22 @@ export default function DashboardPage() {
                 ))}
               </Stack>
             ) : !proximos || proximos.length === 0 ? (
-              <Box sx={{ py: 8, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.disabled">Nenhum agendamento para hoje</Typography>
-              </Box>
+              <EmptyState
+                title="Nenhum agendamento para hoje"
+                description="Use a ação rápida para registrar o próximo atendimento."
+                actionLabel="Novo agendamento"
+                onAction={() => {
+                  openNew();
+                  navigate('/agendamentos');
+                }}
+              />
             ) : (
               <Stack spacing={0} divider={<Divider />}>
-                {proximos.map((a: any) => (
-                  <Box key={a.id} onClick={() => openView(a)} sx={{
+                {proximos.map((a) => (
+                  <Box key={a.id} onClick={() => {
+                    openView(a);
+                    navigate('/agendamentos');
+                  }} sx={{
                     py: 1.5, cursor: 'pointer', display: 'flex',
                     alignItems: 'center', gap: 1.5,
                     '&:hover': { backgroundColor: 'background.default', mx: -2.5, px: 2.5 },

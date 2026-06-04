@@ -8,6 +8,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -20,9 +23,11 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class SecurityFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityFilter.class);
+
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
-    private final TokenBlacklist tokenBlacklist; // NOVO: verificação de blacklist
+    private final TokenBlacklist tokenBlacklist;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,32 +35,41 @@ public class SecurityFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        try {
-            String token = extrairToken(request);
+        String token = extrairToken(request);
 
-            // Só entra aqui se houver um token para validar
-            if (token != null && !tokenBlacklist.estaBloqueado(token)) {
+        if (token != null && !tokenBlacklist.estaBloqueado(token)) {
+            try {
                 String email = jwtService.extrairEmail(token);
 
-                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
-
-                    if (usuario != null && usuario.getIsAtivo()) {
-                        var auth = new UsernamePasswordAuthenticationToken(
-                                usuario, null, usuario.getAuthorities()
-                        );
-                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(auth);
-                    }
+                if (email != null && deveSubstituirAutenticacao()) {
+                    usuarioRepository.findByEmail(email).ifPresent(usuario -> {
+                        if (Boolean.TRUE.equals(usuario.getIsAtivo())) {
+                            var auth = new UsernamePasswordAuthenticationToken(
+                                    usuario, null, usuario.getAuthorities()
+                            );
+                            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        }
+                    });
                 }
+            } catch (Exception e) {
+                log.debug("Token JWT invalido ou expirado: {}", e.getMessage());
+                SecurityContextHolder.clearContext();
             }
-        } catch (Exception e) {
-            System.out.println("Erro no filtro: " + e.getMessage());
-
-            SecurityContextHolder.clearContext();
         }
 
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Substitui autenticacao anonima padrao do Spring pelo usuario do JWT.
+     * Sem isso, hasRole('ADMIN') falha com 403 mesmo com token valido.
+     */
+    private boolean deveSubstituirAutenticacao() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth == null
+                || !auth.isAuthenticated()
+                || auth instanceof AnonymousAuthenticationToken;
     }
 
     private String extrairToken(HttpServletRequest request) {

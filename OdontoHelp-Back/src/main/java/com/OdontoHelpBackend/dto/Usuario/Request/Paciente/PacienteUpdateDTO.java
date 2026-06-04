@@ -1,6 +1,5 @@
 package com.OdontoHelpBackend.dto.Usuario.Request.Paciente;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -23,7 +22,7 @@ public record PacienteUpdateDTO(
 
         String observacoesMedicas,
 
-        @Email(message = "E-mail inválido")
+        /** Opcional — paciente sem login. */
         String email,
 
         String senha,

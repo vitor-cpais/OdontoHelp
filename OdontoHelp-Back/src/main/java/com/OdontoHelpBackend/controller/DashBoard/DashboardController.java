@@ -23,8 +23,10 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/resumo")
-    public ResponseEntity<DashboardResumoDTO> resumo(@AuthenticationPrincipal Usuario usuario) {
-        return ResponseEntity.ok(dashboardService.resumo(usuario));
+    public ResponseEntity<DashboardResumoDTO> resumo(
+            @RequestParam(required = false) Long dentistaId,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(dashboardService.resumo(usuario, dentistaId));
     }
 
     @GetMapping("/agendamentos-por-status")
@@ -33,7 +35,9 @@ public class DashboardController {
             LocalDate dataInicio,
             @RequestParam
             LocalDate dataFim,
+            @RequestParam(required = false)
+            Long dentistaId,
             @AuthenticationPrincipal Usuario usuario) {
-        return ResponseEntity.ok(dashboardService.agendamentosPorStatus(dataInicio, dataFim, usuario));
+        return ResponseEntity.ok(dashboardService.agendamentosPorStatus(dataInicio, dataFim, dentistaId, usuario));
     }
 }

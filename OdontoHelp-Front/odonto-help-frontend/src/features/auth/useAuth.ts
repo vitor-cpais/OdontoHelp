@@ -2,14 +2,9 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { authService, type LoginPayload } from './authService';
-import { useAuthStore, type PerfilUsuario } from '../../shared/store/authStore';
+import { useAuthStore } from '../../shared/store/authStore';
+import { roleHomePath } from '../../permissions';
 import queryClient from '../../app/queryClient';
-
-/** Rota home por perfil */
-export function homeByPerfil(perfil: PerfilUsuario): string {
-  if (perfil === 'DENTISTA') return '/agendamentos';
-  return '/dashboard';
-}
 
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -19,7 +14,7 @@ export function useLogin() {
     mutationFn: (payload: LoginPayload) => authService.login(payload),
     onSuccess: (data) => {
       setAuth(data);
-      navigate(homeByPerfil(data.usuario.perfil), { replace: true });
+      navigate(roleHomePath(data.usuario.perfil), { replace: true });
     },
   });
 }

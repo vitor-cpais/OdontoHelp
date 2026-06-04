@@ -9,6 +9,7 @@ import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Clinica.Request.AtualizarDenteRequestDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.HistoricoOdontogramaResponseDTO;
 import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaResponseDTO;
+import com.OdontoHelpBackend.dto.Clinica.Response.OdontogramaVersaoResponseDTO;
 import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Clinico.AtendimentoRepository;
@@ -40,6 +41,53 @@ public class OdontogramaService {
     public List<OdontogramaResponseDTO> buscarPorPaciente(Long pacienteId) {
         garantirSnapshotInicialSeNecessario(pacienteId);
         return reconstruirEstado(pacienteId).values().stream()
+                .filter(e -> e.situacao() != SituacaoDente.SAUDAVEL || e.observacao() != null)
+                .map(e -> new OdontogramaResponseDTO(
+                        e.snapshotDenteId(),
+                        e.numeroDente(),
+                        e.situacao(),
+                        e.observacao(),
+                        e.atualizadoEm()
+                ))
+                .sorted(Comparator.comparing(OdontogramaResponseDTO::numeroDente))
+                .toList();
+    }
+
+    public Slice<OdontogramaVersaoResponseDTO> buscarVersoes(Long pacienteId, Pageable pageable) {
+        garantirSnapshotInicialSeNecessario(pacienteId);
+
+        List<OdontogramaSnapshot> snapshots = snapshotRepository.findByPacienteIdOrderByCriadoEmAsc(pacienteId);
+        List<OdontogramaVersaoResponseDTO> versoes = new ArrayList<>();
+        for (int i = 0; i < snapshots.size(); i++) {
+            OdontogramaSnapshot snap = snapshots.get(i);
+            boolean inicial = isSnapshotInicial(snap);
+            versoes.add(new OdontogramaVersaoResponseDTO(
+                    snap.getId(),
+                    i + 1,
+                    snap.getAtendimento() != null ? snap.getAtendimento().getId() : null,
+                    snap.getEditadoPor().getNome(),
+                    inicial ? 0 : snap.getDentes().size(),
+                    inicial,
+                    snap.getCriadoEm()
+            ));
+        }
+
+        Collections.reverse(versoes);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), versoes.size());
+        List<OdontogramaVersaoResponseDTO> page = start >= versoes.size()
+                ? List.of()
+                : versoes.subList(start, end);
+        return new org.springframework.data.domain.SliceImpl<>(page, pageable, end < versoes.size());
+    }
+
+    public List<OdontogramaResponseDTO> buscarVersao(Long pacienteId, Long snapshotId) {
+        garantirSnapshotInicialSeNecessario(pacienteId);
+        OdontogramaSnapshot snapshot = snapshotRepository.findById(snapshotId)
+                .filter(s -> s.getPaciente().getId().equals(pacienteId))
+                .orElseThrow(() -> new NotFoundException("Versão do odontograma não encontrada"));
+
+        return reconstruirEstadoAteSnapshot(pacienteId, snapshot.getId()).values().stream()
                 .filter(e -> e.situacao() != SituacaoDente.SAUDAVEL || e.observacao() != null)
                 .map(e -> new OdontogramaResponseDTO(
                         e.snapshotDenteId(),
@@ -185,6 +233,10 @@ public class OdontogramaService {
     }
 
     private Map<Integer, EstadoDente> reconstruirEstado(Long pacienteId) {
+        return reconstruirEstadoAteSnapshot(pacienteId, null);
+    }
+
+    private Map<Integer, EstadoDente> reconstruirEstadoAteSnapshot(Long pacienteId, Long snapshotLimiteId) {
         Map<Integer, EstadoDente> mapa = new LinkedHashMap<>();
         for (Integer n : OdontogramaFdi.TODOS_DENTES_ADULTOS) {
             mapa.put(n, new EstadoDente(n, SituacaoDente.SAUDAVEL, null, null, null, false));
@@ -204,8 +256,17 @@ public class OdontogramaService {
                         true
                 ));
             }
+            if (snapshotLimiteId != null && snap.getId().equals(snapshotLimiteId)) {
+                break;
+            }
         }
         return mapa;
+    }
+
+    private static boolean isSnapshotInicial(OdontogramaSnapshot snap) {
+        return snap.getAtendimento() == null
+                && snap.getDentes().size() == OdontogramaFdi.TODOS_DENTES_ADULTOS.size()
+                && snap.getDentes().stream().allMatch(d -> d.getSituacao() == SituacaoDente.SAUDAVEL);
     }
 
     private Slice<HistoricoOdontogramaResponseDTO> flattenHistorico(

@@ -15,10 +15,11 @@ import { z } from 'zod';
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useUsuarioDrawerStore } from './usuarioStore';
-import { useCreateUsuario, useUpdateUsuario } from './useUsuarios';
+import { useAlterarPerfilUsuario, useCreateUsuario, useUpdateUsuario } from './useUsuarios';
 import { getApiErrorMessage } from '../../shared/lib/axios';
 import { maskCpf, maskTelefone, maskData, formatDataToISO, formatDataFromISO, isValidBirthDate } from '../../shared/utils/masks';
 import type { UsuarioFormData } from './types';
+import { useAuthStore } from '../../shared/store/authStore';
 
 const baseSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
@@ -59,11 +60,13 @@ interface Props {
 export default function UsuarioDrawer({ onSuccess, onError }: Props) {
   const { open, editingId, draft, hasDraft, clearDraft, updateDraft } = useUsuarioDrawerStore();
   const isEditing = editingId !== null;
+  const usuarioLogado = useAuthStore((s) => s.usuario);
   const [confirmClose, setConfirmClose] = useState(false);
   const [senhaExpanded, setSenhaExpanded] = useState(false);
 
   const create = useCreateUsuario();
   const update = useUpdateUsuario(editingId ?? 0);
+  const alterarPerfil = useAlterarPerfilUsuario();
 
   const schema = useMemo(() => (isEditing ? editSchema : createSchema), [isEditing]);
   const resolver = useMemo(() => zodResolver(schema), [schema]);
@@ -101,6 +104,18 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
     if (open) updateDraft(values);
   }, [JSON.stringify(values), open]);
 
+  const perfilClinico = draft.perfil === 'DENTISTA' || draft.perfil === 'PACIENTE';
+  const canAlterarPerfil = isEditing
+    && usuarioLogado?.perfil === 'ADMIN'
+    && usuarioLogado.id !== editingId
+    && !perfilClinico;
+  const perfilDisabled = isEditing && !canAlterarPerfil;
+  const perfilHelperText = usuarioLogado?.id === editingId
+    ? 'Você não pode alterar o próprio perfil'
+    : perfilClinico
+      ? 'Perfis clínicos são gerenciados em módulos específicos'
+      : errors.perfil?.message;
+
   const handleClose = () => {
     if (isDirty && !isEditing) setConfirmClose(true);
     else clearDraft();
@@ -114,6 +129,9 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
       };
       if (isEditing) {
         await update.mutateAsync(dataToSend as UsuarioFormData);
+        if (canAlterarPerfil && data.perfil !== draft.perfil) {
+          await alterarPerfil.mutateAsync({ id: editingId, perfil: data.perfil });
+        }
         onSuccess('Usuário atualizado com sucesso!');
       } else {
         await create.mutateAsync(dataToSend as UsuarioFormData);
@@ -125,7 +143,7 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
     }
   };
 
-  const loading = create.isPending || update.isPending;
+  const loading = create.isPending || update.isPending || alterarPerfil.isPending;
 
   return (
     <>
@@ -230,9 +248,15 @@ export default function UsuarioDrawer({ onSuccess, onError }: Props) {
 
             <Controller name="perfil" control={control} render={({ field }) => (
               <TextField {...field} select label="Perfil *"
-                error={!!errors.perfil} helperText={errors.perfil?.message} fullWidth>
+                disabled={perfilDisabled}
+                error={!!errors.perfil} helperText={perfilHelperText} fullWidth>
                 <MenuItem value="ADMIN">Administrador</MenuItem>
                 <MenuItem value="RECEPCAO">Recepção</MenuItem>
+                {(field.value === 'DENTISTA' || field.value === 'PACIENTE') && (
+                  <MenuItem value={field.value} disabled>
+                    {field.value === 'DENTISTA' ? 'Dentista' : 'Paciente'}
+                  </MenuItem>
+                )}
               </TextField>
             )} />
 

@@ -4,13 +4,15 @@ package com.OdontoHelpBackend.controller.Usuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
+import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.service.Usuario.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -31,8 +33,10 @@ public class UsuarioController {
     @GetMapping
     public ResponseEntity<Slice<UsuarioResponseDTO>> listar(
             @RequestParam(required = false) String nome,
+            @RequestParam(required = false) PerfilUsuario perfil,
+            @RequestParam(required = false) Boolean isAtivo,
             Pageable pageable) {
-        return ResponseEntity.ok(usuarioService.listar(nome, pageable));
+        return ResponseEntity.ok(usuarioService.listar(nome, perfil, isAtivo, pageable));
     }
 
     @PutMapping("/{id}")
@@ -43,9 +47,16 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.atualizar(id, dto));
     }
 
+    @PatchMapping("/{id}/perfil")
+    public ResponseEntity<UsuarioResponseDTO> alterarPerfil(
+            @PathVariable Long id,
+            @RequestParam PerfilUsuario perfil,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(usuarioService.alterarPerfil(id, perfil, usuario));
+    }
+
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UsuarioResponseDTO> criar(@RequestBody @Valid UsuarioRequestDTO dto) {
         UsuarioResponseDTO response = usuarioService.criar(dto);
         URI location = ServletUriComponentsBuilder

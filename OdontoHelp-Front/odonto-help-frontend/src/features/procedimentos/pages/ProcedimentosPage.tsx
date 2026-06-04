@@ -72,8 +72,14 @@ export default function ProcedimentosPage() {
 
   return (
     <Box>
-      {/* Toolbar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      <Paper sx={{ p: { xs: 2.5, md: 3 }, mb: 2.5, borderRadius: 4, color: '#fff', background: 'linear-gradient(135deg, #253B35 0%, #0F6E56 100%)', boxShadow: '0 18px 50px rgba(8,80,65,0.18)' }}>
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)' }}>Catálogo clínico</Typography>
+        <Typography variant="h1" sx={{ color: '#fff', mt: 0.5 }}>Procedimentos</Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.78)', mt: 0.75 }}>Padronize preços, duração e legenda visual da operação clínica.</Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           placeholder="Buscar por nome..."
           value={busca}
@@ -114,15 +120,16 @@ export default function ProcedimentosPage() {
             startIcon={<AddOutlined sx={{ fontSize: 17 }} />}
             onClick={openNew}
             size="small"
-            sx={{ height: 36 }}
+            sx={{ height: 36, px: 2 }}
           >
             Novo procedimento
           </Button>
         </Badge>
       </Box>
+      </Paper>
 
       {/* Table */}
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
           <Table size="small">
             <TableHead>

@@ -14,13 +14,13 @@ import { useAgendamentoDrawerStore } from './agendamentoStore';
 import { getApiErrorMessage } from '../../shared/lib/axios';
 import {
   useCreateAgendamento, useUpdateAgendamento,
-  useAtualizarStatus, useCancelarAgendamento, useAgendamentos,
+  useCancelarAgendamento, useAgendamentos,
   useAtualizarStatusAgendamentoComItens,
-} from './useAgendamentos';
+  STATUS_LABELS,
+} from '../../domains/agendamentos';
+import type { AgendamentoFormData, StatusConsulta } from '../../domains/agendamentos';
 import { useIniciarAtendimento } from '../atendimentos/useAtendimentos';
 import StatusTransition from './StatusTransition';
-import { STATUS_LABELS } from './types';
-import type { AgendamentoFormData, StatusConsulta } from './types';
 import { useDentistas } from '../dentistas/useDentistas';
 import { usePacientes } from '../pacientes/usePacientes';
 
@@ -49,20 +49,20 @@ interface Props {
 
 export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   const navigate = useNavigate();
-  const perfil = useAuthStore((s) => s.usuario?.perfil);
+  const usuario = useAuthStore((s) => s.usuario);
+  const perfil = usuario?.perfil;
   const podeIniciarClinico = perfil === 'ADMIN' || perfil === 'DENTISTA';
   const { open, mode, editingId, draft, hasChanges, clearDraft, setEditMode, setViewMode, setHasChanges } = useAgendamentoDrawerStore();
   const isNew = mode === 'new';
   const isView = mode === 'view';
   const isEdit = mode === 'edit';
-  const isFinalStatus = draft.status && ['CANCELADO', 'CONCLUIDO', 'FALTA'].includes(draft.status);
+  const isFinalStatus = draft.status && ['CANCELADO', 'ATENDIDO', 'FALTA'].includes(draft.status);
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [conflito, setConflito] = useState<string | null>(null);
 
   const create = useCreateAgendamento();
   const update = useUpdateAgendamento(editingId ?? 0);
-  const atualizarStatus = useAtualizarStatus();
   const atualizarStatusComItens = useAtualizarStatusAgendamentoComItens();
   const cancelar = useCancelarAgendamento();
   const iniciarAtendimento = useIniciarAtendimento();
@@ -96,9 +96,12 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   useEffect(() => {
     if (open) {
       const inicio = draft.dataInicio ?? '';
+      const dentistaPadrao =
+        draft.dentistaId ??
+        (perfil === 'DENTISTA' && usuario?.dentistaId ? usuario.dentistaId : null);
       reset({
         pacienteId: draft.pacienteId ?? (null as any),
-        dentistaId: draft.dentistaId ?? (null as any),
+        dentistaId: dentistaPadrao ?? (null as any),
         dataInicio: inicio,
         dataFim: draft.dataFim ?? (inicio ? add30min(inicio) : ''),
         observacoes: draft.observacoes ?? '',
@@ -106,7 +109,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
       });
       setConflito(null);
     }
-  }, [open, mode]);
+  }, [open, mode, draft.dataInicio, draft.dataFim, draft.pacienteId, draft.dentistaId, draft.observacoes, draft.status]);
 
   const watchedInicio = watch('dataInicio');
   const watchedFim = watch('dataFim');
@@ -259,7 +262,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
                 getOptionLabel={(o) => o.nome}
                 value={dentistas.find((d) => d.id === field.value) ?? null}
                 onChange={(_, v) => field.onChange(v?.id ?? null)}
-                disabled={fieldsDisabled}
+                disabled={fieldsDisabled || (perfil === 'DENTISTA' && !!usuario?.dentistaId)}
                 renderInput={(params) => (
                   <TextField {...params} label="Dentista *" error={!!errors.dentistaId}
                     helperText={errors.dentistaId?.message} size="small" />
@@ -301,8 +304,6 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
                 <Divider />
                 <StatusTransition
                   statusAtual={draft.status as StatusConsulta}
-                  onStatusChange={handleStatusChange}
-                  loading={atualizarStatus.isPending}
                 />
               </>
             )}
@@ -333,6 +334,20 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
           {/* Direita */}
           <Stack direction="row" spacing={1.5} alignItems="center">
             {loading && <CircularProgress size={16} />}
+
+            {isView && draft.status === 'AGENDADO' && (
+              <Button variant="outlined" onClick={() => handleStatusChange('CONFIRMADO')}
+                disabled={loading} size="small">
+                Confirmar
+              </Button>
+            )}
+
+            {isView && draft.status === 'CONFIRMADO' && (
+              <Button variant="outlined" color="warning" onClick={() => handleStatusChange('FALTA')}
+                disabled={loading} size="small">
+                Registrar falta
+              </Button>
+            )}
 
             {isView && podeIniciarClinico && draft.status === 'CONFIRMADO' && (
               <Button variant="contained" color="success" onClick={handleIniciarAtendimento}

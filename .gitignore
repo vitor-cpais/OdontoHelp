@@ -1,11 +1,84 @@
-# Build (nunca versionar)
-target/
+# =============================================================================
+# OdontoHelp — repositório público: não versionar segredos nem artefatos locais
+# =============================================================================
+
+# --- Variáveis de ambiente (manter apenas *.example) ---
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# --- Dependências ---
+**/node_modules/
+
+# --- Build / compilados ---
 **/target/
+**/dist/
+**/build/
+**/.vite/
+**/*.tsbuildinfo
+*.class
+*.jar
+*.war
+!**/gradle-wrapper.jar
 
-# IDE
+# --- IDE e editores ---
 .idea/
+**/.idea/
 *.iml
+*.ipr
+*.iws
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.code-workspace
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
 
-# Front
-OdontoHelp-Front/odonto-help-frontend/node_modules/
-OdontoHelp-Front/odonto-help-frontend/dist/
+# Cursor (local)
+.cursor/
+
+# --- Sistema operacional ---
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Logs e cache ---
+*.log
+logs/
+.npm/
+.cache/
+.parcel-cache/
+.eslintcache
+*.tmp
+*.bak
+*.swp
+*~
+
+# --- Testes e cobertura ---
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+**/surefire-reports/
+**/failsafe-reports/
+
+# --- Docker / dados locais ---
+postgres_data/
+docker-data/
+*.pid
+
+# --- Spring / Maven extras ---
+.springBeans
+.factorypath
+dependency-reduced-pom.xml
+
+# --- Front (opcional local) ---
+*.local

@@ -25,6 +25,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, type PerfilUsuario } from '../store/authStore';
 import { useLogout } from '../../features/auth/useAuth';
+import { hasAnyRole } from '../../permissions';
 
 export const SIDEBAR_WIDTH = 220;
 
@@ -94,9 +95,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const perfil = useAuthStore((s) => s.usuario?.perfil);
   const logout = useLogout();
 
-  const visibleItems = navItems.filter(
-    (item) => perfil && item.allowed.includes(perfil)
-  );
+  const visibleItems = navItems.filter((item) => hasAnyRole(perfil, item.allowed));
 
   const SidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -104,19 +103,20 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', gap: 1.25, height: 56 }}>
         <Box
           sx={{
-            width: 28,
-            height: 28,
-            borderRadius: '7px',
-            backgroundColor: 'primary.main',
+            width: 34,
+            height: 34,
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #0F6E56, #1D9E75)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            boxShadow: '0 10px 22px rgba(15,110,86,0.22)',
           }}
         >
           <MedicalServicesOutlined sx={{ fontSize: 15, color: '#fff' }} />
         </Box>
-        <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.9rem' }}>
+        <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.03em' }}>
           OdontoHelp
         </Typography>
       </Box>
@@ -145,13 +145,14 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   }}
                   selected={active}
                   sx={{
-                    borderRadius: 1.5,
+                    borderRadius: 2,
                     py: 1.1,
                     px: 1.25,
                     color: active ? 'primary.main' : 'text.secondary',
                     '&.Mui-selected': {
                       backgroundColor: '#E1F5EE',
                       color: 'primary.main',
+                      boxShadow: 'inset 0 0 0 1px rgba(15,110,86,0.12)',
                       '&:hover': { backgroundColor: '#d0eee3' },
                     },
                     '&:hover': { backgroundColor: 'action.hover' },
@@ -204,7 +205,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <Divider />
       <Box sx={{ px: 2.5, py: 1.75 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          v0.5 • OdontoHelp © 2026
+          v{__APP_VERSION__} • OdontoHelp © 2026
         </Typography>
       </Box>
     </Box>
@@ -233,8 +234,9 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             boxSizing: 'border-box',
             width: SIDEBAR_WIDTH,
             borderRight: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
+            borderColor: 'rgba(15,110,86,0.08)',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(13,30,26,0.9)' : 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(14px)',
           },
         }}
         open

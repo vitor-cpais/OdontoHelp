@@ -127,8 +127,13 @@ public class PlanoDeTratamentoService {
 
         item.setStatus(novoStatus);
 
-        if (novoStatus == StatusItemPlano.REALIZADO && atendimentoRealizacaoId != null)
-            item.setAtendimentoRealizacao(atendimentoService.buscarEntidadePorId(atendimentoRealizacaoId));
+        if (novoStatus == StatusItemPlano.REALIZADO) {
+            if (atendimentoRealizacaoId != null) {
+                item.setAtendimentoRealizacao(atendimentoService.buscarEntidadePorId(atendimentoRealizacaoId));
+            }
+        } else {
+            item.setAtendimentoRealizacao(null);
+        }
 
         return planoMapper.toResponse(planoRepository.save(plano));
     }
