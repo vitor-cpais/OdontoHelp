@@ -22,9 +22,7 @@ npm run dev
 - `src/shared`: componentes compartilhados, tema atual, store de auth, lib Axios e utils.
 - `src/features`: telas, hooks, services, stores e tipos por modulo.
 
-## Documentacao
+## Documentação
 
 - Raiz do monorepo: `../../README.md`
-- Como rodar (Docker e local): `../../docs/OdontoHelp_Como_Rodar.md`
-- Estado da aplicacao: `../../docs/OdontoHelp_Estado_Aplicacao.md`
  
