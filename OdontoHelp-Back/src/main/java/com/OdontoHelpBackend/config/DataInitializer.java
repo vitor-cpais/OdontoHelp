@@ -24,6 +24,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Random;
 
 @Component
+@Profile("dev")
 public class DataInitializer implements ApplicationRunner {
 
     @Value("${app.admin.email}")
@@ -79,6 +81,7 @@ public class DataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // Se já existirem dados, para a execução imediatamente para proteger o banco
         if (usuarioRepository.count() > 0) {
+            garantirAdminAtivo();
             System.out.println("✨ Base de dados já possui registros. Pulando carga de dados.");
             return;
         }
@@ -96,6 +99,16 @@ public class DataInitializer implements ApplicationRunner {
         criarPlanosDeTratamento(dentistas, pacientes, procedimentos);
 
         System.out.println("✅ Base de dados inicializada com sucesso!");
+    }
+
+    private void garantirAdminAtivo() {
+        usuarioRepository.findByEmail(adminEmail)
+                .filter(admin -> !Boolean.TRUE.equals(admin.getIsAtivo()))
+                .ifPresent(admin -> {
+                    admin.setIsAtivo(true);
+                    usuarioRepository.save(admin);
+                    System.out.println("Admin configurado reativado: " + adminEmail);
+                });
     }
 
     private Usuario criarAdmin() {

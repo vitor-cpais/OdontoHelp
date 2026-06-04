@@ -2,6 +2,7 @@ package com.OdontoHelpBackend.service.Usuario;
 
 import com.OdontoHelpBackend.Mapper.DentistaMapper;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
+import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
@@ -66,11 +67,13 @@ public class DentistaService {
     }
 
     @Transactional
-    public DentistaResponseDTO toggleStatus(Long id, boolean isAtivo) {
+    public DentistaResponseDTO toggleStatus(Long id, boolean isAtivo, Usuario usuarioLogado) {
+        Dentista dentista = buscarEntidadePorId(id);
         if (!isAtivo) {
+            validacoesService.validarNaoAutoInativar(id, usuarioLogado);
+            validacoesService.validarUltimoAdminAtivo(dentista);
             validacoesService.validarInativacaoUsuario(id);
         }
-        Dentista dentista = buscarEntidadePorId(id);
         dentista.setIsAtivo(isAtivo);
         return dentistaMapper.toResponse(dentistaRepository.save(dentista));
     }

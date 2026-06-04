@@ -17,6 +17,7 @@ import StatusChip from '../../../shared/components/StatusChip';
 import DentistaDrawer from '../DentistaDrawer'; // 🌟 Corrigido aqui!
 import type { Dentista } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { getApiErrorMessage } from '../../../shared/lib/axios';
 import { maskTelefone } from '../../../shared/utils/masks';
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
@@ -30,6 +31,7 @@ export default function DentistasPage() {
   });
 
   const nomeBusca = useDebounce(busca, 400);
+  const usuarioLogadoId = useAuthStore((s) => s.usuario?.id);
   const perfil = useAuthStore((s) => s.usuario?.perfil);
   const podeCadastrarDentista = perfil === 'ADMIN';
   const { openNew, openEdit, hasDraft } = useDentistaDrawerStore();
@@ -52,15 +54,22 @@ export default function DentistasPage() {
     setToast({ open: true, msg, severity });
   }, []);
 
+  const podeDesativar = (dentista: Dentista) =>
+    dentista.id !== usuarioLogadoId || !dentista.isAtivo;
+
   const handleToggleAtivo = async (dentista: Dentista) => {
+    if (!podeDesativar(dentista)) {
+      showToast('Você não pode desativar o próprio acesso.', 'error');
+      return;
+    }
     try {
       await toggleAtivo.mutateAsync({ id: dentista.id, isAtivo: !dentista.isAtivo });
       showToast(
         `Dentista ${!dentista.isAtivo ? 'ativado' : 'desativado'} com sucesso!`,
         'success'
       );
-    } catch {
-      showToast('Erro ao alterar status', 'error');
+    } catch (err) {
+      showToast(getApiErrorMessage(err, 'Erro ao alterar status'), 'error');
     }
   };
 
@@ -187,18 +196,28 @@ export default function DentistasPage() {
                               <EditOutlined sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={d.isAtivo ? 'Desativar' : 'Ativar'}>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleToggleAtivo(d)}
-                              sx={{ color: d.isAtivo ? 'error.main' : 'success.main' }}
-                            >
-                              {d.isAtivo
-                                ? <ToggleOffOutlined sx={{ fontSize: 16 }} />
-                                : <ToggleOnOutlined sx={{ fontSize: 16 }} />
-                              }
-                            </IconButton>
-                          </Tooltip>
+                          {podeDesativar(d) ? (
+                            <Tooltip title={d.isAtivo ? 'Desativar' : 'Ativar'}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleToggleAtivo(d)}
+                                sx={{ color: d.isAtivo ? 'error.main' : 'success.main' }}
+                              >
+                                {d.isAtivo
+                                  ? <ToggleOffOutlined sx={{ fontSize: 16 }} />
+                                  : <ToggleOnOutlined sx={{ fontSize: 16 }} />
+                                }
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="Você não pode desativar o próprio acesso">
+                              <span>
+                                <IconButton size="small" disabled sx={{ opacity: 0.4 }}>
+                                  <ToggleOffOutlined sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )}
                         </>
                       )}
                     </TableCell>

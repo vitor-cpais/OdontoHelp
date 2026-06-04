@@ -53,11 +53,13 @@ public class UsuarioService {
 
 
     @Transactional
-    public UsuarioResponseDTO toggleStatus(Long id, boolean isAtivo) {
+    public UsuarioResponseDTO toggleStatus(Long id, boolean isAtivo, Usuario usuarioLogado) {
+        Usuario usuario = buscarEntidadePorId(id);
         if (!isAtivo) {
+            validacoesService.validarNaoAutoInativar(id, usuarioLogado);
+            validacoesService.validarUltimoAdminAtivo(usuario);
             validacoesService.validarInativacaoUsuario(id);
         }
-        Usuario usuario = buscarEntidadePorId(id);
         usuario.setIsAtivo(isAtivo);
         return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }

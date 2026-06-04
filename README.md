@@ -2,22 +2,33 @@
 
 Sistema odontológico com backend Spring Boot, frontend React e PostgreSQL.
 
-> Repositório público: use sempre `.env` local (a partir de `.env.example`). **Não** commite senhas, `JWT_SECRET` nem arquivos `.env*` com valores reais.
+> Repositório público: **não** commite `.env` com senhas reais. Use `.env.example` (local) ou `.env.production.example` (VPS).
 
-## Inicio rapido (Docker)
+## Inicio rapido (Docker — local)
 
 ```powershell
 cd C:\Estudo\OdontoHelp
-copy .env.example .env
 docker compose up -d --build
 ```
+
+Opcional: `copy .env.example .env` para customizar portas/senhas.
 
 | Servico | URL |
 |---------|-----|
 | Aplicacao | http://localhost:5173 |
 | API / Swagger | http://localhost:8080/swagger-ui.html |
 
-Credenciais padrão de desenvolvimento (seed): definidas em `APP_ADMIN_*` no seu `.env`. O compose exige `JWT_SECRET` no `.env` — gere uma chave nova antes de expor a API na internet.
+Login seed (dev): `admin@odonto.com` / `123456`
+
+## VPS (Oracle Cloud / producao)
+
+```bash
+cp .env.production.example .env
+# edite dominios, JWT_SECRET, senhas
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Guia completo: [docs/OdontoHelp_Como_Rodar.md](docs/OdontoHelp_Como_Rodar.md#deploy-vps-oracle-cloud)
 
 ## Documentação
 
@@ -31,7 +42,8 @@ Credenciais padrão de desenvolvimento (seed): definidas em `APP_ADMIN_*` no seu
 
 ```text
 OdontoHelp/
-  docker-compose.yml
+  docker-compose.yml          # desenvolvimento local
+  docker-compose.prod.yml     # overlay VPS / producao
   OdontoHelp-Back/          # API Java
   OdontoHelp-Front/
     odonto-help-frontend/   # React + Vite

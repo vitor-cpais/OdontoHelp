@@ -35,6 +35,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Long countByIsAtivo(Boolean isAtivo);
 
+    long countByPerfilAndIsAtivo(PerfilUsuario perfil, Boolean isAtivo);
+
     @Query("""
             SELECT u FROM Usuario u
             WHERE (:nomePattern IS NULL OR LOWER(u.nome) LIKE :nomePattern)

@@ -2,9 +2,12 @@ package com.OdontoHelpBackend.controller.Auth;
 
 import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.auth.AuthResponse;
+import com.OdontoHelpBackend.dto.auth.ForgotPasswordRequest;
 import com.OdontoHelpBackend.dto.auth.LoginRequest;
 import com.OdontoHelpBackend.dto.auth.RefreshRequest;
+import com.OdontoHelpBackend.dto.auth.ResetPasswordRequest;
 import com.OdontoHelpBackend.service.Auth.AuthService;
+import com.OdontoHelpBackend.service.Auth.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +21,23 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        passwordResetService.solicitar(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        passwordResetService.redefinir(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/refresh")

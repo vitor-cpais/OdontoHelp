@@ -1,5 +1,6 @@
 package com.OdontoHelpBackend.controller.Usuario;
 
+import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -45,7 +47,8 @@ public class DentistaController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<DentistaResponseDTO> toggleStatus(
             @PathVariable Long id,
-            @RequestParam boolean isAtivo) {
-        return ResponseEntity.ok(dentistaService.toggleStatus(id, isAtivo));
+            @RequestParam boolean isAtivo,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(dentistaService.toggleStatus(id, isAtivo, usuario));
     }
 }

@@ -1,5 +1,6 @@
 // src/features/auth/LoginPage.tsx
 import { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +14,7 @@ import {
   TextField,
   Typography,
   Alert,
+  Link,
 } from '@mui/material';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Visibility from '@mui/icons-material/Visibility';
@@ -130,6 +132,10 @@ export default function LoginPage() {
               ),
             }}
           />
+
+          <Link component={RouterLink} to="/esqueci-senha" textAlign="right" underline="hover" variant="body2">
+            Esqueci minha senha
+          </Link>
 
           <Button
             type="submit"

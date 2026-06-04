@@ -71,7 +71,8 @@ public class UsuarioController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<UsuarioResponseDTO> toggleStatus(
             @PathVariable Long id,
-            @RequestParam boolean isAtivo) {
-        return ResponseEntity.ok(usuarioService.toggleStatus(id, isAtivo));
+            @RequestParam boolean isAtivo,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(usuarioService.toggleStatus(id, isAtivo, usuario));
     }
 }

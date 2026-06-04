@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AppShell from '../shared/components/AppShell';
 import { PrivateRoute, RoleRoute } from '../shared/components/RouteGuards';
 import LoginPage from '../features/auth/LoginPage';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 
 import AgendamentosPage  from '../features/agendamentos/pages/AgendamentosPage';
 import DashboardPage     from '../features/dashboard/pages/DashboardPage';
@@ -17,6 +19,8 @@ import AtendimentoDetailPage from '../features/atendimentos/pages/AtendimentoDet
 const router = createBrowserRouter([
   // ─── pública ────────────────────────────────────────────────────────────────
   { path: '/login', element: <LoginPage /> },
+  { path: '/esqueci-senha', element: <ForgotPasswordPage /> },
+  { path: '/resetar-senha', element: <ResetPasswordPage /> },
 
   // ─── protegidas ─────────────────────────────────────────────────────────────
   {
