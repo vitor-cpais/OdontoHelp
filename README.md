@@ -20,23 +20,15 @@ Opcional: `copy .env.example .env` para customizar portas/senhas.
 
 Login seed (dev): `admin@odonto.com` / `123456`
 
-## VPS (Oracle Cloud / producao)
+## Produção
 
 ```bash
 cp .env.production.example .env
-# edite dominios, JWT_SECRET, senhas
+# edite URLs, JWT_SECRET, SMTP e senhas
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Guia completo: [docs/OdontoHelp_Como_Rodar.md](docs/OdontoHelp_Como_Rodar.md#deploy-vps-oracle-cloud)
-
-## Documentação
-
-| Documento | Conteudo |
-|-----------|----------|
-| [**Como rodar**](docs/OdontoHelp_Como_Rodar.md) | Docker (subir, atualizar, parar cada servico), host local, banco, Swagger |
-| [**Estado da aplicacao**](docs/OdontoHelp_Estado_Aplicacao.md) | Modulos, perfis, Flyway, arquitetura |
-| [**Modulo clinico**](docs/OdontoHelp_Contexto_ModuloClinico.md) | Atendimento, odontograma, plano de tratamento |
+Em produção, mantenha o arquivo `.env` somente no servidor.
 
 ## Estrutura
 
@@ -47,21 +39,18 @@ OdontoHelp/
   OdontoHelp-Back/          # API Java
   OdontoHelp-Front/
     odonto-help-frontend/   # React + Vite
-  docs/
 ```
 
 ## Comandos Docker (resumo)
 
 ```powershell
-docker compose up -d --build              # tudo
+docker compose up -d --build
 docker compose build frontend && docker compose up -d frontend
-docker compose build backend  && docker compose up -d backend
-docker compose up -d postgres             # so banco
-docker compose stop frontend              # parar um servico
-docker compose down                       # parar tudo
+docker compose build backend && docker compose up -d backend
+docker compose up -d postgres
+docker compose stop frontend
+docker compose down
 ```
-
-Detalhes, fluxos de desenvolvimento e troubleshooting: [docs/OdontoHelp_Como_Rodar.md](docs/OdontoHelp_Como_Rodar.md).
 
 ## Segurança (repo público)
 
