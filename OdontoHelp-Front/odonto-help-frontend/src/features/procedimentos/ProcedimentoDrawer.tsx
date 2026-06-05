@@ -26,9 +26,19 @@ const schema = z.object({
     .refine((v) => v !== '' && Number(v) > 0, { message: 'Duração deve ser maior que zero' }),
   corLegenda: z
     .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida — use #RRGGBB')
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Selecione uma cor válida')
     .or(z.literal('')),
 });
+
+function sameDraftValues(a: Partial<ProcedimentoFormData>, b: Partial<ProcedimentoFormData>) {
+  return (
+    (a.nome ?? '') === (b.nome ?? '') &&
+    (a.descricao ?? '') === (b.descricao ?? '') &&
+    (a.valorBase ?? '') === (b.valorBase ?? '') &&
+    (a.duracaoMinutos ?? '') === (b.duracaoMinutos ?? '') &&
+    (a.corLegenda ?? '') === (b.corLegenda ?? '')
+  );
+}
 
 interface Props {
   onSuccess: (msg: string) => void;
@@ -71,8 +81,8 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
 
   const values = watch();
   useEffect(() => {
-    if (open) updateDraft(values);
-  }, [JSON.stringify(values), open]);
+    if (open && !sameDraftValues(draft, values)) updateDraft(values);
+  }, [values.nome, values.descricao, values.valorBase, values.duracaoMinutos, values.corLegenda, open]);
 
   const handleClose = () => {
     if (isDirty && !isEditing) setConfirmClose(true);
@@ -170,7 +180,7 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
               <Controller name="valorBase" control={control} render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Valor base *"
+                  label="Valor de referência *"
                   type="number"
                   error={!!errors.valorBase}
                   helperText={errors.valorBase?.message}
@@ -186,7 +196,7 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
               <Controller name="duracaoMinutos" control={control} render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Duração *"
+                  label="Duração estimada *"
                   type="number"
                   error={!!errors.duracaoMinutos}
                   helperText={errors.duracaoMinutos?.message}
@@ -201,31 +211,40 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
             </Stack>
 
             <Divider />
-            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Legenda no calendário</Typography>
+            <Typography variant="overline" sx={{ color: 'text.disabled' }}>Cor de identificação</Typography>
 
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Controller name="corLegenda" control={control} render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Cor (#RRGGBB)"
+                  label="Cor do procedimento"
+                  type="color"
                   error={!!errors.corLegenda}
-                  helperText={errors.corLegenda?.message ?? 'Ex: #0F6E56'}
-                  fullWidth
-                  inputProps={{ maxLength: 7 }}
+                  helperText={errors.corLegenda?.message ?? 'Clique para escolher uma cor'}
+                  sx={{ width: 180 }}
+                  inputProps={{
+                    'aria-label': 'Escolher cor do procedimento',
+                    sx: { height: 42, cursor: 'pointer', p: 0.75 },
+                  }}
                 />
               )} />
-              {/* Preview da cor */}
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  flexShrink: 0,
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(corWatch) ? corWatch : '#E0E0E0',
-                }}
-              />
+              <Box sx={{ minWidth: 0 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    flexShrink: 0,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(corWatch) ? corWatch : '#E0E0E0',
+                    mb: 0.5,
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  {corWatch || '#0F6E56'}
+                </Typography>
+              </Box>
             </Stack>
 
             <Typography variant="caption" sx={{ color: 'text.disabled', mt: -1 }}>

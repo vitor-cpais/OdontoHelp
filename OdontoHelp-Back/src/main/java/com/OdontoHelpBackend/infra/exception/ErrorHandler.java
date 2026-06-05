@@ -2,6 +2,7 @@ package com.OdontoHelpBackend.infra.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -89,6 +90,23 @@ public class ErrorHandler {
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(Exception ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiErrorResponse.of(400, "Bad Request", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String message = "Registro já existente ou dados em conflito";
+        String detail = ex.getMostSpecificCause().getMessage();
+        if (detail != null) {
+            String lower = detail.toLowerCase();
+            if (lower.contains("uk_dentista_cro") || lower.contains("(cro)"))
+                message = "CRO já cadastrado";
+            else if (lower.contains("uk_usuario_email") || lower.contains("(email)"))
+                message = "E-mail já cadastrado";
+            else if (lower.contains("uk_usuario_cpf") || lower.contains("(cpf)"))
+                message = "CPF já cadastrado";
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiErrorResponse.of(409, "Conflict", message));
     }
 
     @ExceptionHandler(Exception.class)

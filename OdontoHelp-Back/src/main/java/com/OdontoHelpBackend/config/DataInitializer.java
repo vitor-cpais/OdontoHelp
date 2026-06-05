@@ -271,13 +271,13 @@ public class DataInitializer implements ApplicationRunner {
         Atendimento at1 = Atendimento.iniciar(ag1, ag1.getDentista(), "Cárie no dente 36. Limpeza e restauração realizadas.");
 
         ItemAtendimento item1a = new ItemAtendimento();
-        item1a.setProcedimento(limpeza);
+        item1a.definirProcedimentoCobravel(limpeza);
         item1a.setNumeroDente(36);
         item1a.setSituacaoNova(SituacaoDente.RESTAURADO);
         item1a.setObservacao("Cárie tratada com resina composta");
 
         ItemAtendimento item1b = new ItemAtendimento();
-        item1b.setProcedimento(restauracao);
+        item1b.definirProcedimentoCobravel(restauracao);
         item1b.setNumeroDente(46);
         item1b.setSituacaoNova(SituacaoDente.CARIADO);
         item1b.setObservacao("Cárie identificada — aguarda tratamento na próxima consulta");
@@ -294,7 +294,7 @@ public class DataInitializer implements ApplicationRunner {
         Atendimento at2 = Atendimento.iniciar(ag2, ag2.getDentista(), "Consulta de rotina. Necessário retorno para limpeza.");
 
         ItemAtendimento item2 = new ItemAtendimento();
-        item2.setProcedimento(consulta);
+        item2.definirProcedimentoCobravel(consulta);
         item2.setNumeroDente(11);
         item2.setSituacaoNova(SituacaoDente.SAUDAVEL);
         item2.setObservacao("Dente em bom estado");
@@ -307,7 +307,7 @@ public class DataInitializer implements ApplicationRunner {
         Atendimento at3 = Atendimento.iniciar(ag3, ag3.getDentista(), "Avaliação em andamento.");
 
         ItemAtendimento item3 = new ItemAtendimento();
-        item3.setProcedimento(canal);
+        item3.definirProcedimentoCobravel(canal);
         item3.setNumeroDente(47);
         item3.setSituacaoNova(SituacaoDente.TRATAMENTO_CANAL);
         item3.setObservacao("Iniciado tratamento de canal — sessão 1 de 3");

@@ -38,6 +38,10 @@ public interface AtendimentoMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "procedimento", ignore = true)
     @Mapping(target = "atendimento", ignore = true)
+    @Mapping(target = "valorCobradoSnapshot", ignore = true)
+    @Mapping(target = "statusCobranca", ignore = true)
+    @Mapping(target = "financeiroCobrancaId", ignore = true)
+    @Mapping(target = "cobrancaEnviadaEm", ignore = true)
     ItemAtendimento itemToEntity(ItemAtendimentoRequestDTO dto);
 
     @Mapping(target = "procedimentoId", source = "procedimento.id")

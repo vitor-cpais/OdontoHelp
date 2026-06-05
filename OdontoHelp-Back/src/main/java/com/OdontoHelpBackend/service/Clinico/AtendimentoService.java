@@ -148,7 +148,7 @@ public class AtendimentoService {
                 if (existentes.contains(key)) continue;
 
                 ItemAtendimento item = atendimentoMapper.itemToEntity(itemDto);
-                item.setProcedimento(procedimentoService.buscarEntidadePorId(itemDto.procedimentoId()));
+                item.definirProcedimentoCobravel(procedimentoService.buscarEntidadePorId(itemDto.procedimentoId()));
                 atendimento.adicionarItem(item);
 
                 odontogramaService.registrarPorItemAtendimento(
@@ -190,6 +190,9 @@ public class AtendimentoService {
 
         if (!item.getAtendimento().getId().equals(atendimentoId))
             throw new BusinessException("Item não pertence a este atendimento");
+
+        if (atendimento.getStatus() == StatusAtendimento.FINALIZADO)
+            throw new BusinessException("Não é permitido remover item de um atendimento finalizado");
 
         atendimento.getItens().remove(item);
         itemAtendimentoRepository.delete(item);

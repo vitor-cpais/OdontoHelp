@@ -1,15 +1,17 @@
 # Producao (VPS Oracle, etc.):
 #   copy .env.production.example .env
-#   edite senhas, JWT, dominios
+#   edite senhas, JWT, dominios DuckDNS
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #
-# Nao exponha o Postgres na internet — sem portas publicadas no host.
+# HTTPS via Caddy (80/443). Backend e frontend ficam na rede interna Docker.
+# Na Oracle Security List: abra 80 e 443; feche 8080 publico.
 
 services:
   postgres:
-    ports: []
+    ports: !reset []
 
   backend:
+    ports: !reset []
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -33,6 +35,29 @@ services:
       SPRING_MAIL_SMTP_STARTTLS: ${SPRING_MAIL_SMTP_STARTTLS:-true}
 
   frontend:
+    ports: !reset []
     build:
       args:
         VITE_API_URL: ${VITE_API_URL:?Defina VITE_API_URL (URL publica da API, ex. https://api.seudominio.com)}
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: odontohelp-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      FRONTEND_DOMAIN: ${FRONTEND_DOMAIN:?Defina FRONTEND_DOMAIN (ex. odontohelp.duckdns.org)}
+      API_DOMAIN: ${API_DOMAIN:?Defina API_DOMAIN (ex. api-odontohelp.duckdns.org)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

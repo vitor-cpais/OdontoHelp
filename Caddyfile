@@ -1,0 +1,10 @@
+# Dominios via .env: FRONTEND_DOMAIN e API_DOMAIN (ex. DuckDNS)
+# Caddy obtem certificado Let's Encrypt automaticamente.
+
+{$FRONTEND_DOMAIN} {
+	reverse_proxy frontend:80
+}
+
+{$API_DOMAIN} {
+	reverse_proxy backend:8080
+}
