@@ -1,0 +1,8 @@
+#!/bin/sh
+# Remove trailers do Cursor se o Agent injetar apesar das configuracoes.
+msgfile="$1"
+[ -f "$msgfile" ] || exit 0
+grep -viE \
+  '^(Made-with: Cursor|Made with Cursor|Co-authored-by: Cursor|Assisted-by: Cursor|Co-authored-by:.*cursoragent@cursor\.com)' \
+  "$msgfile" > "${msgfile}.tmp" && mv "${msgfile}.tmp" "$msgfile"
+exit 0
