@@ -103,7 +103,6 @@ services:
     environment:
       FRONTEND_DOMAIN: ${FRONTEND_DOMAIN:?Defina FRONTEND_DOMAIN (ex. odontohelp.duckdns.org)}
       API_DOMAIN: ${API_DOMAIN:?Defina API_DOMAIN (ex. api-odontohelp.duckdns.org)}
-      FINANCEIRO_API_DOMAIN: ${FINANCEIRO_API_DOMAIN:?Defina FINANCEIRO_API_DOMAIN (ex. financeiro-api-odontohelp.duckdns.org)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

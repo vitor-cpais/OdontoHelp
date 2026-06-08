@@ -24,16 +24,17 @@
 			window 1m
 		}
 	}
-	reverse_proxy backend:8080
+
+	# Financeiro no mesmo host (ex. DuckDNS sem 3o subdominio). Paths /financeiro/* nao existem no Core.
+	handle /financeiro* {
+		reverse_proxy financeiro:8081
+	}
+	handle {
+		reverse_proxy backend:8080
+	}
 }
 
-{$FINANCEIRO_API_DOMAIN} {
-	rate_limit {
-		zone financeiro_api {
-			key {remote_host}
-			events 120
-			window 1m
-		}
-	}
-	reverse_proxy financeiro:8081
-}
+# Subdominio dedicado (opcional — descomente quando existir no DNS):
+# financeiro-api-odontohelp.duckdns.org {
+# 	reverse_proxy financeiro:8081
+# }
