@@ -1,9 +1,10 @@
 import {
-  Drawer, Box, Typography, IconButton, Divider,
+  Alert, Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
 } from '@mui/material';
 import { Close, AddOutlined } from '@mui/icons-material';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import type { ItemPlano } from '../../planoTratamento/types';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,12 +25,13 @@ type FormData = z.infer<typeof schema>;
 interface Props {
   open: boolean;
   dentes: number[];
+  sugestaoPlano?: ItemPlano | null;
   onClose: () => void;
   onAddProcedimento: (itens: ItemAtendimento[]) => void;
 }
 
 export default function AtendimentoProcedimentoDrawer({
-  open, dentes, onClose, onAddProcedimento,
+  open, dentes, sugestaoPlano, onClose, onAddProcedimento,
 }: Props) {
   const localIdRef = useRef(-1);
   const { data: procedimentosData } = useProcedimentosAtivos();
@@ -44,6 +46,24 @@ export default function AtendimentoProcedimentoDrawer({
     },
   });
 
+  useEffect(() => {
+    if (!open) return;
+    if (sugestaoPlano) {
+      reset({
+        procedimentoId: sugestaoPlano.procedimentoId,
+        situacaoNova: '',
+        observacao: sugestaoPlano.observacao?.trim()
+          || `Item do plano: ${sugestaoPlano.procedimentoNome}`,
+      });
+      return;
+    }
+    reset({
+      procedimentoId: '' as unknown as FormData['procedimentoId'],
+      situacaoNova: '',
+      observacao: '',
+    });
+  }, [open, sugestaoPlano, reset]);
+
   const onSubmit: SubmitHandler<FormData> = (data) => {
     const proc = procedimentos.find((p) => p.id === data.procedimentoId);
     const novosItens: ItemAtendimento[] = dentes.map((numeroDente) => ({
@@ -53,6 +73,7 @@ export default function AtendimentoProcedimentoDrawer({
       numeroDente,
       situacaoNova: data.situacaoNova as SituacaoDente,
       observacao: data.observacao || null,
+      ...(sugestaoPlano ? { itemPlanoOrigemId: sugestaoPlano.id } : {}),
     }));
     onAddProcedimento(novosItens);
     reset();
@@ -89,6 +110,12 @@ export default function AtendimentoProcedimentoDrawer({
       <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ px: 3, py: 2.5, flex: 1 }}>
           <Stack spacing={2}>
+            {sugestaoPlano && (
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                Sugestão do plano: dente {sugestaoPlano.numeroDente} — {sugestaoPlano.procedimentoNome}.
+                Informe como o dente ficou após o procedimento.
+              </Alert>
+            )}
             <Controller
               name="procedimentoId"
               control={control}

@@ -6,5 +6,6 @@ public record UsuarioResumoResponse(
         String nome,
         String email,
         String perfil,
-        Long dentistaId
+        Long dentistaId,
+        boolean onboardingConcluido
 ) {}

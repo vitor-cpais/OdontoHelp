@@ -58,8 +58,6 @@ export function useTokenRefresh() {
           });
         } else if (response.status === 401 || response.status === 403) {
           redirectToLogin();
-        } else {
-          redirectToLogin();
         }
       } catch (error) {
         console.warn('Não foi possível renovar token agora:', error);

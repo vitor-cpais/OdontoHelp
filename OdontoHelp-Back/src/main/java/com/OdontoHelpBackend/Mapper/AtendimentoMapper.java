@@ -27,6 +27,7 @@ public interface AtendimentoMapper {
     Atendimento toEntity(AtendimentoRequestDTO dto);
 
     @Mapping(target = "agendamentoStatus", source = "agendamento.status")
+    @Mapping(target = "agendamentoOrigem", source = "agendamento.origem")
     @Mapping(target = "agendamentoId", source = "agendamento.id")
     @Mapping(target = "dentistaId", source = "dentista.id")
     @Mapping(target = "dentistaNome", source = "dentista.nome")

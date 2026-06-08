@@ -42,6 +42,10 @@ public class JwtService {
         return getClaims(token).getSubject();
     }
 
+    public Long extrairUserId(String token) {
+        return getClaims(token).get("usuarioId", Long.class);
+    }
+
     // Necessário para o logout invalidar o token na blacklist até a expiração natural
     public Instant extrairExpiracao(String token) {
         return getClaims(token).getExpiration().toInstant();

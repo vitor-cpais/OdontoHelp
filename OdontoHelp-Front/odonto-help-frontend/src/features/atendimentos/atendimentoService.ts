@@ -4,6 +4,7 @@ import type {
   AtendimentoUpdateData,
   AtendimentoUpdateResult,
   AtendimentoFiltros,
+  IniciarAtendimentoAvulsoData,
 } from './types';
 import type { SliceResponse } from '../dentistas/types';
 
@@ -43,6 +44,16 @@ export const atendimentoService = {
       : `${BASE_ATENDIMENTOS}?${query}`;
 
     const { data } = await api.get(url);
+    return data;
+  },
+
+  iniciarAvulso: async (payload: IniciarAtendimentoAvulsoData): Promise<Atendimento> => {
+    const { data } = await api.post(`${BASE_ATENDIMENTOS}/iniciar-avulso`, {
+      pacienteId: payload.pacienteId,
+      dentistaId: payload.dentistaId ?? null,
+      observacoesGerais: payload.observacoesGerais ?? null,
+      motivo: payload.motivo ?? null,
+    });
     return data;
   },
 
@@ -87,6 +98,25 @@ export const atendimentoService = {
     const { data } = await api.post(`${BASE_ATENDIMENTOS}/${id}/baixa-plano-manual`, {
       itemPlanoIds: itensPlanoIds,
     });
+    return data;
+  },
+
+  listarPendentesCobranca: async (
+    page = 0,
+    size = 10,
+    filtros: {
+      nomePaciente?: string;
+      dentistaId?: number | '';
+      dataFinalizacaoDe?: string;
+      dataFinalizacaoAte?: string;
+    } = {},
+  ) => {
+    const query = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filtros.nomePaciente) query.set('nomePaciente', filtros.nomePaciente);
+    if (filtros.dentistaId) query.set('dentistaId', String(filtros.dentistaId));
+    if (filtros.dataFinalizacaoDe) query.set('dataFinalizacaoDe', filtros.dataFinalizacaoDe);
+    if (filtros.dataFinalizacaoAte) query.set('dataFinalizacaoAte', filtros.dataFinalizacaoAte);
+    const { data } = await api.get(`${BASE_ATENDIMENTOS}/pendentes-cobranca?${query}`);
     return data;
   },
 };

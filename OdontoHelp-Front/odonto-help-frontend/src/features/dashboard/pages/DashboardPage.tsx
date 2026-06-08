@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import {
   Box, Button, Grid, Typography, Paper, Skeleton, TextField,
-  Stack, Divider,
+  Stack, Divider, IconButton, Tooltip, Chip,
 } from '@mui/material';
 import {
   CalendarMonthOutlined, PeopleOutlined,
   MedicalServicesOutlined, EventNoteOutlined, AddOutlined, ArrowForwardOutlined,
+  WarningAmberOutlined, EmailOutlined, WhatsApp, EventAvailableOutlined,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import {
-  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { useDashboardResumo, useAgendamentosPorStatus,useProximosHoje } from '../useDashboard';
 import { STATUS_COLORS, STATUS_LABELS } from '../../../domains/agendamentos';
@@ -21,6 +22,10 @@ import { canFilterByDentista } from '../../../permissions/roles';
 import { EmptyState } from '../../../design-system/components';
 import { useDentistas } from '../../dentistas/useDentistas';
 import DentistaFiltroAutocomplete from '../../../shared/components/DentistaFiltroAutocomplete';
+import { useInadimplentesComConsultaHoje, useEnviarLembreteEmail } from '../../financeiro/useFinanceiro';
+import { buildWhatsAppCobrancaUrl, formatLembreteCobrancaMessage } from '../../financeiro/cobrancaNotificacao';
+import { fmtMoeda } from '../../financeiro/financeiroLabels';
+import { getApiErrorMessage } from '../../../shared/lib/axios';
 
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -99,6 +104,8 @@ export default function DashboardPage() {
   const { data: resumo, isLoading: loadingResumo } = useDashboardResumo(dentistaId);
   const { data: porStatus, isLoading: loadingStatus } = useAgendamentosPorStatus(dataInicio, dataFim, dentistaId);
   const { data: proximos, isLoading: loadingProximos } = useProximosHoje(dentistaId);
+  const { data: inadimplentesHoje, isLoading: loadingInadimplentesHoje } = useInadimplentesComConsultaHoje();
+  const enviarEmail = useEnviarLembreteEmail();
   const saudacao = isDentista ? 'Sua agenda clínica do dia' : 'Cockpit operacional da clínica';
 
   const pieData = (porStatus ?? [])
@@ -277,7 +284,7 @@ export default function DashboardPage() {
                         <Cell key={i} fill={entry.fill} stroke={entry.stroke} strokeWidth={1} />
                       ))}
                     </Pie>
-                    <Tooltip
+                    <RechartsTooltip
                       formatter={(value, name) => [value, name]}
                       contentStyle={{ borderRadius: 8, fontSize: '0.8rem', border: '0.5px solid #D3D1C7' }}
                     />
@@ -362,6 +369,98 @@ export default function DashboardPage() {
                       </Typography>
                     </Box>
                     <AgendamentoStatusChip status={a.status} />
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Inadimplentes com consulta hoje */}
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, border: '1px solid rgba(15,110,86,0.08)', boxShadow: '0 10px 30px rgba(22, 43, 35, 0.05)' }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <WarningAmberOutlined sx={{ color: '#C0392B', fontSize: 20 }} />
+                  <Typography variant="h6" sx={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                    Inadimplentes com consulta hoje
+                  </Typography>
+                  {!loadingInadimplentesHoje && (inadimplentesHoje?.length ?? 0) > 0 && (
+                    <Chip size="small" color="warning" label={inadimplentesHoje?.length} />
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.disabled">
+                  Pacientes com parcela vencida e agendamento confirmado para hoje
+                </Typography>
+              </Box>
+              <Button size="small" endIcon={<ArrowForwardOutlined />} onClick={() => navigate('/financeiro')}>
+                Financeiro
+              </Button>
+            </Stack>
+
+            {loadingInadimplentesHoje ? (
+              <Stack spacing={1.5}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} height={52} sx={{ borderRadius: 1 }} />
+                ))}
+              </Stack>
+            ) : !inadimplentesHoje || inadimplentesHoje.length === 0 ? (
+              <EmptyState title="Nenhum inadimplente com consulta hoje" description="Situação financeira alinhada com a agenda do dia." />
+            ) : (
+              <Stack spacing={0} divider={<Divider />}>
+                {inadimplentesHoje.map((p) => (
+                  <Box key={p.id} sx={{ py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                        {p.pacienteNome ?? 'Paciente'}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled" noWrap>
+                        {p.cobrancaDescricao ?? `Cobrança #${p.cobrancaId}`} · Saldo {fmtMoeda(p.saldo)}
+                        {p.horaConsulta && ` · Consulta ${p.horaConsulta}`}
+                        {p.dentistaNome && ` · ${p.dentistaNome}`}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      size="small"
+                      icon={<EventAvailableOutlined sx={{ fontSize: 14 }} />}
+                      label="Hoje"
+                      color="warning"
+                      variant="outlined"
+                    />
+                    <Tooltip title="Enviar lembrete por e-mail">
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={enviarEmail.isPending}
+                          onClick={async () => {
+                            try {
+                              await enviarEmail.mutateAsync({ parcelaId: p.id, pacienteId: p.pacienteIdExterno });
+                            } catch (e) {
+                              console.error(getApiErrorMessage(e, 'Erro ao enviar lembrete'));
+                            }
+                          }}
+                        >
+                          <EmailOutlined fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="WhatsApp">
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={!p.pacienteTelefone}
+                          onClick={() => {
+                            if (!p.pacienteTelefone) return;
+                            const url = buildWhatsAppCobrancaUrl(p.pacienteTelefone, formatLembreteCobrancaMessage(p));
+                            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          <WhatsApp fontSize="small" sx={{ color: '#25D366' }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Button size="small" onClick={() => navigate('/financeiro')}>Ver</Button>
                   </Box>
                 ))}
               </Stack>

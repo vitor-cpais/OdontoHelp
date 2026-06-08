@@ -135,7 +135,7 @@ export default function ProcedimentosPage() {
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
                 <TableCell>Nome</TableCell>
-                <TableCell>Valor base</TableCell>
+                <TableCell>Valor de referência</TableCell>
                 <TableCell>Duração</TableCell>
                 <TableCell>Cor</TableCell>
                 <TableCell>Status</TableCell>

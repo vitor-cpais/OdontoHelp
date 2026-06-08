@@ -26,6 +26,7 @@ import { SIDEBAR_WIDTH } from './Sidebar';
 import { useAuthStore } from '../store/authStore';
 import { useUiPreferencesStore } from '../store/uiPreferencesStore';
 import { useLogout } from '../../features/auth/useAuth';
+import { useOnboardingStore } from '../store/onboardingStore';
 
 const routeLabels: Record<string, string> = {
   '': 'Dashboard',
@@ -50,6 +51,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const themeMode = useUiPreferencesStore((s) => s.themeMode);
   const toggleThemeMode = useUiPreferencesStore((s) => s.toggleThemeMode);
   const logout = useLogout();
+  const openOnboarding = useOnboardingStore((s) => s.open);
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
 
   // ── breadcrumb ──
@@ -169,7 +171,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
           <IconButton
             size="small"
-            sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'inline-flex' } }}
+            onClick={openOnboarding}
+            aria-label="Abrir tutorial"
+            sx={{ color: 'text.secondary' }}
           >
             <HelpOutlineOutlined sx={{ fontSize: 19 }} />
           </IconButton>
@@ -228,6 +232,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   Cargo: {usuario?.perfil ?? ''}
                 </Typography>
               </Box>
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setAnchor(null);
+                openOnboarding();
+              }}
+            >
+              <HelpOutlineOutlined sx={{ fontSize: 17, mr: 1, color: 'text.secondary' }} />
+              <Typography variant="body2">Tutorial</Typography>
             </MenuItem>
 
             <MenuItem

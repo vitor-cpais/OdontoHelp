@@ -55,3 +55,15 @@ export function RoleRoute({ allowed }: RoleRouteProps) {
 
   return <Outlet />;
 }
+
+/** Redireciona URLs inexistentes para login (sem sessão) ou home do perfil. */
+export function NotFoundRedirect() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const usuario = useAuthStore((s) => s.usuario);
+
+  if (!accessToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={roleHomePath(usuario?.perfil)} replace />;
+}

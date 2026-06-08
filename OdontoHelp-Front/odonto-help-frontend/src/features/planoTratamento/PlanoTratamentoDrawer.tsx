@@ -2,18 +2,24 @@ import {
   Drawer, Box, Typography, IconButton, Divider,
   TextField, MenuItem, Button, Stack,
   Tooltip, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
+  Chip,
 } from '@mui/material';
 import {
-  Close, AssignmentOutlined, AddOutlined, DeleteOutlined,
+  Close, AssignmentOutlined, DeleteOutlined, ContentCopyOutlined,
 } from '@mui/icons-material';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
 import { getApiErrorMessage } from '../../shared/lib/axios';
-import { useCreatePlano } from './usePlanoTratamento';
+import { useCreatePlano, useItensPlanoPendentes } from './usePlanoTratamento';
+import OdontogramaVisual from '../odontograma/OdontogramaVisual';
+import OdontogramaSelectionDialog from '../odontograma/OdontogramaSelectionDialog';
+import { useOdontograma } from '../odontograma/useOdontograma';
+import { SITUACAO_DENTE_LABELS, SITUACAO_DENTE_COLORS } from '../atendimentos/types';
+import type { SituacaoDente } from '../atendimentos/types';
 import { useProcedimentosAtivos } from '../procedimentos/useProcedimentos';
 import { usePacientes } from '../pacientes/usePacientes';
 import { useDentistas } from '../dentistas/useDentistas';
@@ -34,7 +40,7 @@ const itemSchema = z.object({
   numeroDente: z
     .union([z.number(), z.literal('')])
     .refine((v) => v !== '' && DENTES_VALIDOS.has(Number(v)), {
-      message: 'Dente inválido (FDI 11-48)',
+      message: 'Selecione o dente no odontograma',
     }),
   prioridade: z
     .union([z.literal(1), z.literal(2), z.literal(3), z.literal('')])
@@ -51,7 +57,7 @@ const schema = z.object({
     .refine((v) => v !== '', { message: 'Dentista obrigatório' }),
   atendimentoId: z.union([z.number().positive(), z.literal('')]).optional(),
   observacoes: z.string().optional().default(''),
-  itens: z.array(itemSchema).min(1, 'Adicione ao menos um item'),
+  itens: z.array(itemSchema).min(1, 'Selecione ao menos um dente no odontograma'),
 });
 
 const ITEM_VAZIO = {
@@ -66,12 +72,26 @@ interface Props {
   pacienteId?: number;
   dentistaId?: number;
   atendimentoId?: number;
-  /** Dentes pré-selecionados para preencher os itens automaticamente */
   selectedDentes?: number[];
   useDialog?: boolean;
   onClose: () => void;
   onSuccess: (msg: string) => void;
   onError: (msg: string) => void;
+}
+
+function SituacaoDenteBadge({ situacao }: { situacao: SituacaoDente | null }) {
+  if (!situacao) return null;
+  const cor = SITUACAO_DENTE_COLORS[situacao];
+  return (
+    <Chip
+      label={SITUACAO_DENTE_LABELS[situacao]}
+      size="small"
+      sx={{
+        height: 22, fontSize: '0.68rem', fontWeight: 600,
+        bgcolor: `${cor}18`, color: cor, border: `1px solid ${cor}44`,
+      }}
+    />
+  );
 }
 
 export default function PlanoTratamentoDrawer({
@@ -81,34 +101,84 @@ export default function PlanoTratamentoDrawer({
   const { data: procedimentosData } = useProcedimentosAtivos();
   const procedimentos = procedimentosData?.content ?? [];
   const create = useCreatePlano();
+  const [odontogramaDialogOpen, setOdontogramaDialogOpen] = useState(false);
 
   const { data: pacientesData, isLoading: pacientesLoading } = usePacientes(
     { page: 0, size: 100, isAtivo: true }, { staleTime: 0 }
   );
   const pacientes = pacientesData?.content ?? [];
-
   const { data: dentistasData, isLoading: dentistasLoading } = useDentistas(
     { page: 0, size: 100, isAtivo: true }, { staleTime: 0 }
   );
   const dentistas = dentistasData?.content ?? [];
 
-  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<PlanoFormData>({
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<PlanoFormData>({
     resolver: zodResolver(schema),
-    defaultValues: { pacienteId: '', dentistaId: '', atendimentoId: '', observacoes: '', itens: [ITEM_VAZIO] },
+    defaultValues: { pacienteId: '', dentistaId: '', atendimentoId: '', observacoes: '', itens: [] },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'itens' });
+  const { fields, remove } = useFieldArray({ control, name: 'itens' });
 
   const watchedPacienteId = watch('pacienteId');
   const pacienteIdNumber = typeof watchedPacienteId === 'number' ? watchedPacienteId : null;
+  const effectivePacienteId = pacienteId ?? pacienteIdNumber;
   const { data: atendimentosData, isLoading: atendimentosLoading } = useAtendimentosPorPaciente(pacienteIdNumber, 0);
   const atendimentos = atendimentosData?.content ?? [];
+  const { data: itensPendentes } = useItensPlanoPendentes(effectivePacienteId);
+  const { data: mapaOdontograma } = useOdontograma(effectivePacienteId);
+
+  const watchedItens = watch('itens');
+  const odontogramaDentes = watchedItens
+    .map((i) => i.numeroDente)
+    .filter((d): d is number => typeof d === 'number');
+
+  const syncDentesToItens = useCallback((dentes: number[]) => {
+    const current = watch('itens');
+    const newItens = dentes.map((d) => {
+      const existing = current.find((i) => i.numeroDente === d);
+      return existing ?? { ...ITEM_VAZIO, numeroDente: d };
+    });
+    setValue('itens', newItens);
+  }, [watch, setValue]);
+
+  const handleDenteClick = (numero: number) => {
+    const next = odontogramaDentes.includes(numero)
+      ? odontogramaDentes.filter((d) => d !== numero)
+      : [...odontogramaDentes, numero];
+    syncDentesToItens(next);
+  };
+
+  const handleRemoverDente = (numero: number) => {
+    syncDentesToItens(odontogramaDentes.filter((d) => d !== numero));
+  };
+
+  const handleSelecionarCarie = () => {
+    const dentes = Object.values(mapaOdontograma ?? {})
+      .filter((e) => e.situacaoAtual === 'CARIADO')
+      .map((e) => e.numeroDente);
+    syncDentesToItens([...new Set([...odontogramaDentes, ...dentes])]);
+  };
+
+  const handleSelecionarPendentes = () => {
+    const dentes = itensPendentes?.map((i) => i.numeroDente) ?? [];
+    syncDentesToItens([...new Set([...odontogramaDentes, ...dentes])]);
+  };
+
+  const handleAplicarATodos = () => {
+    const itens = watch('itens');
+    if (itens.length < 2) return;
+    const first = itens[0];
+    if (!first.procedimentoId || first.procedimentoId === '') return;
+    setValue('itens', itens.map((item, i) => (
+      i === 0 ? item : { ...item, procedimentoId: first.procedimentoId, prioridade: first.prioridade }
+    )));
+  };
 
   useEffect(() => {
     if (!open) return;
     const itensPreenchidos = selectedDentes && selectedDentes.length > 0
       ? selectedDentes.map((numeroDente) => ({ ...ITEM_VAZIO, numeroDente }))
-      : [ITEM_VAZIO];
+      : [];
 
     reset({
       pacienteId: pacienteId ?? '',
@@ -117,7 +187,7 @@ export default function PlanoTratamentoDrawer({
       observacoes: '',
       itens: itensPreenchidos,
     });
-  }, [open, pacienteId, dentistaId, atendimentoId, selectedDentes]);
+  }, [open, pacienteId, dentistaId, atendimentoId, selectedDentes, reset]);
 
   const onSubmit = async (data: PlanoFormData) => {
     try {
@@ -131,6 +201,42 @@ export default function PlanoTratamentoDrawer({
 
   const FormContent = () => (
     <Stack spacing={2.5}>
+      {effectivePacienteId ? (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="overline" sx={{ color: 'text.disabled' }}>
+              Selecionar dentes
+            </Typography>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap">
+              <Button size="small" variant="outlined" onClick={handleSelecionarCarie}>Com cárie</Button>
+              <Button size="small" variant="outlined" onClick={handleSelecionarPendentes}>Pendentes no plano</Button>
+              <Button size="small" variant="outlined" onClick={() => setOdontogramaDialogOpen(true)}>Expandir</Button>
+            </Stack>
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            Clique nos dentes para montar o plano. Cada dente selecionado vira um item abaixo.
+          </Typography>
+          {odontogramaDentes.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              {odontogramaDentes.map((d) => (
+                <Chip key={d} label={String(d)} size="small" onDelete={() => handleRemoverDente(d)} />
+              ))}
+            </Box>
+          )}
+          <OdontogramaVisual
+            pacienteId={effectivePacienteId}
+            selectedDentes={odontogramaDentes}
+            onDenteClick={handleDenteClick}
+            dentesPendentesPlano={itensPendentes?.map((i) => i.numeroDente) ?? []}
+          />
+          <Divider />
+        </>
+      ) : (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Selecione o paciente para exibir o odontograma e escolher os dentes.
+        </Alert>
+      )}
+
       <Typography variant="overline" sx={{ color: 'text.disabled' }}>Dados do plano</Typography>
 
       <Stack direction="row" spacing={1.5}>
@@ -150,7 +256,6 @@ export default function PlanoTratamentoDrawer({
             )}
           />
         )} />
-
         <Controller name="dentistaId" control={control} render={({ field }) => (
           <Autocomplete
             options={dentistas}
@@ -195,71 +300,117 @@ export default function PlanoTratamentoDrawer({
         <Typography variant="overline" sx={{ color: 'text.disabled' }}>
           Itens do plano ({fields.length})
         </Typography>
-        <Button size="small" startIcon={<AddOutlined sx={{ fontSize: 15 }} />} onClick={() => append(ITEM_VAZIO)}>
-          Adicionar item
-        </Button>
+        {fields.length >= 2 && (
+          <Button size="small" startIcon={<ContentCopyOutlined sx={{ fontSize: 15 }} />} onClick={handleAplicarATodos}>
+            Aplicar a todos
+          </Button>
+        )}
       </Box>
 
       {errors.itens?.root && (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>{errors.itens.root.message}</Alert>
       )}
 
-      {fields.map((field, index) => (
-        <Box key={field.id} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', backgroundColor: 'background.default' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              Item {index + 1}
-            </Typography>
-            {fields.length > 1 && (
-              <Tooltip title="Remover item">
-                <IconButton size="small" onClick={() => remove(index)} sx={{ color: 'error.main' }}>
-                  <DeleteOutlined sx={{ fontSize: 15 }} />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-          <Stack spacing={1.5}>
-            <Stack direction="row" spacing={1.5}>
-              <Controller name={`itens.${index}.procedimentoId`} control={control} render={({ field: f }) => (
-                <TextField {...f} select label="Procedimento *" fullWidth
-                  error={!!errors.itens?.[index]?.procedimentoId}
-                  helperText={errors.itens?.[index]?.procedimentoId?.message}
-                  onChange={(e) => f.onChange(Number(e.target.value))}>
-                  {procedimentos.map((p) => <MenuItem key={p.id} value={p.id}>{p.nome}</MenuItem>)}
-                </TextField>
-              )} />
-              <Controller name={`itens.${index}.numeroDente`} control={control} render={({ field: f }) => (
-                <TextField {...f} label="Dente (FDI) *" type="number"
-                  error={!!errors.itens?.[index]?.numeroDente}
-                  helperText={errors.itens?.[index]?.numeroDente?.message ?? '11–48'}
-                  sx={{ width: 130 }} inputProps={{ min: 11, max: 48 }}
-                  onChange={(e) => f.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                />
-              )} />
-              <Controller name={`itens.${index}.prioridade`} control={control} render={({ field: f }) => (
-                <TextField {...f} select label="Prioridade *" sx={{ width: 130 }}
-                  error={!!errors.itens?.[index]?.prioridade}
-                  helperText={errors.itens?.[index]?.prioridade?.message}
-                  onChange={(e) => f.onChange(Number(e.target.value))}>
-                  <MenuItem value={1}>Alta</MenuItem>
-                  <MenuItem value={2}>Média</MenuItem>
-                  <MenuItem value={3}>Baixa</MenuItem>
-                </TextField>
-              )} />
-            </Stack>
-            <Controller name={`itens.${index}.observacao`} control={control} render={({ field: f }) => (
-              <TextField {...f} label="Observação" fullWidth inputProps={{ maxLength: 500 }} />
-            )} />
-          </Stack>
+      {fields.length === 0 ? (
+        <Box sx={{ py: 4, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.disabled">
+            Selecione os dentes no odontograma acima para montar o plano
+          </Typography>
         </Box>
-      ))}
+      ) : (
+        fields.map((field, index) => {
+          const numeroDente = watchedItens[index]?.numeroDente;
+          const situacao = typeof numeroDente === 'number'
+            ? (mapaOdontograma?.[numeroDente]?.situacaoAtual ?? 'SAUDAVEL')
+            : null;
+          return (
+            <Box key={field.id} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', backgroundColor: 'background.default' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label={`Dente ${numeroDente}`} size="small" sx={{ fontFamily: 'monospace', fontWeight: 700 }} />
+                  <SituacaoDenteBadge situacao={situacao as SituacaoDente} />
+                </Stack>
+                <Tooltip title="Remover dente">
+                  <IconButton size="small" onClick={() => typeof numeroDente === 'number' && handleRemoverDente(numeroDente)} sx={{ color: 'error.main' }}>
+                    <DeleteOutlined sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1.5}>
+                  <Controller name={`itens.${index}.procedimentoId`} control={control} render={({ field: f }) => (
+                    <TextField {...f} select label="Procedimento *" fullWidth
+                      error={!!errors.itens?.[index]?.procedimentoId}
+                      helperText={errors.itens?.[index]?.procedimentoId?.message}
+                      onChange={(e) => f.onChange(Number(e.target.value))}>
+                      {procedimentos.map((p) => <MenuItem key={p.id} value={p.id}>{p.nome}</MenuItem>)}
+                    </TextField>
+                  )} />
+                  <Controller name={`itens.${index}.prioridade`} control={control} render={({ field: f }) => (
+                    <TextField {...f} select label="Prioridade *" sx={{ width: 140 }}
+                      error={!!errors.itens?.[index]?.prioridade}
+                      helperText={errors.itens?.[index]?.prioridade?.message}
+                      onChange={(e) => f.onChange(Number(e.target.value))}>
+                      <MenuItem value={1}>Alta</MenuItem>
+                      <MenuItem value={2}>Média</MenuItem>
+                      <MenuItem value={3}>Baixa</MenuItem>
+                    </TextField>
+                  )} />
+                </Stack>
+                <Controller name={`itens.${index}.observacao`} control={control} render={({ field: f }) => (
+                  <TextField {...f} label="Observação" fullWidth inputProps={{ maxLength: 500 }} />
+                )} />
+              </Stack>
+            </Box>
+          );
+        })
+      )}
     </Stack>
   );
 
+  const odontogramaDialog = effectivePacienteId ? (
+    <OdontogramaSelectionDialog
+      open={odontogramaDialogOpen}
+      pacienteId={effectivePacienteId}
+      selectedDentes={odontogramaDentes}
+      onClose={() => setOdontogramaDialogOpen(false)}
+      onConfirm={(dentes) => { syncDentesToItens(dentes); setOdontogramaDialogOpen(false); }}
+    />
+  ) : null;
+
   if (useDialog) {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <>
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+          <DialogTitle sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AssignmentOutlined sx={{ fontSize: 17, color: '#0F6E56' }} />
+              </Box>
+              <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>Novo plano de tratamento</Typography>
+            </Box>
+            <IconButton size="small" onClick={onClose}><Close sx={{ fontSize: 18 }} /></IconButton>
+          </DialogTitle>
+          <Divider />
+          <DialogContent dividers><FormContent /></DialogContent>
+          <Divider />
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button variant="outlined" onClick={onClose} disabled={create.isPending}>Cancelar</Button>
+            <Button variant="contained" disabled={create.isPending} onClick={handleSubmit(onSubmit)}>
+              {create.isPending ? 'Salvando...' : 'Criar plano'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+        {odontogramaDialog}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Drawer anchor="right" open={open} onClose={onClose}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 640 }, display: 'flex', flexDirection: 'column' } }}>
+        <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AssignmentOutlined sx={{ fontSize: 17, color: '#0F6E56' }} />
@@ -267,43 +418,20 @@ export default function PlanoTratamentoDrawer({
             <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>Novo plano de tratamento</Typography>
           </Box>
           <IconButton size="small" onClick={onClose}><Close sx={{ fontSize: 18 }} /></IconButton>
-        </DialogTitle>
+        </Box>
         <Divider />
-        <DialogContent dividers><FormContent /></DialogContent>
+        <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
+          <FormContent />
+        </Box>
         <Divider />
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
           <Button variant="outlined" onClick={onClose} disabled={create.isPending}>Cancelar</Button>
           <Button variant="contained" disabled={create.isPending} onClick={handleSubmit(onSubmit)}>
-            {create.isPending ? 'Salvando...' : 'Criar plano'}
+            {create.isPending ? 'Criando...' : 'Criar plano'}
           </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  }
-
-  return (
-    <Drawer anchor="right" open={open} onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 580 }, display: 'flex', flexDirection: 'column' } }}>
-      <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AssignmentOutlined sx={{ fontSize: 17, color: '#0F6E56' }} />
-          </Box>
-          <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>Novo plano de tratamento</Typography>
         </Box>
-        <IconButton size="small" onClick={onClose}><Close sx={{ fontSize: 18 }} /></IconButton>
-      </Box>
-      <Divider />
-      <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
-        <FormContent />
-      </Box>
-      <Divider />
-      <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-        <Button variant="outlined" onClick={onClose} disabled={create.isPending}>Cancelar</Button>
-        <Button variant="contained" disabled={create.isPending} onClick={handleSubmit(onSubmit)}>
-          {create.isPending ? 'Criando...' : 'Criar plano'}
-        </Button>
-      </Box>
-    </Drawer>
+      </Drawer>
+      {odontogramaDialog}
+    </>
   );
 }

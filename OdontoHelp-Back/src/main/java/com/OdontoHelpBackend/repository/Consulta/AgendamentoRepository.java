@@ -29,6 +29,14 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataInicio
     );
 
+    boolean existsByDentistaIdAndIdNotAndStatusNotAndDataInicioLessThanAndDataFimGreaterThan(
+            Long dentistaId,
+            Long id,
+            StatusConsulta status,
+            LocalDateTime dataFim,
+            LocalDateTime dataInicio
+    );
+
     @Query("""
     SELECT a FROM Agendamento a
     JOIN a.paciente p

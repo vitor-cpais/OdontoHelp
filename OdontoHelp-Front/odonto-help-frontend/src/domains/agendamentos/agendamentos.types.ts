@@ -1,3 +1,5 @@
+export type OrigemAgendamento = 'AGENDADA' | 'AVULSA';
+
 export type StatusConsulta =
   | 'AGENDADO'
   | 'CONFIRMADO'
@@ -12,6 +14,7 @@ export interface Agendamento {
   dentistaId: number;
   dentistaNome: string;
   status: StatusConsulta;
+  origem?: OrigemAgendamento;
   dataInicio: string;
   dataFim: string;
   observacoes?: string;
@@ -24,6 +27,7 @@ export interface AgendamentoFormData {
   dataFim: string;
   observacoes: string;
   status?: StatusConsulta;
+  origem?: OrigemAgendamento;
 }
 
 export interface AgendamentoPageParams {
@@ -44,6 +48,13 @@ export const STATUS_CONSULTA_LABELS: Record<StatusConsulta, string> = {
   CANCELADO: 'Cancelado',
   FALTA: 'Falta',
 };
+
+export const ORIGEM_AGENDAMENTO_LABELS: Record<OrigemAgendamento, string> = {
+  AGENDADA: 'Agendada',
+  AVULSA: 'Consulta avulsa',
+};
+
+export const ORIGEM_AVULSA_COLORS = { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' };
 
 export const STATUS_CONSULTA_COLORS: Record<StatusConsulta, { bg: string; text: string; border: string }> = {
   AGENDADO: { bg: '#E6F1FB', text: '#185FA5', border: '#B5D4F4' },

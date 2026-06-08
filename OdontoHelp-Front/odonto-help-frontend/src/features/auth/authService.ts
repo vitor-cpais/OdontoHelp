@@ -40,4 +40,8 @@ export const authService = {
     // Bearer é injetado automaticamente pelo interceptor
     await api.post('/auth/logout');
   },
+
+  concluirOnboarding: async (): Promise<void> => {
+    await api.post('/auth/onboarding/concluir');
+  },
 };

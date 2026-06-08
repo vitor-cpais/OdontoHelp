@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: odontohelp-fiscal
+  datasource:
+    url: ${FISCAL_DB_URL}
+    username: ${FISCAL_DB_USER}
+    password: ${FISCAL_DB_PASS}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8082
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+fiscal:
+  emissao:
+    modo: ${FISCAL_MODO_EMISSAO:MANUAL}
+  provedor:
+    identificador: ${FISCAL_PROVEDOR:ELOTECH}
+
+  emissor:
+    cnpj: ${FISCAL_EMISSOR_CNPJ:}
+    razao-social: ${FISCAL_EMISSOR_RAZAO_SOCIAL:}
+    inscricao-municipal: ${FISCAL_EMISSOR_INSCRICAO_MUNICIPAL:}
+    codigo-municipio: ${FISCAL_EMISSOR_CODIGO_MUNICIPIO:}
+    codigo-servico-lc116: ${FISCAL_EMISSOR_CODIGO_SERVICO:}
+    aliquota-iss: ${FISCAL_EMISSOR_ALIQUOTA_ISS:}
+    regime-tributario: ${FISCAL_EMISSOR_REGIME_TRIBUTARIO:}
+    logradouro: ${FISCAL_EMISSOR_LOGRADOURO:}
+    numero: ${FISCAL_EMISSOR_NUMERO:}
+    bairro: ${FISCAL_EMISSOR_BAIRRO:}
+    cep: ${FISCAL_EMISSOR_CEP:}
+
+  certificado:
+    caminho: ${FISCAL_CERT_PATH:./certs/certificado.pfx}
+    senha: ${FISCAL_CERT_SENHA:}
+
+  elotech:
+    url: ${FISCAL_ELOTECH_URL:}
+
+  async:
+    core-pool-size: ${FISCAL_ASYNC_CORE:3}
+    max-pool-size: ${FISCAL_ASYNC_MAX:10}
+    queue-capacity: ${FISCAL_ASYNC_QUEUE:50}
+
+resilience4j:
+  retry:
+    instances:
+      elotech-soap:
+        max-attempts: 3
+        wait-duration: 2s
+
+jwt:
+  secret: ${JWT_SECRET}
+
+crypto:
+  secret-key: ${CRYPTO_SECRET_KEY:T2RvbnRvSGVscERldkxvY2FsQ3J5cHRvS2V5MjAyNCE=}
+
+core:
+  blacklist-url: ${CORE_BLACKLIST_URL:http://backend:8080/internal/auth/token/blacklist/check}
+
+app:
+  rate-limit:
+    mutations-per-user-requests: 60
+    mutations-per-user-window-minutes: 1
+    reads-per-user-requests: 300
+    reads-per-user-window-minutes: 1
+    global-per-ip-requests: 200
+    global-per-ip-window-minutes: 1
+    emissao-per-user-requests: 10
+    emissao-per-user-window-minutes: 1

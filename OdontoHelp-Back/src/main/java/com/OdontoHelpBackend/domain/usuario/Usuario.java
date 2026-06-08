@@ -11,6 +11,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -38,7 +39,6 @@ public class Usuario implements UserDetails {
     @Column(name = "EMAIL", unique = true, length = 100)
     private String email;
 
-    // CORRIGIDO: @JsonIgnore como defesa em profundidade — nunca vaza o hash
     @JsonIgnore
     @Column(name = "SENHA")
     private String senha;
@@ -59,6 +59,15 @@ public class Usuario implements UserDetails {
 
     @Column(name = "DATA_NASCIMENTO")
     private LocalDate dataNascimento;
+
+    @Column(name = "FAILED_LOGIN_ATTEMPTS", nullable = false)
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "LOCKED_UNTIL")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "ONBOARDING_CONCLUIDO", nullable = false)
+    private Boolean onboardingConcluido = false;
 
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL)
     private Endereco endereco;

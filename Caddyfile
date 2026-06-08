@@ -6,5 +6,34 @@
 }
 
 {$API_DOMAIN} {
+	@internal path /internal/*
+	respond @internal 403
+
+	rate_limit {
+		zone auth {
+			match {
+				path /auth/*
+			}
+			key {remote_host}
+			events 10
+			window 1m
+		}
+		zone api {
+			key {remote_host}
+			events 120
+			window 1m
+		}
+	}
 	reverse_proxy backend:8080
+}
+
+{$FINANCEIRO_API_DOMAIN} {
+	rate_limit {
+		zone financeiro_api {
+			key {remote_host}
+			events 120
+			window 1m
+		}
+	}
+	reverse_proxy financeiro:8081
 }

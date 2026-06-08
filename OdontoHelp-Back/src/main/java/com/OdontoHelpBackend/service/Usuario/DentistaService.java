@@ -8,6 +8,7 @@ import com.OdontoHelpBackend.dto.Usuario.Request.Dentista.DentistaUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Dentista.DentistaResponseDTO;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
 import com.OdontoHelpBackend.repository.Usuario.DentistaRepository;
+import com.OdontoHelpBackend.service.Utils.PrivacidadeService;
 import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -26,20 +27,21 @@ public class DentistaService {
     private final DentistaMapper dentistaMapper;
     private final ValidacoesService validacoesService;
     private final PasswordEncoder passwordEncoder;
+    private final PrivacidadeService privacidadeService;
 
     public DentistaResponseDTO buscarPorId(Long id) {
-        return dentistaMapper.toResponse(buscarEntidadePorId(id));
+        return privacidadeService.aplicar(dentistaMapper.toResponse(buscarEntidadePorId(id)));
     }
 
     public Slice<DentistaResponseDTO> listar(String nome, Boolean isAtivo, Pageable pageable) {
         if (nome != null && !nome.isBlank())
             return dentistaRepository.findByNomeContainingIgnoreCase(nome, pageable)
-                    .map(dentistaMapper::toResponse);
+                    .map(d -> privacidadeService.aplicar(dentistaMapper.toResponse(d)));
         if (isAtivo != null)
             return dentistaRepository.findByIsAtivo(isAtivo, pageable)
-                    .map(dentistaMapper::toResponse);
+                    .map(d -> privacidadeService.aplicar(dentistaMapper.toResponse(d)));
         return dentistaRepository.findAllBy(pageable)
-                .map(dentistaMapper::toResponse);
+                .map(d -> privacidadeService.aplicar(dentistaMapper.toResponse(d)));
     }
 
     @Transactional
@@ -52,7 +54,7 @@ public class DentistaService {
         if (dentista.getEndereco() != null) {
             dentista.getEndereco().setUsuario(dentista);
         }
-        return dentistaMapper.toResponse(dentistaRepository.save(dentista));
+        return privacidadeService.aplicar(dentistaMapper.toResponse(dentistaRepository.save(dentista)));
     }
 
 
@@ -75,6 +77,6 @@ public class DentistaService {
             validacoesService.validarInativacaoUsuario(id);
         }
         dentista.setIsAtivo(isAtivo);
-        return dentistaMapper.toResponse(dentistaRepository.save(dentista));
+        return privacidadeService.aplicar(dentistaMapper.toResponse(dentistaRepository.save(dentista)));
     }
 }

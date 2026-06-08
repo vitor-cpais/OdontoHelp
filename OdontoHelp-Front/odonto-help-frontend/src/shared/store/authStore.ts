@@ -11,6 +11,7 @@ export interface AuthUsuario {
   email: string;
   perfil: PerfilUsuario;
   dentistaId: number | null;
+  onboardingConcluido: boolean;
 }
 
 interface AuthState {
@@ -22,6 +23,7 @@ interface AuthState {
     refreshToken: string;
     usuario: AuthUsuario;
   }) => void;
+  patchUsuario: (partial: Partial<AuthUsuario>) => void;
   clearAuth: () => void;
 }
 
@@ -39,8 +41,14 @@ export const useAuthStore = create<AuthState>()(
           usuario: {
             ...usuario,
             perfil: normalizePerfil(usuario.perfil) ?? usuario.perfil,
+            onboardingConcluido: usuario.onboardingConcluido ?? false,
           },
         }),
+
+      patchUsuario: (partial) =>
+        set((state) => ({
+          usuario: state.usuario ? { ...state.usuario, ...partial } : null,
+        })),
 
       clearAuth: () =>
         set({ accessToken: null, refreshToken: null, usuario: null }),

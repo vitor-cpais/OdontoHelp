@@ -69,6 +69,20 @@ public class ErrorHandler {
                 .body(ApiErrorResponse.of(401, "Unauthorized", ex.getMessage()));
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleRateLimit(RateLimitExceededException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ApiErrorResponse.of(429, "Too Many Requests", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountLocked(AccountLockedException ex) {
+        return ResponseEntity.status(HttpStatus.LOCKED)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ApiErrorResponse.of(423, "Locked", ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         var fields = ex.getBindingResult().getFieldErrors().stream()
@@ -104,6 +118,8 @@ public class ErrorHandler {
                 message = "E-mail já cadastrado";
             else if (lower.contains("uk_usuario_cpf") || lower.contains("(cpf)"))
                 message = "CPF já cadastrado";
+            else if (lower.contains("ex_agendamento_dentista_horario"))
+                message = "Dentista já possui agendamento neste horário";
         }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiErrorResponse.of(409, "Conflict", message));

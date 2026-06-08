@@ -11,11 +11,26 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-fiscal-db.sql:/docker-entrypoint-initdb.d/02-fiscal-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: odontohelp-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
 
   backend:
     build:
@@ -25,6 +40,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-postgres}
@@ -32,6 +49,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgrespw}
       # Local: 32+ bytes em Base64 (HS256). Nao use em VPS. Se .env tiver JWT_SECRET= vazio, apague a linha.
       JWT_SECRET: ${JWT_SECRET:-braFuSmLxj7ZxDzvlDDEO7xSLwSCpEzo2ofobhnCjNY=}
+      CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:-T2RvbnRvSGVscERldkxvY2FsQ3J5cHRvS2V5MjAyNCE=}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@odonto.com}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-123456}
@@ -44,14 +62,108 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-false}
       SPRING_MAIL_SMTP_STARTTLS: ${SPRING_MAIL_SMTP_STARTTLS:-false}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}
+      STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-odontohelp}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+
+  financeiro:
+    build:
+      context: ./OdontoHelp-Financeiro
+    container_name: odontohelp-financeiro
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fiscal:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-postgres}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgrespw}
+      JWT_SECRET: ${JWT_SECRET:-braFuSmLxj7ZxDzvlDDEO7xSLwSCpEzo2ofobhnCjNY=}
+      CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:-T2RvbnRvSGVscERldkxvY2FsQ3J5cHRvS2V5MjAyNCE=}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      FINANCEIRO_CORE_API_URL: http://backend:8080
+      FINANCEIRO_FISCAL_API_URL: http://fiscal:8082
+      FINANCEIRO_FISCAL_ENABLED: ${FINANCEIRO_FISCAL_ENABLED:-true}
+      FINANCEIRO_FISCAL_TENANT_ID: ${FINANCEIRO_FISCAL_TENANT_ID:-${FISCAL_EMISSOR_CNPJ:-12345678000199}}
+      FISCAL_MODO_EMISSAO: ${FISCAL_MODO_EMISSAO:-MANUAL}
+      # Copie .env.example → .env e defina FISCAL_PORTAL_OXY_URL=https://<municipio>.oxy.elotech.com.br/iss
+      FISCAL_PORTAL_OXY_URL: ${FISCAL_PORTAL_OXY_URL:-}
+      FISCAL_EMISSOR_RAZAO_SOCIAL: ${FISCAL_EMISSOR_RAZAO_SOCIAL:-OdontoHelp Clinica Dev}
+      FISCAL_EMISSOR_CNPJ: ${FISCAL_EMISSOR_CNPJ:-12345678000199}
+    ports:
+      - "${FINANCEIRO_PORT:-8081}:8081"
+
+  fiscal-db-init:
+    image: postgres:16-alpine
+    container_name: odontohelp-fiscal-db-init
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgrespw}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        psql -h postgres -U ${POSTGRES_USER:-postgres} -tc "SELECT 1 FROM pg_database WHERE datname = 'fiscal_db'" | grep -q 1 \
+          || psql -h postgres -U ${POSTGRES_USER:-postgres} -c "CREATE DATABASE fiscal_db;"
+
+  fiscal:
+    build: ./odontohelp-fiscal
+    container_name: odontohelp-fiscal
+    restart: unless-stopped
+    ports:
+      - "${FISCAL_PORT:-8082}:8082"
+    environment:
+      FISCAL_DB_URL: jdbc:postgresql://postgres:5432/fiscal_db
+      FISCAL_DB_USER: ${FISCAL_DB_USER:-postgres}
+      FISCAL_DB_PASS: ${FISCAL_DB_PASS:-${POSTGRES_PASSWORD:-postgrespw}}
+      JWT_SECRET: ${JWT_SECRET:-braFuSmLxj7ZxDzvlDDEO7xSLwSCpEzo2ofobhnCjNY=}
+      CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:-T2RvbnRvSGVscERldkxvY2FsQ3J5cHRvS2V5MjAyNCE=}
+      CORE_BLACKLIST_URL: http://backend:8080/internal/auth/token/blacklist/check
+      FISCAL_MODO_EMISSAO: MANUAL
+      FISCAL_EMISSOR_CNPJ: ${FISCAL_EMISSOR_CNPJ:-12345678000199}
+      FISCAL_EMISSOR_RAZAO_SOCIAL: ${FISCAL_EMISSOR_RAZAO_SOCIAL:-OdontoHelp Clinica Dev}
+      FISCAL_EMISSOR_INSCRICAO_MUNICIPAL: ${FISCAL_EMISSOR_INSCRICAO_MUNICIPAL:-}
+      FISCAL_EMISSOR_CODIGO_MUNICIPIO: ${FISCAL_EMISSOR_CODIGO_MUNICIPIO:-}
+      FISCAL_EMISSOR_CODIGO_SERVICO: ${FISCAL_EMISSOR_CODIGO_SERVICO:-}
+      FISCAL_EMISSOR_ALIQUOTA_ISS: ${FISCAL_EMISSOR_ALIQUOTA_ISS:-}
+      FISCAL_EMISSOR_REGIME_TRIBUTARIO: ${FISCAL_EMISSOR_REGIME_TRIBUTARIO:-}
+      FISCAL_EMISSOR_LOGRADOURO: ${FISCAL_EMISSOR_LOGRADOURO:-}
+      FISCAL_EMISSOR_NUMERO: ${FISCAL_EMISSOR_NUMERO:-}
+      FISCAL_EMISSOR_BAIRRO: ${FISCAL_EMISSOR_BAIRRO:-}
+      FISCAL_EMISSOR_CEP: ${FISCAL_EMISSOR_CEP:-}
+      FISCAL_PORTAL_OXY_URL: ${FISCAL_PORTAL_OXY_URL:-}
+      FISCAL_ELOTECH_URL: ${FISCAL_ELOTECH_URL:-}
+    volumes:
+      - ./certs/fiscal:/app/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fiscal-db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: ./OdontoHelp-Front/odonto-help-frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_FINANCEIRO_API_URL: ${VITE_FINANCEIRO_API_URL:-http://localhost:8081}
     container_name: odontohelp-frontend
     restart: unless-stopped
     # Sem depends_on no backend: permite subir/parar o front isolado (npm run dev no host, etc.).
@@ -60,3 +172,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:

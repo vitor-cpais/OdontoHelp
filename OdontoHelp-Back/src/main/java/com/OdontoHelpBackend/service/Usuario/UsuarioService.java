@@ -6,6 +6,7 @@ import com.OdontoHelpBackend.domain.usuario.enums.PerfilUsuario;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Usuario.UsuarioResponseDTO;
 import com.OdontoHelpBackend.infra.exception.AcessoNegadoException;
+import com.OdontoHelpBackend.infra.util.EmailNormalizer;
 import com.OdontoHelpBackend.infra.exception.BusinessException;
 import com.OdontoHelpBackend.infra.exception.ConflictException;
 import com.OdontoHelpBackend.infra.exception.NotFoundException;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.OdontoHelpBackend.service.Utils.PrivacidadeService;
 import com.OdontoHelpBackend.service.Utils.ValidacoesService;
 import com.OdontoHelpBackend.dto.Usuario.Request.Usuario.UsuarioRequestDTO;
 
@@ -31,10 +33,12 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
     private final ValidacoesService validacoesService;
+    private final PrivacidadeService privacidadeService;
+
     public UsuarioResponseDTO buscarPorId(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-        return usuarioMapper.toResponse(usuario);
+        return privacidadeService.aplicar(usuarioMapper.toResponse(usuario));
     }
 
 
@@ -46,7 +50,7 @@ public class UsuarioService {
             nomePattern = "%" + nome.trim().toLowerCase() + "%";
         }
         return usuarioRepository.filtrar(nomePattern, perfil, isAtivo, pageable)
-                .map(usuarioMapper::toResponse);
+                .map(u -> privacidadeService.aplicar(usuarioMapper.toResponse(u)));
     }
 
 
@@ -61,7 +65,7 @@ public class UsuarioService {
             validacoesService.validarInativacaoUsuario(id);
         }
         usuario.setIsAtivo(isAtivo);
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+        return privacidadeService.aplicar(usuarioMapper.toResponse(usuarioRepository.save(usuario)));
     }
 
     public Usuario buscarEntidadePorId(Long id) {
@@ -83,7 +87,7 @@ public class UsuarioService {
             usuario.getEndereco().setUsuario(usuario);
         }
 
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+        return privacidadeService.aplicar(usuarioMapper.toResponse(usuarioRepository.save(usuario)));
     }
 
     @Transactional
@@ -100,7 +104,7 @@ public class UsuarioService {
             throw new BusinessException("Perfis clínicos devem ser gerenciados pelos módulos específicos");
 
         usuario.setPerfil(novoPerfil);
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+        return privacidadeService.aplicar(usuarioMapper.toResponse(usuarioRepository.save(usuario)));
     }
 
     @Transactional
@@ -120,7 +124,7 @@ public class UsuarioService {
         usuario.setGenero(dto.genero());
         usuario.setIsAtivo(true);
 
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+        return privacidadeService.aplicar(usuarioMapper.toResponse(usuarioRepository.save(usuario)));
     }
 
     private void validarDataNascimento(LocalDate dataNascimento) {
@@ -147,19 +151,21 @@ public class UsuarioService {
     }
 
     protected void validarEmailDuplicado(String email) {
-        if (email == null || email.isBlank()) {
+        String normalizado = EmailNormalizer.normalize(email);
+        if (normalizado == null) {
             return;
         }
-        if (usuarioRepository.existsByEmail(email.trim())) {
+        if (usuarioRepository.existsByEmail(normalizado)) {
             throw new ConflictException("E-mail já cadastrado");
         }
     }
 
     protected void validarEmailDuplicadoExcluindoId(String email, Long id) {
-        if (email == null || email.isBlank()) {
+        String normalizado = EmailNormalizer.normalize(email);
+        if (normalizado == null) {
             return;
         }
-        if (usuarioRepository.existsByEmailAndIdNot(email.trim(), id)) {
+        if (usuarioRepository.existsByEmailAndIdNot(normalizado, id)) {
             throw new ConflictException("E-mail já cadastrado");
         }
     }

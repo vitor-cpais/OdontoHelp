@@ -220,17 +220,23 @@ export default function AgendamentosPage() {
     setToast({ open: true, msg, severity });
   }, []);
 
-  const events = agendamentos.map((a) => ({
-    id: String(a.id),
-    title: `${a.pacienteNome} · ${a.dentistaNome}`,
-    start: a.dataInicio,
-    end: a.dataFim,
-    display: 'block',
-    backgroundColor: STATUS_COLORS[a.status]?.bg ?? '#ccc',
-    borderColor: STATUS_COLORS[a.status]?.border ?? '#999',
-    textColor: STATUS_COLORS[a.status]?.text ?? '#000',
-    extendedProps: { agendamento: a },
-  }));
+  const events = agendamentos.map((a) => {
+    const isAvulso = a.origem === 'AVULSA';
+    const colors = isAvulso
+      ? { bg: '#FAEEDA', text: '#854F0B', border: '#FAC775' }
+      : (STATUS_COLORS[a.status] ?? { bg: '#ccc', text: '#000', border: '#999' });
+    return {
+      id: String(a.id),
+      title: isAvulso ? `Avulso · ${a.pacienteNome}` : `${a.pacienteNome} · ${a.dentistaNome}`,
+      start: a.dataInicio,
+      end: a.dataFim,
+      display: 'block',
+      backgroundColor: colors.bg,
+      borderColor: colors.border,
+      textColor: colors.text,
+      extendedProps: { agendamento: a },
+    };
+  });
 
   const handleCalViewChange = (view: CalView) => {
     setCalView(view);

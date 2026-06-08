@@ -7,7 +7,8 @@ import type { AgendamentoFormData, StatusConsulta } from './agendamentos.types';
 export function useCreateAgendamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: AgendamentoFormData) => agendamentosClient.criar(data),
+    mutationFn: ({ data, idempotencyKey }: { data: AgendamentoFormData; idempotencyKey?: string }) =>
+      agendamentosClient.criar(data, idempotencyKey),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: agendamentosKeys.all }),
   });
 }

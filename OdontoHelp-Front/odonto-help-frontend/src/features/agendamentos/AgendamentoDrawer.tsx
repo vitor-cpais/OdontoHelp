@@ -1,13 +1,13 @@
 import {
   Drawer, Box, Typography, IconButton, Divider, TextField,
   Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions,
-  Alert, Autocomplete, CircularProgress,
+  Alert, Autocomplete, Chip, CircularProgress,
 } from '@mui/material';
 import { Close, CalendarMonthOutlined, WarningAmberOutlined, EditOutlined } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../shared/store/authStore';
 import { useAgendamentoDrawerStore } from './agendamentoStore';
@@ -60,6 +60,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [conflito, setConflito] = useState<string | null>(null);
+  const submitKeyRef = useRef<string | null>(null);
 
   const create = useCreateAgendamento();
   const update = useUpdateAgendamento(editingId ?? 0);
@@ -95,6 +96,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
 
   useEffect(() => {
     if (open) {
+      submitKeyRef.current = null;
       const inicio = draft.dataInicio ?? '';
       const dentistaPadrao =
         draft.dentistaId ??
@@ -143,14 +145,22 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
   }, [watchedInicio, watchedFim, watchedDentistaId, agendamentosDentista]);
 
   const onSubmit = async (data: AgendamentoFormData) => {
+    if (conflito) {
+      onError('Resolva o conflito de horário antes de salvar');
+      return;
+    }
+    if (!submitKeyRef.current) {
+      submitKeyRef.current = crypto.randomUUID();
+    }
     try {
       if (isNew) {
-        await create.mutateAsync(data);
+        await create.mutateAsync({ data, idempotencyKey: submitKeyRef.current });
         onSuccess('Agendamento criado com sucesso!');
       } else {
         await update.mutateAsync({ dataInicio: data.dataInicio, dataFim: data.dataFim, observacoes: data.observacoes });
         onSuccess('Agendamento atualizado com sucesso!');
       }
+      submitKeyRef.current = null;
       clearDraft();
     } catch (e: any) {
       onError(getApiErrorMessage(e, 'Erro ao salvar agendamento'));
@@ -198,8 +208,9 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
     }
   };
 
+  const isAvulso = draft.origem === 'AVULSA';
   const loading = create.isPending || update.isPending || atualizarStatusComItens.isPending || iniciarAtendimento.isPending;
-  const fieldsDisabled = isView || !!isFinalStatus;
+  const fieldsDisabled = isView || !!isFinalStatus || isAvulso;
 
   const drawerTitle = isNew ? 'Novo agendamento' : isEdit ? 'Editar agendamento' : 'Agendamento';
 
@@ -238,6 +249,14 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
                 sx={{ borderRadius: 2, fontSize: '0.8rem' }}>
                 {conflito}
               </Alert>
+            )}
+
+            {isAvulso && (
+              <Chip
+                label="Consulta avulsa"
+                size="small"
+                sx={{ alignSelf: 'flex-start', bgcolor: '#FAEEDA', color: '#854F0B', border: '1px solid #FAC775' }}
+              />
             )}
 
             <Typography variant="overline" sx={{ color: 'text.disabled' }}>Paciente e dentista</Typography>
@@ -318,7 +337,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
 
           {/* Esquerda */}
           <Box>
-            {isView && !isFinalStatus && (
+            {isView && !isFinalStatus && !isAvulso && (
               <Button size="small" color="error" onClick={() => setConfirmCancel(true)} disabled={loading}>
                 Cancelar agendamento
               </Button>
@@ -356,7 +375,7 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
               </Button>
             )}
 
-            {isView && !isFinalStatus && (
+            {isView && !isFinalStatus && !isAvulso && (
               <Button variant="outlined" startIcon={<EditOutlined sx={{ fontSize: 16 }} />}
                 onClick={setEditMode} size="small">
                 Editar
@@ -364,13 +383,13 @@ export default function AgendamentoDrawer({ onSuccess, onError }: Props) {
             )}
 
             {isNew && (
-              <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>
+              <Button variant="contained" disabled={loading || !!conflito} onClick={handleSubmit(onSubmit)}>
                 {loading ? 'Salvando...' : 'Agendar'}
               </Button>
             )}
 
             {isEdit && (
-              <Button variant="contained" disabled={loading} onClick={handleSubmit(onSubmit)}>
+              <Button variant="contained" disabled={loading || !!conflito} onClick={handleSubmit(onSubmit)}>
                 {loading ? 'Salvando...' : 'Salvar'}
               </Button>
             )}

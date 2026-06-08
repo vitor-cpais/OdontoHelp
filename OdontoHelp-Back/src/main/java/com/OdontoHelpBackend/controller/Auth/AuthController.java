@@ -45,7 +45,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.refresh(request));
     }
 
-    // CORRIGIDO: passa o accessToken para ser invalidado na blacklist
+    @PostMapping("/onboarding/concluir")
+    public ResponseEntity<Void> concluirOnboarding(@AuthenticationPrincipal Usuario usuario) {
+        authService.marcarOnboardingConcluido(usuario);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal Usuario usuario,
                                        HttpServletRequest request) {

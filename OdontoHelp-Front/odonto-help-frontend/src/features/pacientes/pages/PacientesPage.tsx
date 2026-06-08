@@ -17,7 +17,7 @@ import PacienteDrawer from '../PacienteDrawer';
 import PacienteDetalheModal from '../PacienteDetalheModal';
 import type { Paciente } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { maskTelefone } from '../../../shared/utils/masks';
+import DadoSensivel from '../../../shared/components/DadoSensivel';
 
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
@@ -170,7 +170,7 @@ export default function PacientesPage() {
                       <Typography variant="caption" color="text.disabled">{p.email}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{maskTelefone(p.telefone)}</Typography>
+                      <DadoSensivel valor={p.telefone} tipo="telefone" />
                     </TableCell>
                     <TableCell>
                       <StatusChip isAtivo={p.isAtivo} />

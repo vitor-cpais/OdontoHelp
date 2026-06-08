@@ -3,7 +3,7 @@ import {
   Box, TextField, MenuItem, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Tooltip, Typography, TablePagination,
-  Alert, Skeleton, InputAdornment,
+  Alert, Skeleton, InputAdornment, Button, Snackbar,
 } from '@mui/material';
 import { EditOutlined, VisibilityOutlined, SearchOutlined } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
@@ -15,6 +15,7 @@ import AtendimentoStatusChip from '../AtendimentoStatusChip';
 import { STATUS_ATENDIMENTO_LABELS } from '../types';
 import type { StatusAtendimento } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import IniciarAtendimentoAvulsoDialog from '../IniciarAtendimentoAvulsoDialog';
 
 type FiltroStatus = 'TODOS' | StatusAtendimento;
 
@@ -36,6 +37,10 @@ export default function AtendimentosPage() {
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODOS');
   const [dataInicio, setDataInicio] = useState(today);
   const [dataFim, setDataFim] = useState(today);
+  const [avulsoOpen, setAvulsoOpen] = useState(false);
+  const [toast, setToast] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({
+    open: false, msg: '', severity: 'error',
+  });
 
   useEffect(() => {
     setDataInicio(today);
@@ -135,11 +140,36 @@ export default function AtendimentosPage() {
         />
 
         <Box sx={{ flex: 1 }} />
-        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          Para iniciar um atendimento, acesse Agendamentos.
+        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', mr: 1 }}>
+          Para o fluxo normal, use Agendamentos.
         </Typography>
+        <Button
+          variant="outlined"
+          color="warning"
+          size="small"
+          onClick={() => setAvulsoOpen(true)}
+        >
+          Atendimento avulso
+        </Button>
       </Box>
       </Paper>
+
+      <IniciarAtendimentoAvulsoDialog
+        open={avulsoOpen}
+        onClose={() => setAvulsoOpen(false)}
+        onError={(msg) => setToast({ open: true, msg, severity: 'error' })}
+      />
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={5000}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toast.severity} onClose={() => setToast((t) => ({ ...t, open: false }))}>
+          {toast.msg}
+        </Alert>
+      </Snackbar>
 
 
       <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>

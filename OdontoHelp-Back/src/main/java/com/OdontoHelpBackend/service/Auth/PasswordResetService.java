@@ -4,6 +4,7 @@ import com.OdontoHelpBackend.domain.usuario.Usuario;
 import com.OdontoHelpBackend.dto.auth.ForgotPasswordRequest;
 import com.OdontoHelpBackend.dto.auth.ResetPasswordRequest;
 import com.OdontoHelpBackend.infra.exception.InvalidTokenException;
+import com.OdontoHelpBackend.infra.security.ratelimit.RateLimitService;
 import com.OdontoHelpBackend.infra.security.token.PasswordResetToken;
 import com.OdontoHelpBackend.infra.security.token.PasswordResetTokenRepository;
 import com.OdontoHelpBackend.repository.Usuario.UsuarioRepository;
@@ -32,13 +33,16 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordResetEmailService passwordResetEmailService;
     private final PasswordEncoder passwordEncoder;
+    private final RateLimitService rateLimitService;
 
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
     @Transactional
     public void solicitar(ForgotPasswordRequest request) {
-        usuarioRepository.findByEmail(request.email().trim().toLowerCase())
+        String email = request.email().trim().toLowerCase();
+        rateLimitService.checkForgotPasswordByEmail(email);
+        usuarioRepository.findByEmail(email)
                 .filter(usuario -> Boolean.TRUE.equals(usuario.getIsAtivo()))
                 .ifPresent(this::criarTokenEEnviar);
     }

@@ -7,11 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OdontogramaSnapshotRepository extends JpaRepository<OdontogramaSnapshot, Long> {
 
     boolean existsByPacienteId(Long pacienteId);
+
+    Optional<OdontogramaSnapshot> findByAtendimentoId(Long atendimentoId);
 
     Slice<OdontogramaSnapshot> findByPacienteIdOrderByCriadoEmDesc(Long pacienteId, Pageable pageable);
 

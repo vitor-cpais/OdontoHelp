@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   Grid,
+  IconButton,
   Paper,
   Skeleton,
   Snackbar,
@@ -18,6 +19,7 @@ import {
 import {
   ArrowBackOutlined,
   CalendarMonthOutlined,
+  DownloadOutlined,
   EditOutlined,
   HealingOutlined,
   MedicalInformationOutlined,
@@ -34,8 +36,15 @@ import { useItensPlanoPendentes } from '../../planoTratamento/usePlanoTratamento
 import OdontogramaVisual from '../../odontograma/OdontogramaVisual';
 import HistoricoOdontogramaTab from '../../odontograma/HistoricoOdontogramaTab';
 import PlanoTratamentoTab from '../../planoTratamento/PlanoTratamentoTab';
+import PacienteDocumentosTab from '../../arquivos/PacienteDocumentosTab';
+import ArquivoBlobImage from '../../arquivos/ArquivoBlobImage';
+import { arquivoService } from '../../arquivos/arquivoService';
+import { useFotoPrincipal } from '../../arquivos/useArquivos';
+import { getApiErrorMessage } from '../../../shared/lib/axios';
 import AtendimentoStatusChip from '../../atendimentos/AtendimentoStatusChip';
-import { formatDataFromISO, maskTelefone } from '../../../shared/utils/masks';
+import IniciarAtendimentoAvulsoDialog from '../../atendimentos/IniciarAtendimentoAvulsoDialog';
+import { formatDataFromISO } from '../../../shared/utils/masks';
+import DadoSensivel from '../../../shared/components/DadoSensivel';
 import { EmptyState, StatusChip } from '../../../design-system/components';
 
 function getIdade(dataNascimento?: string) {
@@ -58,6 +67,8 @@ export default function PacienteHubPage() {
   });
   const perfil = useAuthStore((s) => s.usuario?.perfil);
   const podeEditarPaciente = perfil === 'ADMIN' || perfil === 'RECEPCAO' || perfil === 'DENTISTA';
+  const podeIniciarClinico = perfil === 'ADMIN' || perfil === 'DENTISTA';
+  const [avulsoOpen, setAvulsoOpen] = useState(false);
   const openEdit = usePacienteDrawerStore((s) => s.openEdit);
 
   const showToast = useCallback((msg: string, severity: 'success' | 'error') => {
@@ -67,6 +78,7 @@ export default function PacienteHubPage() {
   const { data: paciente, isLoading } = usePaciente(pacienteId);
   const { data: atendimentosData, isLoading: loadingAtendimentos } = useAtendimentosPorPaciente(pacienteId, 0);
   const { data: itensPendentes } = useItensPlanoPendentes(pacienteId);
+  const { data: fotoPrincipal } = useFotoPrincipal(pacienteId);
 
   const atendimentos = atendimentosData?.content ?? [];
   const ultimoAtendimento = atendimentos[0];
@@ -100,6 +112,50 @@ export default function PacienteHubPage() {
         }}
       >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+          {fotoPrincipal && (
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <Box
+                sx={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid rgba(255,255,255,0.35)',
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                }}
+              >
+                <ArquivoBlobImage
+                  pacienteId={paciente.id}
+                  arquivoId={fotoPrincipal.id}
+                  alt={`Foto de ${paciente.nome}`}
+                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </Box>
+              <IconButton
+                size="small"
+                aria-label="Baixar foto do paciente"
+                onClick={async () => {
+                  try {
+                    await arquivoService.download(fotoPrincipal);
+                  } catch (e: unknown) {
+                    showToast(getApiErrorMessage(e, 'Erro ao baixar foto'), 'error');
+                  }
+                }}
+                sx={{
+                  position: 'absolute',
+                  right: -4,
+                  bottom: -4,
+                  bgcolor: 'rgba(255,255,255,0.92)',
+                  color: 'primary.main',
+                  width: 28,
+                  height: 28,
+                  '&:hover': { bgcolor: '#fff' },
+                }}
+              >
+                <DownloadOutlined sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          )}
           <Box sx={{ flex: 1 }}>
             <Button
               size="small"
@@ -117,7 +173,11 @@ export default function PacienteHubPage() {
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.5 }}>
               <Chip label={idade ? `${idade} anos` : 'Idade não informada'} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }} />
-              <Chip label={maskTelefone(paciente.telefone)} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }} />
+              <Chip
+                label={<DadoSensivel valor={paciente.telefone} tipo="telefone" />}
+                size="small"
+                sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }}
+              />
               {paciente.email && (
                 <Chip label={paciente.email} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }} />
               )}
@@ -135,6 +195,11 @@ export default function PacienteHubPage() {
                 Atendimento aberto
               </Button>
             )}
+            {podeIniciarClinico && !atendimentoAberto && (
+              <Button variant="outlined" color="warning" onClick={() => setAvulsoOpen(true)}>
+                Atendimento avulso
+              </Button>
+            )}
             {podeEditarPaciente && (
               <Button variant="contained" startIcon={<EditOutlined />} onClick={() => openEdit(paciente)}>
                 Editar cadastro
@@ -143,6 +208,13 @@ export default function PacienteHubPage() {
           </Stack>
         </Stack>
       </Paper>
+
+      <IniciarAtendimentoAvulsoDialog
+        open={avulsoOpen}
+        onClose={() => setAvulsoOpen(false)}
+        pacienteIdPrefill={paciente.id}
+        onError={(msg) => showToast(msg, 'error')}
+      />
 
       <Grid container spacing={2.25} sx={{ mb: 2.5 }}>
         <Grid item xs={12} md={4}>
@@ -202,6 +274,7 @@ export default function PacienteHubPage() {
           <Tab label="Plano" />
           <Tab label="Atendimentos" />
           <Tab label="Histórico" />
+          <Tab label="Documentos" />
         </Tabs>
 
         <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -263,13 +336,13 @@ export default function PacienteHubPage() {
                 <TextField label="Nome" value={paciente.nome} disabled fullWidth />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField label="CPF" value={paciente.cpf} disabled fullWidth />
+                <DadoSensivel valor={paciente.cpf} tipo="cpf" variant="textfield" label="CPF" fullWidth />
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField label="E-mail" value={paciente.email} disabled fullWidth />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField label="Telefone" value={maskTelefone(paciente.telefone)} disabled fullWidth />
+                <DadoSensivel valor={paciente.telefone} tipo="telefone" variant="textfield" label="Telefone" fullWidth />
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField label="Nascimento" value={paciente.dataNascimento ? formatDataFromISO(paciente.dataNascimento) : '-'} disabled fullWidth />
@@ -315,6 +388,14 @@ export default function PacienteHubPage() {
           )}
 
           {tab === 5 && <HistoricoOdontogramaTab pacienteId={paciente.id} />}
+
+          {tab === 6 && (
+            <PacienteDocumentosTab
+              pacienteId={paciente.id}
+              onSuccess={(msg) => showToast(msg, 'success')}
+              onError={(msg) => showToast(msg, 'error')}
+            />
+          )}
         </Box>
       </Paper>
 

@@ -17,6 +17,8 @@ interface DataTableProps {
   emptyTitle?: string;
   emptyDescription?: string;
   skeletonRows?: number;
+  /** Colunas com largura fixa — evita desalinhamento entre linhas */
+  fixedLayout?: boolean;
   children: ReactNode;
   pagination?: ReactNode;
 }
@@ -28,13 +30,14 @@ export default function DataTable({
   emptyTitle = 'Nenhum registro encontrado',
   emptyDescription,
   skeletonRows = 6,
+  fixedLayout = false,
   children,
   pagination,
 }: DataTableProps) {
   return (
     <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', border: '0.5px solid', borderColor: 'divider' }}>
       <TableContainer>
-        <Table size="small">
+        <Table size="small" sx={fixedLayout ? { tableLayout: 'fixed', width: '100%' } : undefined}>
           {loading ? (
             <TableBody>
               {Array.from({ length: skeletonRows }).map((_, rowIndex) => (

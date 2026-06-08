@@ -183,7 +183,7 @@ export default function ProcedimentoDrawer({ onSuccess, onError }: Props) {
                   label="Valor de referência *"
                   type="number"
                   error={!!errors.valorBase}
-                  helperText={errors.valorBase?.message}
+                  helperText={errors.valorBase?.message ?? 'Sugestão de preço; pode ser ajustado na cobrança'}
                   fullWidth
                   InputProps={{
                     startAdornment: <InputAdornment position="start">R$</InputAdornment>,

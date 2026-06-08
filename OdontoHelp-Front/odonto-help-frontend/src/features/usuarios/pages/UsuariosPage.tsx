@@ -17,7 +17,7 @@ import StatusChip from '../../../shared/components/StatusChip';
 import UsuarioDrawer from '../UsuarioDrawer';
 import type { Usuario } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { maskTelefone } from '../../../shared/utils/masks';
+import DadoSensivel from '../../../shared/components/DadoSensivel';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { getApiErrorMessage } from '../../../shared/lib/axios';
 
@@ -208,7 +208,7 @@ export default function UsuariosPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{maskTelefone(u.telefone)}</Typography>
+                      <DadoSensivel valor={u.telefone} tipo="telefone" />
                     </TableCell>
                     <TableCell>
                       <StatusChip isAtivo={u.isAtivo} />

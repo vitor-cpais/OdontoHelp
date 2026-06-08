@@ -39,7 +39,8 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const onSubmit = (values: FormValues) => login.mutate(values);
+  const onSubmit = (values: FormValues) =>
+    login.mutate({ ...values, email: values.email.trim().toLowerCase() });
 
   return (
     <Box

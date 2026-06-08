@@ -14,6 +14,7 @@ import { useAuthStore } from '../../shared/store/authStore';
 import { useOdontograma, useUpdateOdontograma } from '../odontograma/useOdontograma';
 import { SITUACAO_DENTE_LABELS } from '../atendimentos/types';
 import { formatDataFromISO } from '../../shared/utils/masks';
+import DadoSensivel from '../../shared/components/DadoSensivel';
 import type { SituacaoDente } from '../atendimentos/types';
 import OdontogramaVisual from '../odontograma/OdontogramaVisual';
 import { useAtendimentosPorPaciente } from '../atendimentos/useAtendimentos';
@@ -139,7 +140,10 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>{paciente.nome}</Typography>
-              <Typography variant="caption" color="text.disabled">CPF: {paciente.cpf} • <Box component="span" sx={{ color: paciente.isAtivo ? '#0F6E56' : '#888' }}>{paciente.isAtivo ? 'Ativo' : 'Inativo'}</Box></Typography>
+              <Typography variant="caption" color="text.disabled">
+                CPF: <DadoSensivel valor={paciente.cpf} tipo="cpf" /> •{' '}
+                <Box component="span" sx={{ color: paciente.isAtivo ? '#0F6E56' : '#888' }}>{paciente.isAtivo ? 'Ativo' : 'Inativo'}</Box>
+              </Typography>
             </Box>
           </Box>
           <IconButton size="small" onClick={onClose}><Close sx={{ fontSize: 18 }} /></IconButton>
@@ -164,9 +168,11 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
             <Stack spacing={1.5}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                 <TextField label="Nome" value={paciente.nome} disabled fullWidth size="small" />
-                <TextField label="CPF" value={paciente.cpf} disabled fullWidth size="small" />
+                <DadoSensivel valor={paciente.cpf} tipo="cpf" variant="textfield" label="CPF" size="small" fullWidth />
                 <TextField label="E-mail" value={paciente.email ?? '—'} disabled fullWidth size="small" />
-                <TextField label="Telefone" value={paciente.telefone ?? '—'} disabled fullWidth size="small" />
+                {paciente.telefone
+                  ? <DadoSensivel valor={paciente.telefone} tipo="telefone" variant="textfield" label="Telefone" size="small" fullWidth />
+                  : <TextField label="Telefone" value="—" disabled fullWidth size="small" />}
                 <TextField label="Data de nascimento" value={paciente.dataNascimento ? formatDataFromISO(paciente.dataNascimento) : '—'} disabled fullWidth size="small" />
                 <TextField label="Gênero" value={paciente.genero ?? '—'} disabled fullWidth size="small" />
               </Box>
@@ -219,7 +225,10 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
                 pacienteId={paciente.id}
                 denteFiltro={denteFiltroHistorico}
                 onClearFiltro={() => setDenteFiltroHistorico(null)}
-                onCriarPlano={() => { setPlanoDrawerOpen(true); }}
+                onCriarPlano={() => {
+                  if (denteFiltroHistorico) setDenteParaPlano(denteFiltroHistorico);
+                  setPlanoDrawerOpen(true);
+                }}
               />
             </TabPanel>
           )}
@@ -293,6 +302,7 @@ export default function PacienteDetalheModal({ open, paciente, onClose }: Props)
         open={planoDrawerOpen}
         pacienteId={paciente.id}
         dentistaId={currentDentistaId}
+        selectedDentes={denteParaPlano != null ? [denteParaPlano] : undefined}
         useDialog
         onClose={() => { setPlanoDrawerOpen(false); setDenteParaPlano(null); }}
         onSuccess={() => { setPlanoDrawerOpen(false); setDenteParaPlano(null); }}

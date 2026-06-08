@@ -13,6 +13,7 @@ public interface AgendamentoMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "origem", ignore = true)
     @Mapping(target = "paciente", ignore = true)
     @Mapping(target = "dentista", ignore = true)
     Agendamento toEntity(AgendamentoRequestDTO dto);
@@ -25,6 +26,7 @@ public interface AgendamentoMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "origem", ignore = true)
     @Mapping(target = "paciente", ignore = true)
     @Mapping(target = "dentista", ignore = true)
     void updateEntity(AgendamentoUpdateDTO dto,

@@ -21,6 +21,7 @@ import {
   LogoutOutlined,
   MedicalInformationOutlined,
   HealingOutlined,
+  AccountBalanceOutlined,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, type PerfilUsuario } from '../store/authStore';
@@ -66,6 +67,12 @@ const navItems: NavItem[] = [
     icon: <MedicalInformationOutlined sx={{ fontSize: 18 }} />,
     path: '/procedimentos',
     allowed: ['ADMIN'],
+  },
+  {
+    label: 'Financeiro',
+    icon: <AccountBalanceOutlined sx={{ fontSize: 18 }} />,
+    path: '/financeiro',
+    allowed: ['ADMIN', 'RECEPCAO'],
   },
   {
     label: 'Atendimentos',

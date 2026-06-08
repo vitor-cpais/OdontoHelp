@@ -44,6 +44,10 @@
 # Cursor (local)
 .cursor/
 
+# Documentação local (notas, checklists, runbooks — não versionar)
+docs/
+scripts/vps/
+
 # --- Sistema operacional ---
 .DS_Store
 .DS_Store?
@@ -75,6 +79,12 @@ playwright-report/
 postgres_data/
 docker-data/
 *.pid
+
+# --- Certificados fiscais (nunca versionar) ---
+certs/**/*.pfx
+certs/**/*.pem
+certs/**/*.p12
+certs/**/*.key
 
 # --- Spring / Maven extras ---
 .springBeans

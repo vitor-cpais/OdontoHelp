@@ -1,12 +1,15 @@
-import { useState } from 'react'; // 1. Faltou importar o useState
+import { useState } from 'react';
 import { Box } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
 import Header from './Header';
+import OnboardingDialog from '../../features/onboarding/OnboardingDialog';
+import { useOnboardingAutoOpen } from '../../features/onboarding/useOnboarding';
+import InstallPwaBanner from './InstallPwaBanner';
 
 export default function AppShell() {
-  // 2. Criar o estado para o menu
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isOpen: onboardingOpen, close: closeOnboarding } = useOnboardingAutoOpen();
 
   // 3. Função para inverter o estado (abrir/fechar)
   const handleDrawerToggle = () => {
@@ -43,10 +46,23 @@ export default function AppShell() {
         {/* 6. AQUI RESOLVE O ERRO DA FOTO: Passar a prop onMenuClick */}
         <Header onMenuClick={handleDrawerToggle} />
         
-        <Box sx={{ flex: 1, p: { xs: 2, sm: 3 }, maxWidth: 1440, width: '100%', mx: 'auto' }}>
+        <Box
+          sx={{
+            flex: 1,
+            p: { xs: 2, sm: 3 },
+            pt: { xs: 'max(16px, env(safe-area-inset-top))', sm: 3 },
+            pb: { xs: 'max(16px, env(safe-area-inset-bottom))', sm: 3 },
+            maxWidth: 1440,
+            width: '100%',
+            mx: 'auto',
+          }}
+        >
+          <InstallPwaBanner />
           <Outlet />
         </Box>
       </Box>
+
+      <OnboardingDialog open={onboardingOpen} onClose={closeOnboarding} />
     </Box>
   );
 }

@@ -139,13 +139,39 @@ public class OdontogramaService {
     @Transactional
     public void registrarPorItemAtendimento(Paciente paciente, ItemAtendimento item,
                                             Atendimento atendimento, Usuario usuario) {
-        garantirSnapshotInicialSeNecessario(paciente.getId());
-        Map<Integer, EstadoDente> antes = reconstruirEstado(paciente.getId());
-        SituacaoDente anterior = situacaoDe(antes, item.getNumeroDente());
+        registrarPorItensAtendimento(paciente, List.of(item), atendimento, usuario);
+    }
 
-        registrarAlteracoes(paciente, atendimento, usuario, List.of(
-                new AlteracaoDente(item.getNumeroDente(), item.getSituacaoNova(), item.getObservacao(), anterior)
-        ));
+    @Transactional
+    public void registrarPorItensAtendimento(Paciente paciente, List<ItemAtendimento> itens,
+                                             Atendimento atendimento, Usuario usuario) {
+        if (itens.isEmpty()) return;
+
+        garantirSnapshotInicialSeNecessario(paciente.getId());
+        Map<Integer, EstadoDente> estado = reconstruirEstado(paciente.getId());
+
+        List<AlteracaoDente> alteracoes = new ArrayList<>();
+        for (ItemAtendimento item : itens) {
+            SituacaoDente anterior = situacaoDe(estado, item.getNumeroDente());
+            alteracoes.add(new AlteracaoDente(
+                    item.getNumeroDente(),
+                    item.getSituacaoNova(),
+                    item.getObservacao(),
+                    anterior
+            ));
+            if (!anterior.equals(item.getSituacaoNova())) {
+                estado.put(item.getNumeroDente(), new EstadoDente(
+                        item.getNumeroDente(),
+                        item.getSituacaoNova(),
+                        item.getObservacao(),
+                        null,
+                        null,
+                        true
+                ));
+            }
+        }
+
+        registrarAlteracoes(paciente, atendimento, usuario, alteracoes);
     }
 
     @Transactional
@@ -215,18 +241,39 @@ public class OdontogramaService {
                 .toList();
         if (relevantes.isEmpty()) return;
 
-        OdontogramaSnapshot snapshot = new OdontogramaSnapshot();
-        snapshot.setPaciente(paciente);
-        snapshot.setAtendimento(atendimento);
-        snapshot.setEditadoPor(usuario);
+        OdontogramaSnapshot snapshot;
+        if (atendimento != null) {
+            snapshot = snapshotRepository.findByAtendimentoId(atendimento.getId())
+                    .orElseGet(() -> {
+                        OdontogramaSnapshot novo = new OdontogramaSnapshot();
+                        novo.setPaciente(paciente);
+                        novo.setAtendimento(atendimento);
+                        novo.setEditadoPor(usuario);
+                        return novo;
+                    });
+        } else {
+            snapshot = new OdontogramaSnapshot();
+            snapshot.setPaciente(paciente);
+            snapshot.setEditadoPor(usuario);
+        }
 
         for (AlteracaoDente alt : relevantes) {
-            OdontogramaDente dente = new OdontogramaDente();
-            dente.setNumeroDente(alt.numeroDente());
-            dente.setSituacao(alt.novaSituacao());
-            dente.setObservacao(alt.observacao());
-            dente.vincularSnapshot(snapshot);
-            snapshot.getDentes().add(dente);
+            Optional<OdontogramaDente> existente = snapshot.getDentes().stream()
+                    .filter(d -> d.getNumeroDente().equals(alt.numeroDente()))
+                    .findFirst();
+
+            if (existente.isPresent()) {
+                OdontogramaDente dente = existente.get();
+                dente.setSituacao(alt.novaSituacao());
+                dente.setObservacao(alt.observacao());
+            } else {
+                OdontogramaDente dente = new OdontogramaDente();
+                dente.setNumeroDente(alt.numeroDente());
+                dente.setSituacao(alt.novaSituacao());
+                dente.setObservacao(alt.observacao());
+                dente.vincularSnapshot(snapshot);
+                snapshot.getDentes().add(dente);
+            }
         }
 
         snapshotRepository.save(snapshot);

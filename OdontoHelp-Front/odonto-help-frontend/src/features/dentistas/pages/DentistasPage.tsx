@@ -18,7 +18,7 @@ import DentistaDrawer from '../DentistaDrawer'; // 🌟 Corrigido aqui!
 import type { Dentista } from '../types';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { getApiErrorMessage } from '../../../shared/lib/axios';
-import { maskTelefone } from '../../../shared/utils/masks';
+import DadoSensivel from '../../../shared/components/DadoSensivel';
 type StatusFiltro = 'TODOS' | 'ATIVO' | 'INATIVO';
 
 export default function DentistasPage() {
@@ -183,7 +183,7 @@ export default function DentistasPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{maskTelefone(d.telefone)}</Typography>
+                      <DadoSensivel valor={d.telefone} tipo="telefone" />
                     </TableCell>
                     <TableCell>
                       <StatusChip isAtivo={d.isAtivo} />

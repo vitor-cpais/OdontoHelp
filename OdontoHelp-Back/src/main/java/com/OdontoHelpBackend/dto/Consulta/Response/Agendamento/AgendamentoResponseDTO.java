@@ -1,5 +1,6 @@
 package com.OdontoHelpBackend.dto.Consulta.Response.Agendamento;
 
+import com.OdontoHelpBackend.domain.Consulta.enums.OrigemAgendamento;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -12,6 +13,7 @@ public record AgendamentoResponseDTO(
         Long dentistaId,
         String dentistaNome,
         StatusConsulta status,
+        OrigemAgendamento origem,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime dataInicio,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")

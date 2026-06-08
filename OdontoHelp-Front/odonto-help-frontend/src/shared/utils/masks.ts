@@ -15,6 +15,25 @@ export function maskTelefone(value: string): string {
     .replace(/(\d{5})(\d{1,4})$/, '$1-$2');
 }
 
+/** Ocultação parcial para exibição (LGPD). */
+export function ocultarCpf(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 11) return '***.***.***-**';
+  return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+}
+
+/** Ocultação parcial para exibição (LGPD). */
+export function ocultarTelefone(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 10) return '(**) *****-****';
+  const ddd = digits.slice(0, 2);
+  const sufixo = digits.slice(-2);
+  if (digits.length === 11) {
+    return `(${ddd}) ${digits[2]}****-**${sufixo}`;
+  }
+  return `(${ddd}) ****-**${sufixo}`;
+}
+
 export function maskCro(value: string): string {
   // Formato: UF-NNNNN ex: SP-12345
   const digits = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();

@@ -7,6 +7,7 @@ import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteRequestDTO;
 import com.OdontoHelpBackend.dto.Usuario.Request.Paciente.PacienteUpdateDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteObservacaoResponseDTO;
 import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteResponseDTO;
+import com.OdontoHelpBackend.dto.Usuario.Response.Paciente.PacienteSnapshotFinanceiroDTO;
 import com.OdontoHelpBackend.service.Usuario.PacienteObservacaoService;
 import com.OdontoHelpBackend.service.Usuario.PacienteService;
 import jakarta.validation.Valid;
@@ -30,6 +31,11 @@ public class PacienteController {
     @GetMapping("/{id}")
     public ResponseEntity<PacienteResponseDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(pacienteService.buscarPorId(id));
+    }
+
+    @GetMapping("/{id}/snapshot-financeiro")
+    public ResponseEntity<PacienteSnapshotFinanceiroDTO> snapshotFinanceiro(@PathVariable Long id) {
+        return ResponseEntity.ok(pacienteService.snapshotFinanceiro(id));
     }
 
     @GetMapping

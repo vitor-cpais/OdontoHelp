@@ -82,7 +82,7 @@ public class DataInitializer implements ApplicationRunner {
         // Se já existirem dados, para a execução imediatamente para proteger o banco
         if (usuarioRepository.count() > 0) {
             garantirAdminAtivo();
-            System.out.println("✨ Base de dados já possui registros. Pulando carga de dados.");
+            System.out.println("Base de dados ja possui registros. Pulando carga de dados.");
             return;
         }
 
@@ -98,7 +98,7 @@ public class DataInitializer implements ApplicationRunner {
         criarAtendimentosEOdontograma(agendamentos, procedimentos, admin);
         criarPlanosDeTratamento(dentistas, pacientes, procedimentos);
 
-        System.out.println("✅ Base de dados inicializada com sucesso!");
+        System.out.println("Base de dados inicializada com sucesso!");
     }
 
     private void garantirAdminAtivo() {

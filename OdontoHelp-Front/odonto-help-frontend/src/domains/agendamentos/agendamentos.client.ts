@@ -32,14 +32,14 @@ export const agendamentosClient = {
     return data;
   },
 
-  criar: async (payload: AgendamentoFormData): Promise<Agendamento> => {
+  criar: async (payload: AgendamentoFormData, idempotencyKey?: string): Promise<Agendamento> => {
     const { data } = await api.post(BASE, {
       pacienteId: payload.pacienteId,
       dentistaId: payload.dentistaId,
       dataInicio: formatDateTime(payload.dataInicio),
       dataFim: formatDateTime(payload.dataFim),
       observacoes: payload.observacoes,
-    });
+    }, { idempotencyKey });
     return data;
   },
 

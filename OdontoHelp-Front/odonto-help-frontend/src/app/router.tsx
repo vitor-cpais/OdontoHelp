@@ -1,7 +1,7 @@
 // src/app/router.tsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AppShell from '../shared/components/AppShell';
-import { PrivateRoute, RoleRoute } from '../shared/components/RouteGuards';
+import { NotFoundRedirect, PrivateRoute, RoleRoute } from '../shared/components/RouteGuards';
 import LoginPage from '../features/auth/LoginPage';
 import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/ResetPasswordPage';
@@ -15,6 +15,7 @@ import UsuariosPage      from '../features/usuarios/pages/UsuariosPage';
 import ProcedimentosPage from '../features/procedimentos/pages/ProcedimentosPage';
 import AtendimentosPage  from '../features/atendimentos/pages/AtendimentosPage';
 import AtendimentoDetailPage from '../features/atendimentos/pages/AtendimentoDetailPage';
+import FinanceiroPage from '../features/financeiro/pages/FinanceiroPage';
 
 const router = createBrowserRouter([
   // ─── pública ────────────────────────────────────────────────────────────────
@@ -45,6 +46,14 @@ const router = createBrowserRouter([
             ],
           },
 
+          // ADMIN + RECEPCAO (financeiro)
+          {
+            element: <RoleRoute allowed={['ADMIN', 'RECEPCAO']} />,
+            children: [
+              { path: 'financeiro', element: <FinanceiroPage /> },
+            ],
+          },
+
           // ADMIN + DENTISTA (módulo clínico)
           {
             element: <RoleRoute allowed={['ADMIN', 'DENTISTA']} />,
@@ -64,13 +73,16 @@ const router = createBrowserRouter([
               { path: 'dentistas/:id', element: <DentistasPage /> },
             ],
           },
+
+          { path: '*', element: <NotFoundRedirect /> },
         ],
       },
+      { path: '*', element: <NotFoundRedirect /> },
     ],
   },
 
   // ─── fallback ────────────────────────────────────────────────────────────────
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <NotFoundRedirect /> },
 ]);
 
 export default router;

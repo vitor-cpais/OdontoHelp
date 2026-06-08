@@ -60,6 +60,7 @@ export const useAgendamentoDrawerStore = create<AgendamentoDrawerState>((set) =>
         dataFim: agendamento.dataFim.slice(0, 16),
         observacoes: agendamento.observacoes ?? '',
         status: agendamento.status,
+        origem: agendamento.origem ?? 'AGENDADA',
       },
     }),
 

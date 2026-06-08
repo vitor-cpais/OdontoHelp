@@ -1,5 +1,6 @@
 package com.OdontoHelpBackend.domain.Consulta;
 
+import com.OdontoHelpBackend.domain.Consulta.enums.OrigemAgendamento;
 import com.OdontoHelpBackend.domain.Consulta.enums.StatusConsulta;
 import com.OdontoHelpBackend.domain.usuario.Dentista;
 import com.OdontoHelpBackend.domain.usuario.Paciente;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "TB_AGENDAMENTO")
@@ -38,4 +40,21 @@ public class Agendamento {
     @ManyToOne
     @JoinColumn(name = "dentista_id", nullable = false)
     private Dentista dentista;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrigemAgendamento origem = OrigemAgendamento.AGENDADA;
+
+    public static Agendamento criarAvulso(Paciente paciente, Dentista dentista, String observacoes, int duracaoMinutos) {
+        LocalDateTime inicio = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        Agendamento agendamento = new Agendamento();
+        agendamento.paciente = paciente;
+        agendamento.dentista = dentista;
+        agendamento.dataInicio = inicio;
+        agendamento.dataFim = inicio.plusMinutes(duracaoMinutos);
+        agendamento.observacoes = observacoes;
+        agendamento.status = StatusConsulta.CONFIRMADO;
+        agendamento.origem = OrigemAgendamento.AVULSA;
+        return agendamento;
+    }
 }

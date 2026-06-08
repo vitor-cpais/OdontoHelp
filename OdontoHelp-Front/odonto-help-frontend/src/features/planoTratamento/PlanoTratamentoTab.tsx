@@ -227,7 +227,7 @@ export default function PlanoTratamentoTab({ pacienteId, onNovo, dentistaId, use
           onClick={handleNovo}
           sx={{ height: 34 }}
         >
-          Adicionar item
+          Novo plano
         </Button>
       </Box>
 
