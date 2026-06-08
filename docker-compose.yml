@@ -12,6 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init-fiscal-db.sql:/docker-entrypoint-initdb.d/02-fiscal-db.sql:ro
+      - ./docker/postgres/repair-financeiro-v3.sql:/scripts/repair-financeiro-v3.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 10s
