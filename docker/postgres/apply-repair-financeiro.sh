@@ -15,6 +15,10 @@ echo "Reparando schema financeiro (user=$POSTGRES_USER db=$POSTGRES_DB)..."
 docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < "$ROOT/docker/postgres/repair-financeiro-v3.sql"
 
+echo "Limpando migracao V3 falha no Flyway (se houver)..."
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "DELETE FROM financeiro.flyway_schema_history WHERE version = '3' AND success = false;"
+
 echo "Verificando colunas..."
 docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
   "SELECT column_name FROM information_schema.columns WHERE table_schema='financeiro' AND table_name='cliente_financeiro' AND column_name LIKE '%encrypted%';"
