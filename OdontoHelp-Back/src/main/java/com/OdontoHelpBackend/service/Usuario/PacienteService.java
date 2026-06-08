@@ -146,9 +146,7 @@ public class PacienteService {
         Paciente paciente = buscarEntidadePorId(id);
         paciente.setNome("PACIENTE_ANONIMIZADO_" + id);
         paciente.setCpf(null);
-        paciente.setCpfHash(null);
         paciente.setEmail(null);
-        paciente.setEmailHash(null);
         paciente.setTelefone("");
         if (paciente.getEndereco() != null) {
             paciente.setEndereco(null);
