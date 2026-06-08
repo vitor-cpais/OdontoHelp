@@ -7,6 +7,7 @@ import com.OdontoHelpFinanceiro.dto.DtoRecords.*;
 import com.OdontoHelpFinanceiro.dto.ResponseRecords.*;
 import com.OdontoHelpFinanceiro.infra.security.AuthUser;
 import com.OdontoHelpFinanceiro.service.FinanceiroService;
+import com.OdontoHelpFinanceiro.service.FiscalEmissaoService;
 import com.OdontoHelpFinanceiro.service.NfseFiscalService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,6 +30,7 @@ public class FinanceiroController {
 
     private final FinanceiroService service;
     private final NfseFiscalService nfseFiscalService;
+    private final FiscalEmissaoService fiscalEmissaoService;
 
     @PostMapping("/cobrancas")
     public ResponseEntity<CobrancaResponse> criarCobranca(
@@ -114,6 +116,12 @@ public class FinanceiroController {
     @PatchMapping("/pagamentos/{id}/estornar")
     public PagamentoResponse estornar(@PathVariable Long id, @AuthenticationPrincipal AuthUser user) {
         return service.estornarPagamento(id, user);
+    }
+
+    @PostMapping("/pagamentos/{id}/reprocessar-nfse")
+    public ResponseEntity<Void> reprocessarNfse(@PathVariable Long id, HttpServletRequest http) {
+        fiscalEmissaoService.reprocessarNfse(id, bearer(http));
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/inadimplencia")

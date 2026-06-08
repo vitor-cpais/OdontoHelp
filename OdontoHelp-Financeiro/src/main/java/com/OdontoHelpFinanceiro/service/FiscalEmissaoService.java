@@ -6,6 +6,7 @@ import com.OdontoHelpFinanceiro.domain.Pagamento;
 import com.OdontoHelpFinanceiro.dto.FiscalDtoRecords.EmitirNfseFiscalRequest;
 import com.OdontoHelpFinanceiro.dto.FiscalDtoRecords.EmitirNfseFiscalResponse;
 import com.OdontoHelpFinanceiro.dto.FiscalDtoRecords.TomadorFiscalDto;
+import com.OdontoHelpFinanceiro.infra.exception.BusinessException;
 import com.OdontoHelpFinanceiro.infra.exception.NotFoundException;
 import com.OdontoHelpFinanceiro.repository.PagamentoRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,19 @@ public class FiscalEmissaoService {
         } catch (Exception ex) {
             log.error("Falha ao solicitar NFS-e no Fiscal para pagamento id={}: {}", event.pagamentoId(), ex.getMessage(), ex);
         }
+    }
+
+    public void reprocessarNfse(Long pagamentoId, String bearerToken) {
+        if (!fiscalEnabled) {
+            throw new BusinessException("Integracao fiscal desabilitada");
+        }
+        if (fiscalTenantId.isBlank()) {
+            throw new BusinessException("Tenant fiscal nao configurado");
+        }
+        if (bearerToken == null || bearerToken.isBlank()) {
+            throw new BusinessException("Token ausente");
+        }
+        emitirPorPagamento(pagamentoId, bearerToken);
     }
 
     void emitirPorPagamento(Long pagamentoId, String bearerToken) {

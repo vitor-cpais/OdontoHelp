@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -13,7 +14,11 @@ public class TenantFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !path.startsWith("/v1/notas");
+        if (!path.startsWith("/v1/notas")) {
+            return true;
+        }
+        // POST /v1/notas envia tenantId no body; o controller resolve via TenantResolver.
+        return HttpMethod.POST.matches(request.getMethod());
     }
 
     @Override
