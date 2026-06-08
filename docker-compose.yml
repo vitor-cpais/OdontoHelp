@@ -125,7 +125,7 @@ services:
       - "${FISCAL_PORT:-8082}:8082"
     environment:
       FISCAL_DB_URL: jdbc:postgresql://postgres:5432/fiscal_db
-      FISCAL_DB_USER: ${FISCAL_DB_USER:-postgres}
+      FISCAL_DB_USER: ${FISCAL_DB_USER:-${POSTGRES_USER:-postgres}}
       FISCAL_DB_PASS: ${FISCAL_DB_PASS:-${POSTGRES_PASSWORD:-postgrespw}}
       JWT_SECRET: ${JWT_SECRET:-braFuSmLxj7ZxDzvlDDEO7xSLwSCpEzo2ofobhnCjNY=}
       CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:-T2RvbnRvSGVscERldkxvY2FsQ3J5cHRvS2V5MjAyNCE=}

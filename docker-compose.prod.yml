@@ -57,6 +57,7 @@ services:
   fiscal:
     ports: !reset []
     environment:
+      FISCAL_DB_USER: ${POSTGRES_USER}
       FISCAL_DB_PASS: ${FISCAL_DB_PASS:-${POSTGRES_PASSWORD}}
       JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no .env}
       CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:?Defina CRYPTO_SECRET_KEY no .env}
