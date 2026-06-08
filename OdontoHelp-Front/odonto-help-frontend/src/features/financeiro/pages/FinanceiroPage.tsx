@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Alert, Autocomplete, Box, Button, Chip, Checkbox, Dialog, DialogActions, DialogContent,
-  DialogTitle, Grid, IconButton, MenuItem, Paper, Skeleton, Snackbar, Stack, Tab, Tabs,
-  TextField, Tooltip, Typography, Table, TableBody, TableCell, TableHead, TableRow, TablePagination,
+  DialogTitle, Grid, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Skeleton,
+  Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, Table, TableBody, TableCell,
+  TableHead, TableRow, TablePagination,
 } from '@mui/material';
 import {
   AddOutlined, AccountBalanceWalletOutlined, PaymentsOutlined,
   WarningAmberOutlined, TrendingUpOutlined, HealingOutlined, RepeatOutlined,
   DescriptionOutlined, EmailOutlined, WhatsApp, FileDownloadOutlined,
-  EventAvailableOutlined, ContentCopyOutlined, OpenInNewOutlined, VisibilityOutlined, MoneyOffOutlined,
+  EventAvailableOutlined, ContentCopyOutlined, EditNoteOutlined, MoreVert,
+  OpenInNewOutlined, VisibilityOutlined, MoneyOffOutlined,
 } from '@mui/icons-material';
 import { usePacientes } from '../../pacientes/usePacientes';
 import type { Paciente } from '../../pacientes/types';
@@ -105,6 +107,84 @@ const FINANCEIRO_ACOES_CELL_SX = {
   whiteSpace: 'nowrap' as const,
   verticalAlign: 'middle' as const,
 };
+
+const NFSE_ACOES_CELL_SX = {
+  width: 56,
+  minWidth: 56,
+  maxWidth: 56,
+  textAlign: 'center' as const,
+  px: 0.5,
+  verticalAlign: 'middle' as const,
+};
+
+function NfseRowAcoes({
+  nfse,
+  modoManual,
+  portalUrl,
+  onVer,
+  onRegistrar,
+}: {
+  nfse: NfseFiscal;
+  modoManual: boolean;
+  portalUrl: string | null;
+  onVer: () => void;
+  onRegistrar: () => void;
+}) {
+  const [anchor, setAnchor] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchor);
+  const podePortal = Boolean(portalUrl && (nfse.status === 'PENDENTE' || nfse.status === 'EMITIDA'));
+  const podeRegistrar = modoManual && nfse.status === 'PENDENTE';
+
+  return (
+    <>
+      <Tooltip title="Ações">
+        <IconButton
+          size="small"
+          onClick={(e) => setAnchor(e.currentTarget)}
+          aria-label={`Ações da NFS-e ${nfse.externalChargeId}`}
+        >
+          <MoreVert fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Menu
+        anchorEl={anchor}
+        open={open}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => { setAnchor(null); onVer(); }}>
+          <ListItemIcon><VisibilityOutlined fontSize="small" /></ListItemIcon>
+          <ListItemText>Ver detalhes</ListItemText>
+        </MenuItem>
+        {podeRegistrar && (
+          <MenuItem onClick={() => { setAnchor(null); onRegistrar(); }}>
+            <ListItemIcon><EditNoteOutlined fontSize="small" /></ListItemIcon>
+            <ListItemText>Registrar nº</ListItemText>
+          </MenuItem>
+        )}
+        {podePortal && (
+          <MenuItem
+            component="a"
+            href={portalUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setAnchor(null)}
+          >
+            <ListItemIcon><OpenInNewOutlined fontSize="small" /></ListItemIcon>
+            <ListItemText>Abrir portal</ListItemText>
+          </MenuItem>
+        )}
+        {modoManual && nfse.status === 'PENDENTE' && !portalUrl && (
+          <MenuItem disabled>
+            <ListItemIcon><OpenInNewOutlined fontSize="small" /></ListItemIcon>
+            <ListItemText primary="Abrir portal" secondary="Não configurado" />
+          </MenuItem>
+        )}
+      </Menu>
+    </>
+  );
+}
 
 function MetricCard({ label, value, loading, icon, color, bgColor, isCurrency = true }: {
   label: string; value: number; loading: boolean; icon: React.ReactNode;
@@ -1309,7 +1389,7 @@ function NotasTab({ onToast, onGoToCobrancas }: { onToast: (msg: string, isError
             <TableCell>Valor</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Criada em</TableCell>
-            <TableCell sx={FINANCEIRO_ACOES_CELL_SX}>Ações</TableCell>
+            <TableCell sx={NFSE_ACOES_CELL_SX} aria-label="Ações" />
           </TableRow>
         </TableHead>
         <TableBody>
@@ -1340,41 +1420,17 @@ function NotasTab({ onToast, onGoToCobrancas }: { onToast: (msg: string, isError
                 <Chip size="small" label={STATUS_NFSE_LABELS[nfse.status]} color={nfseStatusColor[nfse.status]} />
               </TableCell>
               <TableCell>{new Date(nfse.criadoEm).toLocaleString('pt-BR')}</TableCell>
-              <TableCell sx={FINANCEIRO_ACOES_CELL_SX}>
+              <TableCell sx={NFSE_ACOES_CELL_SX}>
                 {!integracaoAtiva ? (
                   <Typography variant="caption" color="text.disabled">—</Typography>
                 ) : (
-                  <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center" flexWrap="wrap" useFlexGap>
-                    <Button size="small" startIcon={<VisibilityOutlined sx={{ fontSize: 16 }} />} onClick={() => setVerNfse(nfse)}>
-                      Ver
-                    </Button>
-                    {modoManual && nfse.status === 'PENDENTE' && (
-                      <Button size="small" variant="contained" onClick={() => setRegistrarNfse(nfse)}>
-                        Registrar nº
-                      </Button>
-                    )}
-                    {portalUrl && (nfse.status === 'PENDENTE' || nfse.status === 'EMITIDA') && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        href={portalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        startIcon={<OpenInNewOutlined sx={{ fontSize: 16 }} />}
-                      >
-                        Portal
-                      </Button>
-                    )}
-                    {modoManual && nfse.status === 'PENDENTE' && !portalUrl && (
-                      <Tooltip title="Link do portal da prefeitura não configurado">
-                        <span>
-                          <Button size="small" variant="outlined" disabled startIcon={<OpenInNewOutlined sx={{ fontSize: 16 }} />}>
-                            Portal
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    )}
-                  </Stack>
+                  <NfseRowAcoes
+                    nfse={nfse}
+                    modoManual={modoManual}
+                    portalUrl={portalUrl}
+                    onVer={() => setVerNfse(nfse)}
+                    onRegistrar={() => setRegistrarNfse(nfse)}
+                  />
                 )}
               </TableCell>
             </TableRow>
